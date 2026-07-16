@@ -9,18 +9,44 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int tab = 0;
+  int unreadAlerts = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnread();
+  }
+
+  Future<void> _loadUnread() async {
+    try {
+      final dashboard = await WorkerApiService().fetchDashboard();
+      if (mounted) {
+        setState(() => unreadAlerts = dashboard.stats.unreadNotifications);
+      }
+    } on ApiException {
+      // A badge should never show stale or invented data on request failure.
+      if (mounted) setState(() => unreadAlerts = 0);
+    }
+  }
+
+  void _selectTab(int value) {
+    setState(() => tab = value);
+    if (value == 3) _loadUnread();
+  }
 
   @override
   Widget build(BuildContext context) {
     final pages = [
       HomeTab(
         onBrowse: () => setState(() => tab = 1),
-        onAlerts: () => setState(() => tab = 3),
+        onAlerts: () => _selectTab(3),
         onProfile: () => setState(() => tab = 4),
       ),
       const JobsTab(),
       const ApplicationsTab(),
-      const NotificationsTab(),
+      NotificationsTab(
+        onUnreadChanged: (value) => setState(() => unreadAlerts = value),
+      ),
       const ProfileTab(),
     ];
     return Scaffold(
@@ -41,36 +67,36 @@ class _MainShellState extends State<MainShell> {
                   'Home',
                   0,
                   tab,
-                  (v) => setState(() => tab = v),
+                  _selectTab,
                 ),
                 _NavItem(
                   LucideIcons.briefcaseBusiness,
                   'Jobs',
                   1,
                   tab,
-                  (v) => setState(() => tab = v),
+                  _selectTab,
                 ),
                 _NavItem(
                   LucideIcons.fileCheck,
                   'Applied',
                   2,
                   tab,
-                  (v) => setState(() => tab = v),
+                  _selectTab,
                 ),
                 _NavItem(
                   LucideIcons.bell,
                   'Alerts',
                   3,
                   tab,
-                  (v) => setState(() => tab = v),
-                  badge: '3',
+                  _selectTab,
+                  badge: unreadAlerts > 0 ? unreadAlerts.toString() : null,
                 ),
                 _NavItem(
                   LucideIcons.userRound,
                   'Profile',
                   4,
                   tab,
-                  (v) => setState(() => tab = v),
+                  _selectTab,
                 ),
               ],
             ),

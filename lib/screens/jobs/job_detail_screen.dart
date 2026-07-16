@@ -9,6 +9,55 @@ class JobDetailPage extends StatefulWidget {
 
 class _JobDetailPageState extends State<JobDetailPage> {
   bool saved = false, applied = false;
+  bool loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDetail();
+  }
+
+  Future<void> _loadDetail() async {
+    if (widget.job.id == 0) return;
+    try {
+      final response = await WorkerApiService().fetchJob(widget.job.id);
+      if (mounted) setState(() {
+        saved = response.isSaved;
+        applied = response.application != null;
+      });
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  Future<void> _toggleSaved() async {
+    if (widget.job.id == 0 || loading) return;
+    setState(() => loading = true);
+    try {
+      final result = await WorkerApiService().toggleSaved(widget.job.id);
+      if (mounted) setState(() => saved = result);
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _apply() async {
+    if (widget.job.id == 0 || loading) return;
+    setState(() => loading = true);
+    try {
+      await WorkerApiService().apply(widget.job.id);
+      if (!mounted) return;
+      Navigator.pop(context);
+      setState(() => applied = true);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Application submitted!')));
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final j = widget.job;
@@ -21,7 +70,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         title: const Text('Job Details', style: TextStyle(fontSize: 16)),
         actions: [
           IconButton(
-            onPressed: () => setState(() => saved = !saved),
+            onPressed: loading ? null : _toggleSaved,
             icon: Icon(
               LucideIcons.bookmark,
               color: saved ? brand : context.foregroundColor,
@@ -141,15 +190,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                           showDragHandle: true,
                           isScrollControlled: true,
                           builder: (_) => ApplySheet(
-                            onApply: () {
-                              Navigator.pop(context);
-                              setState(() => applied = true);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Application submitted! 🎉'),
-                                ),
-                              );
-                            },
+                            onApply: _apply,
                           ),
                         ),
                 ),

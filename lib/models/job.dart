@@ -10,11 +10,43 @@ class Job {
     this.rating,
     this.openings,
     this.skills,
-    this.description,
-  );
+    this.description, {
+    this.id = 0,
+  });
+  final int id;
   final String title, category, employer, city, wage, rating, description;
   final int openings;
   final List<String> skills;
+
+  factory Job.fromJson(Map<String, dynamic> json) {
+    final employer = Map<String, dynamic>.from(json['employer'] as Map? ?? {});
+    return Job(
+      json['title']?.toString() ?? '',
+      json['category']?.toString() ?? '',
+      employer['name']?.toString() ?? '',
+      json['location_label']?.toString() ??
+          [json['city'], json['state']].where((e) => e != null).join(', '),
+      json['wage_label']?.toString() ?? '',
+      '0',
+      (json['vacancies'] as num?)?.toInt() ?? 0,
+      (json['skills'] as List? ?? []).map((e) => e.toString()).toList(),
+      json['description']?.toString() ?? '',
+      id: (json['id'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  factory Job.fromApi(ApiJobModel job) => Job(
+    job.title,
+    job.category,
+    job.employer.name,
+    job.locationLabel.isEmpty ? '${job.city}, ${job.state}' : job.locationLabel,
+    job.wageLabel,
+    '0',
+    job.vacancies,
+    job.skills,
+    job.description,
+    id: job.id,
+  );
 }
 
 const jobs = [

@@ -7,297 +7,266 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
-  bool available = true;
+  final name = TextEditingController();
+  final phone = TextEditingController();
+  final experience = TextEditingController();
+  final bio = TextEditingController();
+  final wage = TextEditingController();
+  final upi = TextEditingController();
+  List<String> skills = [], languages = [], states = [], cities = [];
+  String? education, wageType, state, city;
+  bool available = true, loading = true, saving = false;
+  bool uploadingAvatar = false;
+  String? avatarUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final service = WorkerApiService();
+      final worker = await service.profile();
+      final reference = await service.reference();
+      final data = worker.data;
+      final selectedState = data['state']?.toString();
+      final loadedCities = selectedState == null
+          ? <String>[]
+          : await service.cities(selectedState);
+      if (!mounted) return;
+      setState(() {
+        name.text = data['name']?.toString() ?? '';
+        phone.text = data['phone']?.toString() ?? '';
+        experience.text = data['experience_years']?.toString() ?? '';
+        bio.text = data['bio']?.toString() ?? '';
+        wage.text = data['expected_wage']?.toString() ?? '';
+        upi.text = data['payout_upi']?.toString() ?? '';
+        avatarUrl = data['avatar_url']?.toString();
+        skills = (data['skills'] as List? ?? []).map((e) => e.toString()).toList();
+        languages = (data['spoken_languages'] as List? ?? []).map((e) => e.toString()).toList();
+        available = data['available'] == true;
+        education = data['education']?.toString();
+        wageType = data['wage_type']?.toString();
+        state = selectedState;
+        city = data['city']?.toString();
+        states = reference.states;
+        cities = loadedCities;
+      });
+    } on ApiException catch (error) {
+      if (mounted) _error(error.message);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _selectState(String value) async {
+    setState(() { state = value; city = null; cities = []; });
+    try {
+      final result = await WorkerApiService().cities(value);
+      if (mounted && state == value) setState(() => cities = result);
+    } on ApiException catch (error) {
+      if (mounted) _error(error.message);
+    }
+  }
+
+  Future<void> _save() async {
+    if (saving) return;
+    setState(() => saving = true);
+    try {
+      final values = <String, dynamic>{
+        'name': name.text.trim(),
+        'skills': skills,
+        'experience_years': int.tryParse(experience.text) ?? 0,
+        'education': education,
+        'spoken_languages': languages,
+        'bio': bio.text.trim(),
+        'expected_wage': num.tryParse(wage.text),
+        'wage_type': wageType,
+        'state': state,
+        'city': city,
+        'available': available,
+        'payout_upi': upi.text.trim(),
+      }..removeWhere((key, value) => value == null);
+      await WorkerApiService().updateProfile(values);
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (error) {
+      if (mounted) _error(error.message);
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Future<void> _pickAvatar() async {
+    if (uploadingAvatar) return;
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1200,
+      );
+      if (picked == null) return;
+      final file = File(picked.path);
+      if (await file.length() > 2 * 1024 * 1024) {
+        _error('Avatar image must be 2 MB or smaller.');
+        return;
+      }
+      setState(() => uploadingAvatar = true);
+      final uploadedUrl = await WorkerApiService().uploadAvatar(file);
+      if (!mounted) return;
+      setState(() => avatarUrl = uploadedUrl);
+      profileAvatarUrl.value = uploadedUrl;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile photo updated.')),
+      );
+    } on ApiException catch (error) {
+      if (mounted) _error(error.message);
+    } on MissingPluginException catch (error) {
+      debugPrint('[AVATAR PICKER] Missing plugin: $error');
+      if (mounted) {
+        _error('Photo picker is not initialized. Stop the app and run it again.');
+      }
+    } on PlatformException catch (error) {
+      debugPrint('[AVATAR PICKER] ${error.code}: ${error.message}');
+      if (mounted) {
+        final denied = error.code.toLowerCase().contains('permission') ||
+            (error.message?.toLowerCase().contains('permission') ?? false);
+        _error(
+          denied
+              ? 'Photo permission is required. Enable it in app settings.'
+              : error.message ?? 'Unable to open the photo picker.',
+        );
+      }
+    } catch (error, stackTrace) {
+      debugPrint('[AVATAR PICKER] $error\n$stackTrace');
+      if (mounted) _error('Unable to select profile photo: $error');
+    } finally {
+      if (mounted) setState(() => uploadingAvatar = false);
+    }
+  }
+
+  void _error(String message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+
+  @override
+  void dispose() {
+    for (final item in [name, phone, experience, bio, wage, upi]) { item.dispose(); }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      leading: IconButton(
-        onPressed: () => Navigator.maybePop(context),
-        icon: const Icon(LucideIcons.arrowLeft),
-      ),
+      leading: IconButton(onPressed: () => Navigator.maybePop(context), icon: const Icon(LucideIcons.arrowLeft)),
       title: const Text('Edit Profile', style: TextStyle(fontSize: 16)),
     ),
-    body: ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Center(
-          child: Column(
+    body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  CircleAvatar(
-                    radius: 44,
-                    backgroundColor: Color(0xFFFFE3D8),
-                    child: Text(
-                      'RK',
-                      style: TextStyle(
-                        color: Color(0xFFC93A06),
-                        fontSize: 34,
-                        fontWeight: FontWeight.w700,
+              Center(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(52),
+                  onTap: uploadingAvatar ? null : _pickAvatar,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(
+                        radius: 44,
+                        backgroundColor: const Color(0xFFFFE3D8),
+                        backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
+                            ? NetworkImage(avatarUrl!)
+                            : null,
+                        child: uploadingAvatar
+                            ? const CircularProgressIndicator()
+                            : avatarUrl == null || avatarUrl!.isEmpty
+                                ? Text(
+                                    name.text.trim().isEmpty
+                                        ? 'W'
+                                        : name.text.trim().split(RegExp(r'\s+')).take(2).map((e) => e[0]).join().toUpperCase(),
+                                    style: const TextStyle(color: Color(0xFFC93A06), fontSize: 30, fontWeight: FontWeight.w700),
+                                  )
+                                : null,
                       ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: CircleAvatar(
-                      radius: 15,
-                      backgroundColor: brand,
-                      child: Icon(
-                        LucideIcons.camera,
-                        color: Colors.white,
-                        size: 15,
+                      const Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: CircleAvatar(
+                          radius: 15,
+                          backgroundColor: brand,
+                          child: Icon(LucideIcons.camera, color: Colors.white, size: 15),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Tap to change photo',
-                style: TextStyle(color: muted, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        const FieldLabel('Full name'),
-        const TextField(
-          controller: null,
-          decoration: InputDecoration(hintText: 'Rakesh Kumar'),
-        ),
-        const SizedBox(height: 14),
-        const FieldLabel('Mobile number'),
-        TextField(
-          enabled: false,
-          decoration: InputDecoration(
-            hintText: '+91 98765 43210',
-            fillColor: context.subduedColor,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          "Verified via OTP · can't be changed",
-          style: TextStyle(color: muted, fontSize: 12),
-        ),
-        const SizedBox(height: 14),
-        const FieldLabel('Skills'),
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: context.surfaceColor,
-            border: Border.all(color: context.borderColor),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Tag('Plumbing ×'),
-              Tag('Pipe Fitting ×'),
-              Tag('Tiling ×'),
-              SizedBox(
-                width: 90,
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: '+ Add skill',
-                    filled: false,
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(4),
+                    ],
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              const Text('Tap to change photo', textAlign: TextAlign.center, style: TextStyle(color: muted, fontSize: 12)),
+              const SizedBox(height: 20),
+              const FieldLabel('Full name'),
+              TextField(controller: name),
+              const SizedBox(height: 14),
+              const FieldLabel('Mobile number'),
+              TextField(controller: phone, enabled: false),
+              const SizedBox(height: 14),
+              const FieldLabel('Skills'),
+              Wrap(spacing: 8, runSpacing: 8, children: skills.map(Tag.new).toList()),
+              const SizedBox(height: 14),
+              const FieldLabel('Experience'),
+              TextField(controller: experience, keyboardType: TextInputType.number, decoration: const InputDecoration(suffixText: 'years')),
+              const SizedBox(height: 14),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Available for work'),
+                value: available,
+                activeTrackColor: brand,
+                onChanged: (value) => setState(() => available = value),
+              ),
+              const FieldLabel('Languages you speak'),
+              Wrap(spacing: 8, runSpacing: 8, children: languages.map(Tag.new).toList()),
+              const SizedBox(height: 14),
+              const FieldLabel('Education'),
+              DropdownButtonFormField<String>(
+                initialValue: education,
+                items: ['Below 10th', '10th Pass', '12th Pass', 'ITI / Diploma', 'Graduate', 'Post Graduate'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: (value) => setState(() => education = value),
+              ),
+              const SizedBox(height: 14),
+              const FieldLabel('Bio'),
+              TextField(controller: bio, maxLines: 4),
+              const SizedBox(height: 14),
+              const FieldLabel('Expected wage'),
+              TextField(controller: wage, keyboardType: TextInputType.number, decoration: const InputDecoration(prefixText: '₹ ')),
+              const SizedBox(height: 14),
+              const FieldLabel('Wage type'),
+              DropdownButtonFormField<String>(
+                initialValue: wageType,
+                items: ['hourly', 'daily', 'monthly'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: (value) => setState(() => wageType = value),
+              ),
+              const SectionTitle('Location'),
+              DropdownButtonFormField<String>(
+                initialValue: state,
+                hint: const Text('Select state'),
+                items: states.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: (value) { if (value != null) _selectState(value); },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                key: ValueKey(state),
+                initialValue: city,
+                hint: const Text('Select city'),
+                items: cities.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: (value) => setState(() => city = value),
+              ),
+              const SectionTitle('Payout'),
+              const FieldLabel('UPI ID'),
+              TextField(controller: upi, decoration: const InputDecoration(prefixIcon: Icon(LucideIcons.indianRupee, size: 18))),
+              const SizedBox(height: 20),
+              PrimaryButton(saving ? 'Saving...' : 'Save Profile', onPressed: saving ? null : _save),
             ],
           ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Type and press Enter. e.g. Waterproofing, Welding',
-          style: TextStyle(color: muted, fontSize: 12),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FieldLabel('Experience'),
-                  TextField(
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: '6',
-                      suffixText: 'years',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const FieldLabel('Available'),
-                  Container(
-                    height: 49,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: context.surfaceColor,
-                      border: Border.all(color: context.borderColor),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'For work',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        Switch(
-                          value: available,
-                          activeTrackColor: brand,
-                          onChanged: (v) => setState(() => available = v),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        const FieldLabel('Languages you speak'),
-        const Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            Tag('Hindi'),
-            Tag('Tamil'),
-            Tag('English'),
-            Tag('Telugu'),
-            Tag('+ Add'),
-          ],
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Helps match you with employers who speak your language.',
-          style: TextStyle(color: muted, fontSize: 12),
-        ),
-        const SizedBox(height: 14),
-        const FieldLabel('Education'),
-        DropdownButtonFormField<String>(
-          initialValue: '12th Pass',
-          items: [
-            'Below 10th',
-            '10th Pass',
-            '12th Pass',
-            'ITI / Diploma',
-            'Graduate',
-          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (_) {},
-        ),
-        const SizedBox(height: 14),
-        const FieldLabel('Bio'),
-        const TextField(
-          maxLines: 4,
-          decoration: InputDecoration(
-            hintText:
-                '6 years of experience. Bathroom & kitchen plumbing, leak repair and tiling specialist. On-time and clean work.',
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FieldLabel('Expected wage'),
-                  TextField(
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      prefixText: '₹ ',
-                      hintText: '900',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const FieldLabel('Per'),
-                  DropdownButtonFormField<String>(
-                    initialValue: 'day',
-                    items: ['day', 'hour', 'month', 'contract']
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                        .toList(),
-                    onChanged: (_) {},
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SectionTitle('Location'),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: 'Tamil Nadu',
-                items: ['Tamil Nadu', 'Kerala', 'Karnataka']
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (_) {},
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: 'Chennai',
-                items: ['Chennai', 'Coimbatore', 'Madurai']
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (_) {},
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        const FieldLabel('Pin your location'),
-        const MapBox(),
-        const SizedBox(height: 6),
-        const Text(
-          'Tap the map to set your exact location (nearby jobs are matched to this)',
-          style: TextStyle(color: muted, fontSize: 12),
-        ),
-        const SectionTitle('Payout'),
-        const FieldLabel('UPI ID'),
-        const TextField(
-          decoration: InputDecoration(
-            prefixIcon: Icon(LucideIcons.indianRupee, size: 18),
-            hintText: 'rakesh@okhdfcbank',
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Job payments will be sent directly to this UPI.',
-          style: TextStyle(color: muted, fontSize: 12),
-        ),
-        const SizedBox(height: 20),
-        PrimaryButton('Save Profile', onPressed: () => Navigator.pop(context)),
-      ],
-    ),
   );
 }

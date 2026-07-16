@@ -9,27 +9,100 @@ class JobsTab extends StatefulWidget {
 class _JobsTabState extends State<JobsTab> {
   String query = '';
   String cat = 'All';
+  String? filterState, filterCity, filterSkill;
+  List<Job> apiJobs = [];
+  List<String> categories = ['All'];
+  List<String> states = [], skills = [];
+  bool loading = true;
+  String? error;
+  Timer? searchTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReference();
+    _load();
+  }
+
+  Future<void> _loadReference() async {
+    try {
+      final reference = await WorkerApiService().reference();
+      if (mounted) setState(() {
+        states = reference.states;
+        skills = reference.skills;
+        categories = ['All', ...reference.jobCategories];
+      });
+    } on ApiException catch (e) {
+      if (mounted) setState(() => error = e.message);
+    }
+  }
+
+  void _search(String value) {
+    query = value;
+    searchTimer?.cancel();
+    searchTimer = Timer(const Duration(milliseconds: 450), _load);
+  }
+
+  Future<void> _openFilter() async {
+    final result = await showModalBottomSheet<Map<String, String?>>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => JobsApiFilterSheet(
+        states: states,
+        skills: skills,
+        categories: categories.where((e) => e != 'All').toList(),
+        selectedState: filterState,
+        selectedCity: filterCity,
+        selectedCategory: cat == 'All' ? null : cat,
+        selectedSkill: filterSkill,
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      filterState = result['state'];
+      filterCity = result['city'];
+      filterSkill = result['skill'];
+      cat = result['category'] ?? 'All';
+    });
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final service = WorkerApiService();
+      final response = await service.fetchJobs(filters: {
+        if (query.trim().isNotEmpty) 'q': query.trim(),
+        if (cat != 'All') 'category': cat,
+        if (filterState != null) 'state': filterState,
+        if (filterCity != null) 'city': filterCity,
+        if (filterSkill != null) 'skill': filterSkill,
+      });
+      if (!mounted) return;
+      setState(() {
+        apiJobs = response.jobs.map(Job.fromApi).toList();
+      });
+    } on ApiException catch (error) {
+      if (mounted) setState(() => this.error = error.message);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+  @override
+  void dispose() {
+    searchTimer?.cancel();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
-    final filtered = jobs
-        .where(
-          (j) =>
-              (cat == 'All' || j.category == cat) &&
-              ('${j.title} ${j.category} ${j.skills.join(' ')}')
-                  .toLowerCase()
-                  .contains(query.toLowerCase()),
-        )
-        .toList();
+    final filtered = apiJobs;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Browse Jobs'),
         actions: [
           IconButton(
-            onPressed: () => showModalBottomSheet(
-              context: context,
-              showDragHandle: true,
-              builder: (_) => const FilterSheet(),
-            ),
+            onPressed: _openFilter,
             icon: const Icon(LucideIcons.slidersHorizontal),
           ),
         ],
@@ -45,7 +118,7 @@ class _JobsTabState extends State<JobsTab> {
             child: Column(
               children: [
                 TextField(
-                  onChanged: (v) => setState(() => query = v),
+                  onChanged: _search,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(LucideIcons.search, size: 20),
                     hintText: 'Search job title, skill…',
@@ -58,21 +131,16 @@ class _JobsTabState extends State<JobsTab> {
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     children:
-                        [
-                          'All',
-                          'Plumbing',
-                          'Electrical',
-                          'Carpentry',
-                          'Painting',
-                          'Masonry',
-                          'AC Repair',
-                        ].map((e) {
+                        categories.map((e) {
                           final active = cat == e;
                           return Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(20),
-                              onTap: () => setState(() => cat = e),
+                              onTap: () {
+                                setState(() => cat = e);
+                                _load();
+                              },
                               child: Container(
                                 alignment: Alignment.center,
                                 padding: const EdgeInsets.symmetric(
@@ -113,11 +181,37 @@ class _JobsTabState extends State<JobsTab> {
               padding: const EdgeInsets.all(16),
               children: [
                 Text(
-                  '${filtered.length} jobs · Chennai, TN · matched to your skills',
+                  '${filtered.length} jobs${filterCity != null ? ' · $filterCity' : ''} · matched to your filters',
                   style: const TextStyle(color: muted, fontSize: 12.5),
                 ),
                 const SizedBox(height: 12),
-                ...filtered.map(JobCard.new),
+                if (loading)
+                  const Center(child: CircularProgressIndicator())
+                else if (error != null)
+                  AppCard(
+                    child: Column(
+                      children: [
+                        const Icon(LucideIcons.triangleAlert, color: brand),
+                        const SizedBox(height: 8),
+                        Text(error!, textAlign: TextAlign.center),
+                        TextButton(onPressed: _load, child: const Text('Try again')),
+                      ],
+                    ),
+                  )
+                else if (filtered.isEmpty)
+                  const AppCard(
+                    child: Column(
+                      children: [
+                        Icon(LucideIcons.searchX, color: muted, size: 30),
+                        SizedBox(height: 8),
+                        Text('No matching jobs found', style: TextStyle(fontWeight: FontWeight.w700)),
+                        SizedBox(height: 3),
+                        Text('Try changing your search or filters.', style: TextStyle(color: muted)),
+                      ],
+                    ),
+                  )
+                else
+                  ...filtered.map(JobCard.new),
               ],
             ),
           ),
@@ -125,6 +219,70 @@ class _JobsTabState extends State<JobsTab> {
       ),
     );
   }
+}
+
+class JobsApiFilterSheet extends StatefulWidget {
+  const JobsApiFilterSheet({super.key, required this.states, required this.skills, required this.categories, this.selectedState, this.selectedCity, this.selectedCategory, this.selectedSkill});
+  final List<String> states, skills, categories;
+  final String? selectedState, selectedCity, selectedCategory, selectedSkill;
+  @override
+  State<JobsApiFilterSheet> createState() => _JobsApiFilterSheetState();
+}
+
+class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
+  String? state, city, category, skill;
+  List<String> cities = [];
+  bool loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    state = widget.selectedState;
+    city = widget.selectedCity;
+    category = widget.selectedCategory;
+    skill = widget.selectedSkill;
+    if (state != null) _loadCities(state!, keepCity: true);
+  }
+
+  Future<void> _loadCities(String value, {bool keepCity = false}) async {
+    setState(() { state = value; if (!keepCity) city = null; loading = true; });
+    try {
+      final result = await WorkerApiService().cities(value);
+      if (mounted && state == value) setState(() => cities = result);
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+    child: SingleChildScrollView(
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Filter jobs', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 14),
+        const FieldLabel('Category'),
+        DropdownButtonFormField<String>(initialValue: category, isExpanded: true, hint: const Text('All categories'), items: widget.categories.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) => setState(() => category = v)),
+        const SizedBox(height: 14),
+        const FieldLabel('Skill'),
+        DropdownButtonFormField<String>(initialValue: skill, isExpanded: true, menuMaxHeight: 400, hint: const Text('All skills'), items: widget.skills.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) => setState(() => skill = v)),
+        const SizedBox(height: 14),
+        const FieldLabel('State'),
+        DropdownButtonFormField<String>(initialValue: state, isExpanded: true, menuMaxHeight: 400, hint: const Text('All states'), items: widget.states.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) { if (v != null) _loadCities(v); }),
+        const SizedBox(height: 14),
+        const FieldLabel('City'),
+        DropdownButtonFormField<String>(key: ValueKey(state), initialValue: city, isExpanded: true, menuMaxHeight: 400, hint: Text(loading ? 'Loading cities...' : 'All cities'), items: cities.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: loading ? null : (v) => setState(() => city = v)),
+        const SizedBox(height: 18),
+        Row(children: [
+          Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context, <String, String?>{}), child: const Text('Reset'))),
+          const SizedBox(width: 10),
+          Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, {'state': state, 'city': city, 'category': category, 'skill': skill}), child: const Text('Apply'))),
+        ]),
+      ]),
+    ),
+  );
 }
 
 class JobCard extends StatelessWidget {
@@ -147,7 +305,7 @@ class JobCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Tag(job.category),
-                if (job == jobs.first || job == jobs[1] || job == jobs.last)
+                if (job.id > 0)
                   const StatusPill('New', Color(0xFFECFDF5), Color(0xFF047857)),
               ],
             ),

@@ -9,11 +9,54 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool otp = false;
   final phone = TextEditingController();
+  final otpFields = List.generate(4, (_) => TextEditingController());
+  final auth = AuthController();
 
   @override
   void dispose() {
     phone.dispose();
+    for (final controller in otpFields) {
+      controller.dispose();
+    }
+    auth.dispose();
     super.dispose();
+  }
+
+  void _message(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _sendOtp() async {
+    final number = phone.text.replaceAll(RegExp(r'\D'), '');
+    if (number.length != 10) {
+      _message('Enter a valid 10-digit mobile number.');
+      return;
+    }
+    if (await auth.sendOtp(number) && mounted) setState(() => otp = true);
+    if (mounted && auth.error != null) _message(auth.error!);
+  }
+
+  Future<void> _verifyOtp() async {
+    final code = otpFields.map((e) => e.text).join();
+    if (code.length != 4) {
+      _message('Enter the 4-digit OTP.');
+      return;
+    }
+    if (!await auth.verifyOtp(phone.text, code)) {
+      if (mounted) _message(auth.error!);
+      return;
+    }
+    if (!mounted) return;
+    final page = auth.result!.isNew || auth.result!.needsRegistration
+        ? const RegistrationPage()
+        : const MainShell();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => page),
+      (_) => false,
+    );
   }
 
   @override
@@ -103,6 +146,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: TextField(
                     controller: phone,
                     keyboardType: TextInputType.phone,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     maxLength: 10,
                     decoration: const InputDecoration(
                       counterText: '',
@@ -130,11 +174,11 @@ class _LoginPageState extends State<LoginPage> {
           PrimaryButton(
             'Send OTP',
             height: 46,
-            onPressed: () => setState(() => otp = true),
+            onPressed: auth.loading ? null : _sendOtp,
           ),
         ] else ...[
           const Text(
-            'Enter the 6-digit code sent to',
+            'Enter the 4-digit code sent to',
             style: TextStyle(fontSize: 15),
           ),
           const SizedBox(height: 4),
@@ -154,13 +198,20 @@ class _LoginPageState extends State<LoginPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(
-              6,
-              (_) => SizedBox(
+              4,
+              (index) => SizedBox(
                 width: 46,
                 child: TextField(
+                  controller: otpFields[index],
                   textAlign: TextAlign.center,
                   maxLength: 1,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (value) {
+                    if (value.isNotEmpty && index < otpFields.length - 1) {
+                      FocusScope.of(context).nextFocus();
+                    }
+                  },
                   decoration: const InputDecoration(
                     counterText: '',
                     contentPadding: EdgeInsets.symmetric(vertical: 16),
@@ -172,17 +223,14 @@ class _LoginPageState extends State<LoginPage> {
           const SizedBox(height: 10),
           const Center(
             child: Text(
-              'Demo OTP autofilled. Resend in 30s',
+              'Resend available in 30s',
               style: TextStyle(color: muted, fontSize: 12),
             ),
           ),
           const SizedBox(height: 18),
           PrimaryButton(
             'Verify & Continue',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RegistrationPage()),
-            ),
+            onPressed: auth.loading ? null : _verifyOtp,
           ),
           const SizedBox(height: 16),
           const Center(

@@ -1,0 +1,65 @@
+part of '../main.dart';
+
+class AppSplash extends StatelessWidget {
+  const AppSplash({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFF5A1F), brand, Color(0xFFC93A06)],
+        ),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            const Spacer(flex: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: Image.asset(
+                'assets/icons/karigar_launcher.png',
+                width: 150,
+                height: 150,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              'Karigar',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 34,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -.6,
+              ),
+            ),
+            const SizedBox(height: 7),
+            const Text(
+              'Kaam. Hunar. Bharosa.',
+              style: TextStyle(
+                color: Color(0xFFFFE3D8),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                letterSpacing: .4,
+              ),
+            ),
+            const Spacer(flex: 3),
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 34),
+          ],
+        ),
+      ),
+    ),
+  );
+}

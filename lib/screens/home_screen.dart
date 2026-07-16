@@ -14,30 +14,106 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   bool available = true;
+  bool loading = true;
+  Map<String, dynamic> dashboard = {};
+  List<Job> latestJobs = [];
+
+  Map<String, dynamic> get stats =>
+      Map<String, dynamic>.from(dashboard['stats'] as Map? ?? {});
+  Map<String, dynamic> get profile =>
+      Map<String, dynamic>.from(dashboard['profile'] as Map? ?? {});
+  String get workerName =>
+      dashboard['greeting']?.toString() ?? profile['name']?.toString() ?? 'Worker';
+  int get completion =>
+      (stats['profile_completion'] as num?)?.toInt() ?? 0;
+  int get unreadNotifications =>
+      (stats['unread_notifications'] as num?)?.toInt() ?? 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboard();
+  }
+
+  Future<void> _loadDashboard() async {
+    try {
+      final service = WorkerApiService();
+      final response = await service.fetchDashboard();
+      var homeJobs = response.latestJobs;
+      if (homeJobs.isEmpty) {
+        final jobsPage = await service.fetchJobs(page: 1);
+        homeJobs = jobsPage.jobs.take(3).toList();
+      }
+      if (!mounted) return;
+      setState(() {
+        dashboard = {
+          'greeting': response.greeting,
+          'profile': response.profile.data,
+          'stats': {
+            'available_jobs': response.stats.availableJobs,
+            'applications': response.stats.applications,
+            'saved_jobs': response.stats.savedJobs,
+            'kyc_status_label': response.stats.kycStatusLabel,
+            'profile_completion': response.stats.profileCompletion,
+            'unread_notifications': response.stats.unreadNotifications,
+          },
+        };
+        available = response.profile.available;
+        profileAvatarUrl.value = response.profile.data['avatar_url']?.toString();
+        latestJobs = homeJobs.map(Job.fromApi).toList();
+      });
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _setAvailability(bool value) async {
+    final previous = available;
+    setState(() => available = value);
+    try {
+      final saved = await WorkerApiService().setAvailability(value);
+      if (mounted) setState(() => available = saved);
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => available = previous);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       toolbarHeight: 59,
       leadingWidth: 58,
-      leading: const Padding(
+      leading: Padding(
         padding: EdgeInsets.only(left: 16, top: 10, bottom: 10),
-        child: CircleAvatar(
-          backgroundColor: Color(0xFFFFE3D8),
-          child: Text(
-            'RK',
-            style: TextStyle(
-              color: Color(0xFFC93A06),
-              fontWeight: FontWeight.w700,
-            ),
+        child: ValueListenableBuilder<String?>(
+          valueListenable: profileAvatarUrl,
+          builder: (context, avatarUrl, _) => CircleAvatar(
+            backgroundColor: const Color(0xFFFFE3D8),
+            backgroundImage: avatarUrl?.isNotEmpty == true
+                ? NetworkImage(avatarUrl!)
+                : null,
+            child: avatarUrl?.isNotEmpty == true
+                ? null
+                : Text(
+                    workerName.trim().split(RegExp(r'\s+')).take(2).map((e) => e.isEmpty ? '' : e[0]).join().toUpperCase(),
+                    style: const TextStyle(
+                      color: Color(0xFFC93A06),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
           ),
         ),
       ),
       titleSpacing: 8,
-      title: const Column(
+      title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Welcome back 👋',
             style: TextStyle(
               fontSize: 12,
@@ -46,7 +122,7 @@ class _HomeTabState extends State<HomeTab> {
             ),
           ),
           Text(
-            'Rakesh Kumar',
+            workerName,
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
         ],
@@ -67,19 +143,20 @@ class _HomeTabState extends State<HomeTab> {
                 onPressed: widget.onAlerts,
                 icon: const Icon(LucideIcons.bell, size: 21),
               ),
-              Positioned(
-                top: 9,
-                right: 9,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: brand,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+              if (unreadNotifications > 0)
+                Positioned(
+                  top: 9,
+                  right: 9,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: brand,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -114,17 +191,17 @@ class _HomeTabState extends State<HomeTab> {
               Switch(
                 value: available,
                 activeTrackColor: brand,
-                onChanged: (v) => setState(() => available = v),
+                onChanged: _setAvailability,
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        const Row(
+        Row(
           children: [
             Expanded(
               child: StatCard(
-                '128',
+                stats['available_jobs']?.toString() ?? '0',
                 'Available Jobs',
                 LucideIcons.briefcaseBusiness,
                 Color(0xFFFFF3EE),
@@ -134,7 +211,7 @@ class _HomeTabState extends State<HomeTab> {
             SizedBox(width: 12),
             Expanded(
               child: StatCard(
-                'Not submitted',
+                stats['kyc_status_label']?.toString() ?? 'Not submitted',
                 'KYC Status',
                 LucideIcons.shieldCheck,
                 Color(0xFFFFF7ED),
@@ -145,11 +222,11 @@ class _HomeTabState extends State<HomeTab> {
           ],
         ),
         const SizedBox(height: 12),
-        const Row(
+        Row(
           children: [
             Expanded(
               child: StatCard(
-                '3',
+                stats['applications']?.toString() ?? '0',
                 'Applications',
                 LucideIcons.check,
                 Color(0xFFECFDF5),
@@ -159,7 +236,7 @@ class _HomeTabState extends State<HomeTab> {
             SizedBox(width: 12),
             Expanded(
               child: StatCard(
-                '70%',
+                '$completion%',
                 'Profile complete',
                 LucideIcons.clock,
                 Color(0xFFEEF2FF),
@@ -185,12 +262,12 @@ class _HomeTabState extends State<HomeTab> {
             children: [
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Profile 70% complete',
+                          'Profile $completion% complete',
                           style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                         SizedBox(height: 2),
@@ -224,7 +301,7 @@ class _HomeTabState extends State<HomeTab> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: LinearProgressIndicator(
-                  value: .7,
+                  value: completion / 100,
                   minHeight: 7,
                   backgroundColor: context.surfaceColor,
                   color: brand,
@@ -240,7 +317,32 @@ class _HomeTabState extends State<HomeTab> {
           onTap: widget.onBrowse,
         ),
         const SizedBox(height: 4),
-        ...jobs.take(3).map(JobCard.new),
+        if (loading)
+          const Center(child: CircularProgressIndicator())
+        else if (latestJobs.isEmpty)
+          AppCard(
+            child: Column(
+              children: [
+                Icon(
+                  LucideIcons.briefcaseBusiness,
+                  color: muted,
+                  size: 28,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'No jobs available near you yet',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'New matching jobs will appear here.',
+                  style: TextStyle(color: muted, fontSize: 12),
+                ),
+              ],
+            ),
+          )
+        else
+          ...latestJobs.map(JobCard.new),
       ],
     ),
   );

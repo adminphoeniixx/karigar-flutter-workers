@@ -1,7 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter/services.dart';
+import 'dart:async';
+import 'dart:io';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
+
+import 'controllers/auth_controller.dart';
+import 'models/api_models.dart';
+import 'services/api_client.dart';
+import 'services/auth_service.dart';
+import 'services/worker_api_service.dart';
 
 part 'models/job.dart';
+part 'screens/splash_screen.dart';
 part 'screens/auth/onboarding_screen.dart';
 part 'screens/auth/login_screen.dart';
 part 'screens/auth/registration_screen.dart';
@@ -19,7 +32,11 @@ part 'screens/profile/reviews_screen.dart';
 part 'screens/profile/settings_screen.dart';
 part 'widgets/common_widgets.dart';
 
-void main() => runApp(const KarigarApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiClient.instance.initialize();
+  runApp(const KarigarApp());
+}
 
 const brand = Color(0xFFF4470F);
 const bg = Color(0xFFF6F7F9);
@@ -27,6 +44,7 @@ const line = Color(0xFFE9EBEF);
 const ink = Color(0xFF16181D);
 const muted = Color(0xFF6B7280);
 final appThemeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+final profileAvatarUrl = ValueNotifier<String?>(null);
 
 extension AppThemeColors on BuildContext {
   Color get surfaceColor => Theme.of(this).colorScheme.surface;
@@ -55,7 +73,7 @@ class KarigarApp extends StatelessWidget {
       theme: _theme(Brightness.light),
       darkTheme: _theme(Brightness.dark),
       themeMode: mode,
-      home: const OnboardingPage(),
+      home: const AuthGate(),
     ),
   );
 
@@ -130,4 +148,49 @@ class KarigarApp extends StatelessWidget {
       navigationBarTheme: NavigationBarThemeData(backgroundColor: surface),
     );
   }
+}
+
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  late final Future<bool> _session = _initialize();
+
+  Future<bool> _initialize() async {
+    final results = await Future.wait<dynamic>([
+      _restoreSession(),
+      Future<void>.delayed(const Duration(milliseconds: 1400)),
+    ]);
+    return results.first as bool;
+  }
+
+  Future<bool> _restoreSession() async {
+    if (!ApiClient.instance.isAuthenticated) return false;
+    try {
+      await AuthService().me();
+      return true;
+    } on ApiException catch (error) {
+      if (error.statusCode == 401 || error.statusCode == 403) {
+        await ApiClient.instance.setToken(null);
+        return false;
+      }
+      // Keep an existing session during temporary connectivity/server failures.
+      return true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<bool>(
+    future: _session,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const AppSplash();
+      }
+      return snapshot.data == true ? const MainShell() : const OnboardingPage();
+    },
+  );
 }

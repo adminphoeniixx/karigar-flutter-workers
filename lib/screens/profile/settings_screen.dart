@@ -8,11 +8,56 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool dark = false, alerts = true;
+  String selectedLocale = 'en';
+  bool languageSaving = false;
+  static const supportedLanguages = [
+    ('en', 'English', 'English'),
+    ('hi', 'हिन्दी', 'Hindi'),
+    ('ta', 'தமிழ்', 'Tamil'),
+    ('te', 'తెలుగు', 'Telugu'),
+    ('bn', 'বাংলা', 'Bengali'),
+    ('mr', 'मराठी', 'Marathi'),
+  ];
 
   @override
   void initState() {
     super.initState();
     dark = appThemeMode.value == ThemeMode.dark;
+    _loadLocale();
+  }
+
+  Future<void> _loadLocale() async {
+    try {
+      final me = await AuthService().fetchMe();
+      if (mounted) setState(() => selectedLocale = me.user.locale);
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  String get selectedLanguageName => supportedLanguages
+      .firstWhere((item) => item.$1 == selectedLocale, orElse: () => supportedLanguages.first)
+      .$3;
+
+  Future<void> _setLanguage(String locale) async {
+    if (languageSaving || locale == selectedLocale) {
+      if (locale == selectedLocale && mounted) Navigator.pop(context);
+      return;
+    }
+    setState(() => languageSaving = true);
+    try {
+      final result = await WorkerApiService().updateLocale(locale);
+      if (!mounted) return;
+      setState(() => selectedLocale = result.locale);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Language changed to $selectedLanguageName.')),
+      );
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) setState(() => languageSaving = false);
+    }
   }
 
   void _setDark(bool value) {
@@ -20,7 +65,25 @@ class _SettingsPageState extends State<SettingsPage> {
     appThemeMode.value = value ? ThemeMode.dark : ThemeMode.light;
   }
 
-  void _languages() => showModalBottomSheet(
+  Future<void> _logout() async {
+    try {
+      await AuthService().logout();
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const OnboardingPage()),
+        (_) => false,
+      );
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    }
+  }
+
+  void _legacyLanguages() => showModalBottomSheet(
     context: context,
     showDragHandle: true,
     builder: (context) => Padding(
@@ -68,6 +131,65 @@ class _SettingsPageState extends State<SettingsPage> {
     ),
   );
 
+  void _languages() => showModalBottomSheet(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (sheetContext) => SizedBox(
+      height: MediaQuery.sizeOf(sheetContext).height * .56,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Choose language',
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Pick your preferred app language.',
+              style: TextStyle(color: muted, fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            Expanded(
+              child: ListView.separated(
+                itemCount: supportedLanguages.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (_, index) {
+                  final language = supportedLanguages[index];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(
+                        color: language.$1 == selectedLocale
+                            ? brand
+                            : sheetContext.borderColor,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    title: Text(
+                      language.$2,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(language.$3),
+                    trailing: language.$1 == selectedLocale
+                        ? const Icon(LucideIcons.check, color: brand)
+                        : null,
+                    onTap: languageSaving
+                        ? null
+                        : () => _setLanguage(language.$1),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -91,7 +213,12 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
         ),
-        MenuRow(LucideIcons.languages, 'Language', 'English', _languages),
+        MenuRow(
+          LucideIcons.languages,
+          'Language',
+          selectedLanguageName,
+          _languages,
+        ),
         MenuRow(
           LucideIcons.moon,
           'Dark theme',
@@ -145,11 +272,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            onPressed: () => Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const OnboardingPage()),
-              (_) => false,
-            ),
+            onPressed: _logout,
             icon: const Icon(LucideIcons.logOut),
             label: const Text('Log out'),
           ),

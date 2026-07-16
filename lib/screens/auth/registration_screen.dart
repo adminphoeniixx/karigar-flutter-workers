@@ -9,8 +9,21 @@ class RegistrationPage extends StatefulWidget {
 class _RegistrationPageState extends State<RegistrationPage> {
   int step = 0;
   String? gender;
+  String? selectedState;
+  String? selectedCity;
+  List<String> states = [];
+  List<String> cities = [];
+  bool loadingStates = false;
+  bool loadingCities = false;
+  bool locating = false;
+  double? latitude;
+  double? longitude;
+  final workerApi = WorkerApiService();
+  final nameController = TextEditingController();
+  bool submitting = false;
   String education = '10th Pass';
-  final selected = <String>{'Tamil', 'Hindi'};
+  final selectedLanguages = <String>{'Tamil', 'Hindi'};
+  final selectedSkills = <String>{};
   static const skills = [
     'Plumbing',
     'Pipe Fitting',
@@ -35,6 +48,126 @@ class _RegistrationPageState extends State<RegistrationPage> {
     'Marathi',
     'Bengali',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStates();
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadStates() async {
+    setState(() => loadingStates = true);
+    try {
+      final reference = await workerApi.reference();
+      if (mounted) setState(() => states = reference.states);
+    } on ApiException catch (error) {
+      if (mounted) _showError(error.message);
+    } finally {
+      if (mounted) setState(() => loadingStates = false);
+    }
+  }
+
+  Future<void> _loadCities(String state) async {
+    setState(() {
+      selectedState = state;
+      selectedCity = null;
+      cities = [];
+      loadingCities = true;
+    });
+    try {
+      final result = await workerApi.cities(state);
+      if (mounted && selectedState == state) {
+        setState(() => cities = result);
+      }
+    } on ApiException catch (error) {
+      if (mounted) _showError(error.message);
+    } finally {
+      if (mounted && selectedState == state) {
+        setState(() => loadingCities = false);
+      }
+    }
+  }
+
+  Future<void> _useCurrentLocation() async {
+    if (locating) return;
+    setState(() => locating = true);
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        _showError('Please turn on device location.');
+        await Geolocator.openLocationSettings();
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _showError('Location permission is required to detect your city.');
+        if (permission == LocationPermission.deniedForever) {
+          await Geolocator.openAppSettings();
+        }
+        return;
+      }
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      final places = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      if (places.isEmpty) throw Exception('Address not found');
+      final place = places.first;
+      final detectedState = place.administrativeArea?.trim();
+      final detectedCity = (place.locality?.trim().isNotEmpty == true
+              ? place.locality
+              : place.subAdministrativeArea)
+          ?.trim();
+      final matchingState = states.cast<String?>().firstWhere(
+        (item) => item!.toLowerCase() == detectedState?.toLowerCase(),
+        orElse: () => null,
+      );
+      if (matchingState == null) {
+        _showError('Could not match your detected state. Please select it manually.');
+        return;
+      }
+      final allCities = await workerApi.cities(matchingState);
+      final matchingCity = allCities.cast<String?>().firstWhere(
+        (item) => item!.toLowerCase() == detectedCity?.toLowerCase(),
+        orElse: () => null,
+      );
+      if (!mounted) return;
+      setState(() {
+        latitude = position.latitude;
+        longitude = position.longitude;
+        selectedState = matchingState;
+        cities = allCities;
+        selectedCity = matchingCity;
+      });
+      if (matchingCity == null) {
+        _showError('State detected. Please select the nearest city.');
+      }
+    } catch (_) {
+      if (mounted) _showError('Unable to detect location. Please try again.');
+    } finally {
+      if (mounted) setState(() => locating = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -121,11 +254,46 @@ class _RegistrationPageState extends State<RegistrationPage> {
     ),
   );
 
-  void _finish() => Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (_) => const MainShell()),
-    (_) => false,
-  );
+  Future<void> _finish() async {
+    if (submitting) return;
+    final missing = <String>[
+      if (nameController.text.trim().isEmpty) 'name',
+      if (gender == null) 'gender',
+      if (selectedState == null) 'state',
+      if (selectedCity == null) 'city',
+      if (selectedLanguages.isEmpty) 'language',
+      if (selectedSkills.isEmpty) 'skill/category',
+    ];
+    if (missing.isNotEmpty) {
+      _showError('Please select: ${missing.join(', ')}.');
+      return;
+    }
+    setState(() => submitting = true);
+    try {
+      await workerApi.updateProfile({
+        'name': nameController.text.trim(),
+        'gender': gender!.toLowerCase(),
+        'state': selectedState,
+        'city': selectedCity,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        'spoken_languages': selectedLanguages.toList(),
+        'education': education,
+        'skills': selectedSkills.toList(),
+        'available': true,
+      });
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainShell()),
+        (_) => false,
+      );
+    } on ApiException catch (error) {
+      if (mounted) _showError(error.message);
+    } finally {
+      if (mounted) setState(() => submitting = false);
+    }
+  }
 
   List<Widget> _stepContent() {
     final heads = [
@@ -167,7 +335,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
     if (step == 0) {
       out.addAll([
         const FieldLabel('Full name'),
-        const TextField(
+        TextField(
+          controller: nameController,
           decoration: InputDecoration(hintText: 'e.g. Rakesh Kumar'),
         ),
         const SizedBox(height: 16),
@@ -195,36 +364,46 @@ class _RegistrationPageState extends State<RegistrationPage> {
             backgroundColor: context.brandTint,
             side: BorderSide.none,
           ),
-          onPressed: () {},
+          onPressed: locating ? null : _useCurrentLocation,
           icon: const Icon(LucideIcons.locateFixed),
-          label: const Text('Use my current location'),
+          label: Text(locating ? 'Detecting location...' : 'Use my current location'),
         ),
         const SizedBox(height: 16),
         const FieldLabel('State'),
         DropdownButtonFormField<String>(
-          initialValue: null,
-          hint: const Text('Select state'),
-          items: [
-            'Tamil Nadu',
-            'Kerala',
-            'Karnataka',
-            'Maharashtra',
-            'Delhi',
-          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (_) {},
+          isExpanded: true,
+          menuMaxHeight: 420,
+          initialValue: selectedState,
+          hint: Text(loadingStates ? 'Loading states...' : 'Select state'),
+          items: states
+              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .toList(),
+          onChanged: loadingStates
+              ? null
+              : (value) {
+                  if (value != null) _loadCities(value);
+                },
         ),
         const SizedBox(height: 14),
         const FieldLabel('City / District'),
         DropdownButtonFormField<String>(
-          initialValue: null,
-          hint: const Text('Select city'),
-          items: [
-            'Chennai',
-            'Coimbatore',
-            'Madurai',
-            'Salem',
-          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (_) {},
+          isExpanded: true,
+          menuMaxHeight: 420,
+          key: ValueKey(selectedState),
+          initialValue: selectedCity,
+          hint: Text(
+            selectedState == null
+                ? 'Select state first'
+                : loadingCities
+                ? 'Loading cities...'
+                : 'Select city',
+          ),
+          items: cities
+              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .toList(),
+          onChanged: selectedState == null || loadingCities
+              ? null
+              : (value) => setState(() => selectedCity = value),
         ),
         const SizedBox(height: 14),
         const FieldLabel('How far can you travel?'),
@@ -244,9 +423,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
               .map(
                 (e) => FilterChip(
                   label: Text(e),
-                  selected: selected.contains(e),
+                  selected: selectedLanguages.contains(e),
                   onSelected: (v) =>
-                      setState(() => v ? selected.add(e) : selected.remove(e)),
+                      setState(() => v ? selectedLanguages.add(e) : selectedLanguages.remove(e)),
                 ),
               )
               .toList(),
@@ -341,7 +520,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
             'Driving',
             'Housekeeping',
           ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (_) {},
+          onChanged: (value) {
+            if (value != null) {
+              setState(() => selectedSkills.add(value));
+            }
+          },
         ),
         const SizedBox(height: 14),
         const FieldLabel('Your skills'),
@@ -352,9 +535,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
               .map(
                 (e) => FilterChip(
                   label: Text(e),
-                  selected: selected.contains(e),
+                  selected: selectedSkills.contains(e),
                   onSelected: (v) =>
-                      setState(() => v ? selected.add(e) : selected.remove(e)),
+                      setState(() => v ? selectedSkills.add(e) : selectedSkills.remove(e)),
                 ),
               )
               .toList(),
