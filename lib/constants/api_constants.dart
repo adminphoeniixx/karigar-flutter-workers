@@ -23,6 +23,7 @@ class ApiConstants {
   static const reviews = '/worker/reviews';
   static const dashboard = '/worker/dashboard';
   static const locale = '/locale';
+  static const deviceTokens = '/device-tokens';
 
   static String job(int jobId) => '$jobs/$jobId';
   static String applyToJob(int jobId) => '$jobs/$jobId/apply';

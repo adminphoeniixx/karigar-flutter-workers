@@ -74,7 +74,12 @@ class _HomeTabState extends State<HomeTab> {
     setState(() => available = value);
     try {
       final saved = await WorkerApiService().setAvailability(value);
-      if (mounted) setState(() => available = saved);
+      if (mounted) {
+        setState(() => available = saved);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(saved ? 'You are now available for work.' : 'Availability turned off.'),
+        ));
+      }
     } on ApiException catch (error) {
       if (mounted) {
         setState(() => available = previous);

@@ -20,6 +20,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
   double? longitude;
   final workerApi = WorkerApiService();
   final nameController = TextEditingController();
+  final emailController = TextEditingController();
+  final experienceController = TextEditingController();
+  final wageController = TextEditingController();
+  final panController = TextEditingController();
+  final aadhaarController = TextEditingController();
+  File? panDoc, aadhaarDoc;
+  int travelRadiusKm = 15;
   bool submitting = false;
   String education = '10th Pass';
   final selectedLanguages = <String>{'Tamil', 'Hindi'};
@@ -58,7 +65,23 @@ class _RegistrationPageState extends State<RegistrationPage> {
   @override
   void dispose() {
     nameController.dispose();
+    emailController.dispose();
+    experienceController.dispose();
+    wageController.dispose();
+    panController.dispose();
+    aadhaarController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickKycDocument(bool isPan) async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 90);
+    if (picked == null) return;
+    final file = File(picked.path);
+    if (await file.length() > 4 * 1024 * 1024) {
+      _showError('Document must be 4 MB or smaller.');
+      return;
+    }
+    if (mounted) setState(() => isPan ? panDoc = file : aadhaarDoc = file);
   }
 
   Future<void> _loadStates() async {
@@ -272,17 +295,37 @@ class _RegistrationPageState extends State<RegistrationPage> {
     try {
       await workerApi.updateProfile({
         'name': nameController.text.trim(),
+        if (emailController.text.trim().isNotEmpty)
+          'email': emailController.text.trim(),
         'gender': gender!.toLowerCase(),
         'state': selectedState,
         'city': selectedCity,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
+        'travel_radius_km': travelRadiusKm,
         'spoken_languages': selectedLanguages.toList(),
         'education': education,
         'skills': selectedSkills.toList(),
+        'experience_years': int.tryParse(experienceController.text) ?? 0,
+        if (num.tryParse(wageController.text) != null)
+          'expected_wage': num.parse(wageController.text),
+        'wage_type': 'daily',
         'available': true,
       });
+      final pan = panController.text.trim().toUpperCase();
+      final aadhaar = aadhaarController.text.replaceAll(RegExp(r'\D'), '');
+      final hasAnyKyc = pan.isNotEmpty || aadhaar.isNotEmpty || panDoc != null || aadhaarDoc != null;
+      if (hasAnyKyc) {
+        if (!RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$').hasMatch(pan) ||
+            aadhaar.length != 12 || panDoc == null || aadhaarDoc == null) {
+          throw ApiException('Complete all KYC fields or use Skip for now.', statusCode: 422);
+        }
+        await workerApi.submitKyc(pan: pan, aadhaar: aadhaar, panDoc: panDoc!, aadhaarDoc: aadhaarDoc!);
+      }
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile created successfully. You can submit KYC from your profile.')),
+      );
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const MainShell()),
@@ -338,6 +381,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
         TextField(
           controller: nameController,
           decoration: InputDecoration(hintText: 'e.g. Rakesh Kumar'),
+        ),
+        const SizedBox(height: 16),
+        const FieldLabel('Email (optional)'),
+        TextField(
+          controller: emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(hintText: 'you@example.com', helperText: 'Get job & application updates by email.'),
         ),
         const SizedBox(height: 16),
         const FieldLabel('Gender'),
@@ -407,10 +457,16 @@ class _RegistrationPageState extends State<RegistrationPage> {
         ),
         const SizedBox(height: 14),
         const FieldLabel('How far can you travel?'),
-        const Wrap(
+        Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: [Tag('Within 5 km'), Tag('Within 15 km'), Tag('Anywhere')],
+          children: [(5, 'Within 5 km'), (15, 'Within 15 km'), (100, 'Anywhere')]
+              .map((item) => ChoiceChip(
+                    label: Text(item.$2),
+                    selected: travelRadiusKm == item.$1,
+                    onSelected: (_) => setState(() => travelRadiusKm = item.$1),
+                  ))
+              .toList(),
         ),
       ]);
     }
@@ -548,7 +604,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           style: TextStyle(color: muted, fontSize: 12),
         ),
         const SizedBox(height: 18),
-        const Row(
+        Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
@@ -557,6 +613,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 children: [
                   FieldLabel('Experience'),
                   TextField(
+                    controller: experienceController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       hintText: '0',
@@ -573,6 +630,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 children: [
                   FieldLabel('Expected wage'),
                   TextField(
+                    controller: wageController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       prefixText: '₹ ',
@@ -590,18 +648,35 @@ class _RegistrationPageState extends State<RegistrationPage> {
     if (step == 5) {
       out.addAll([
         const FieldLabel('Aadhaar number'),
-        const TextField(
+        TextField(
+          controller: aadhaarController,
           keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(12)],
           decoration: InputDecoration(hintText: '1234 5678 9012'),
         ),
         const SizedBox(height: 14),
         const FieldLabel('PAN number'),
-        const TextField(decoration: InputDecoration(hintText: 'ABCDE1234F')),
+        TextField(
+          controller: panController,
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: [LengthLimitingTextInputFormatter(10)],
+          decoration: const InputDecoration(hintText: 'ABCDE1234F'),
+        ),
         const SizedBox(height: 14),
-        const UploadTile(
+        UploadTile(
           'Upload Aadhaar & PAN photo\nJPG / PNG / PDF · max 5MB each',
           LucideIcons.upload,
           dashed: true,
+          onTap: () => _pickKycDocument(false),
+        ),
+        const SizedBox(height: 10),
+        UploadTile(
+          panDoc == null
+              ? 'Upload PAN photo\nJPG / PNG · max 4MB'
+              : panDoc!.path.split(Platform.pathSeparator).last,
+          LucideIcons.upload,
+          dashed: true,
+          onTap: () => _pickKycDocument(true),
         ),
         const SizedBox(height: 10),
         const Row(

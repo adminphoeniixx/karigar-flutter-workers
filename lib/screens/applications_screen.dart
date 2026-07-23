@@ -93,6 +93,34 @@ class _ApplicationsTabState extends State<ApplicationsTab> {
     comment.dispose();
   }
 
+  Future<void> _contact(ApplicationModel application) async {
+    final job = application.job;
+    if (job == null) return;
+    try {
+      final detail = await WorkerApiService().fetchJob(job.id);
+      if (!mounted) return;
+      final phone = detail.contactPhone;
+      if (phone == null || phone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Employer contact is not available yet.')),
+        );
+        return;
+      }
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Contact employer'),
+          content: SelectableText(phone, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          actions: [
+            FilledButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Done')),
+          ],
+        ),
+      );
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('My Applications')),
@@ -147,6 +175,7 @@ class _ApplicationsTabState extends State<ApplicationsTab> {
                                 application: application,
                                 onWithdraw: () => _withdraw(application),
                                 onReview: () => _review(application),
+                                onContact: () => _contact(application),
                               )).toList(),
                             ),
                     ),
@@ -157,9 +186,9 @@ class _ApplicationsTabState extends State<ApplicationsTab> {
 }
 
 class _ApiApplicationCard extends StatelessWidget {
-  const _ApiApplicationCard({required this.application, required this.onWithdraw, required this.onReview});
+  const _ApiApplicationCard({required this.application, required this.onWithdraw, required this.onReview, required this.onContact});
   final ApplicationModel application;
-  final VoidCallback onWithdraw, onReview;
+  final VoidCallback onWithdraw, onReview, onContact;
 
   @override
   Widget build(BuildContext context) {
@@ -188,18 +217,109 @@ class _ApiApplicationCard extends StatelessWidget {
             Wrap(spacing: 12, runSpacing: 6, children: [
               Meta(LucideIcons.mapPin, job?.locationLabel ?? ''),
               Meta(LucideIcons.indianRupee, job?.wageLabel ?? '', bold: true),
-              Meta(LucideIcons.calendarDays, application.createdAgo),
+              Meta(LucideIcons.calendarDays, 'Applied ${application.createdAgo}'),
             ]),
+            if (accepted || application.trackingSteps.any((step) => step.key == 'shortlisted' && step.state == 'done')) ...[
+              const SizedBox(height: 9),
+              const Text('★ Shortlisted by employer', style: TextStyle(color: Color(0xFF047857), fontSize: 12, fontWeight: FontWeight.w600)),
+            ],
+            if (application.trackingSteps.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _ApplicationTracker(steps: application.trackingSteps, applicationStatus: status),
+            ],
             if (pending) ...[
               const SizedBox(height: 12),
               SizedBox(width: double.infinity, child: OutlinedButton(onPressed: onWithdraw, child: const Text('Withdraw'))),
             ] else if (accepted) ...[
               const SizedBox(height: 12),
-              SizedBox(width: double.infinity, child: OutlinedButton(onPressed: onReview, child: const Text('Leave review'))),
+              Row(children: [
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(backgroundColor: brand, minimumSize: const Size.fromHeight(44)),
+                    onPressed: onContact,
+                    child: const Text('Contact employer'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                    onPressed: onReview,
+                    child: const Text('Leave review'),
+                  ),
+                ),
+              ]),
             ],
           ]),
         ),
       ),
-    );
-  }
+  );
+}
+}
+
+class _ApplicationTracker extends StatelessWidget {
+  const _ApplicationTracker({required this.steps, required this.applicationStatus});
+  final List<TrackingStepModel> steps;
+  final String applicationStatus;
+
+  static const labels = {
+    'applied': 'Applied',
+    'review': 'Under review',
+    'shortlisted': 'Shortlisted',
+    'decision': 'Decision',
+  };
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      border: Border.all(color: context.borderColor),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Application status', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+        const SizedBox(height: 10),
+        ...steps.indexed.map((entry) {
+          final index = entry.$1;
+          final step = entry.$2;
+          final done = step.state == 'done' || applicationStatus == 'accepted';
+          final current = step.state == 'current' && applicationStatus != 'accepted';
+          final rejected = step.state == 'rejected' && applicationStatus != 'accepted';
+          final activeColor = rejected ? const Color(0xFFE11D48) : done ? const Color(0xFF10B981) : current ? brand : muted;
+          var label = labels[step.key] ?? step.key;
+          if (step.key == 'decision' && applicationStatus == 'accepted') {
+            label = 'Selected 🎉';
+          }
+          if (step.key == 'decision' && step.result?.isNotEmpty == true) {
+            label = switch (step.result) {
+              'accepted' => 'Selected 🎉',
+              'rejected' => 'Not selected',
+              'withdrawn' => 'Withdrawn',
+              _ => '${step.result![0].toUpperCase()}${step.result!.substring(1)}',
+            };
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(children: [
+                Container(
+                  width: 20, height: 20,
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: done || current || rejected ? activeColor : Colors.transparent, border: Border.all(color: activeColor, width: 2)),
+                  child: Icon(rejected ? Icons.close : done ? Icons.check : current ? Icons.circle : null, size: 12, color: Colors.white),
+                ),
+                if (index < steps.length - 1) Container(width: 2, height: 22, color: done ? activeColor : context.borderColor),
+              ]),
+              const SizedBox(width: 9),
+              Expanded(child: Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: done ? activeColor : step.state == 'upcoming' || step.state == 'skipped' ? muted : activeColor)),
+              )),
+            ],
+          );
+        }),
+      ],
+    ),
+  );
 }

@@ -27,11 +27,13 @@ class _JobsTabState extends State<JobsTab> {
   Future<void> _loadReference() async {
     try {
       final reference = await WorkerApiService().reference();
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         states = reference.states;
         skills = reference.skills;
         categories = ['All', ...reference.jobCategories];
       });
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => error = e.message);
     }
@@ -65,7 +67,12 @@ class _JobsTabState extends State<JobsTab> {
       filterSkill = result['skill'];
       cat = result['category'] ?? 'All';
     });
-    _load();
+    await _load();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Job filters applied successfully.')),
+      );
+    }
   }
 
   Future<void> _load() async {

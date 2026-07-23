@@ -8,6 +8,7 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final name = TextEditingController();
+  final email = TextEditingController();
   final phone = TextEditingController();
   final experience = TextEditingController();
   final bio = TextEditingController();
@@ -17,7 +18,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String? education, wageType, state, city;
   bool available = true, loading = true, saving = false;
   bool uploadingAvatar = false;
+  bool locating = false;
   String? avatarUrl;
+  double? latitude, longitude;
+  int travelRadiusKm = 15;
 
   @override
   void initState() {
@@ -38,12 +42,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (!mounted) return;
       setState(() {
         name.text = data['name']?.toString() ?? '';
+        email.text = data['email']?.toString() ?? '';
         phone.text = data['phone']?.toString() ?? '';
         experience.text = data['experience_years']?.toString() ?? '';
         bio.text = data['bio']?.toString() ?? '';
         wage.text = data['expected_wage']?.toString() ?? '';
         upi.text = data['payout_upi']?.toString() ?? '';
         avatarUrl = data['avatar_url']?.toString();
+        latitude = (data['latitude'] as num?)?.toDouble();
+        longitude = (data['longitude'] as num?)?.toDouble();
+        travelRadiusKm = (data['travel_radius_km'] as num?)?.toInt() ?? 15;
         skills = (data['skills'] as List? ?? []).map((e) => e.toString()).toList();
         languages = (data['spoken_languages'] as List? ?? []).map((e) => e.toString()).toList();
         available = data['available'] == true;
@@ -77,6 +85,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       final values = <String, dynamic>{
         'name': name.text.trim(),
+        if (email.text.trim().isNotEmpty) 'email': email.text.trim(),
         'skills': skills,
         'experience_years': int.tryParse(experience.text) ?? 0,
         'education': education,
@@ -86,11 +95,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
         'wage_type': wageType,
         'state': state,
         'city': city,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        'travel_radius_km': travelRadiusKm,
         'available': available,
         'payout_upi': upi.text.trim(),
       }..removeWhere((key, value) => value == null);
       await WorkerApiService().updateProfile(values);
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully.')),
+        );
+        Navigator.pop(context, true);
+      }
     } on ApiException catch (error) {
       if (mounted) _error(error.message);
     } finally {
@@ -146,11 +163,47 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  Future<void> _pinCurrentLocation() async {
+    if (locating) return;
+    setState(() => locating = true);
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        _error('Please turn on device location.');
+        await Geolocator.openLocationSettings();
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        _error('Location permission is required to pin your location.');
+        if (permission == LocationPermission.deniedForever) await Geolocator.openAppSettings();
+        return;
+      }
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      if (!mounted) return;
+      setState(() {
+        latitude = position.latitude;
+        longitude = position.longitude;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location pinned successfully. Save profile to update it.')),
+      );
+    } catch (_) {
+      if (mounted) _error('Unable to get your current location. Please try again.');
+    } finally {
+      if (mounted) setState(() => locating = false);
+    }
+  }
+
   void _error(String message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 
   @override
   void dispose() {
-    for (final item in [name, phone, experience, bio, wage, upi]) { item.dispose(); }
+    for (final item in [name, email, phone, experience, bio, wage, upi]) { item.dispose(); }
     super.dispose();
   }
 
@@ -208,6 +261,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
               const FieldLabel('Full name'),
               TextField(controller: name),
               const SizedBox(height: 14),
+              const FieldLabel('Email'),
+              TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(hintText: 'you@example.com')),
+              const SizedBox(height: 14),
               const FieldLabel('Mobile number'),
               TextField(controller: phone, enabled: false),
               const SizedBox(height: 14),
@@ -260,6 +316,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 hint: const Text('Select city'),
                 items: cities.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                 onChanged: (value) => setState(() => city = value),
+              ),
+              const SizedBox(height: 14),
+              const FieldLabel('Pin your location'),
+              MapBox(
+                onTap: locating ? null : _pinCurrentLocation,
+                label: locating
+                    ? 'Detecting location...'
+                    : latitude == null || longitude == null
+                        ? 'Tap to use current location'
+                        : '${latitude!.toStringAsFixed(5)}, ${longitude!.toStringAsFixed(5)}',
+              ),
+              const SizedBox(height: 6),
+              Text(
+                latitude == null ? 'Tap the map to pin your exact location.' : 'Pinned coordinates will be used to match nearby jobs.',
+                style: const TextStyle(color: muted, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              const FieldLabel('Travel radius'),
+              Wrap(
+                spacing: 8,
+                children: [(5, '5 km'), (15, '15 km'), (30, '30 km'), (100, 'Anywhere')]
+                    .map((item) => ChoiceChip(
+                          label: Text(item.$2),
+                          selected: travelRadiusKm == item.$1,
+                          onSelected: (_) => setState(() => travelRadiusKm = item.$1),
+                        ))
+                    .toList(),
               ),
               const SectionTitle('Payout'),
               const FieldLabel('UPI ID'),

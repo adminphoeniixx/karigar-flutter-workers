@@ -149,16 +149,20 @@ class JobPageModel {
 }
 
 class JobDetailModel {
-  const JobDetailModel({required this.job, required this.isSaved, required this.canApply, this.application});
+  const JobDetailModel({required this.job, required this.isSaved, required this.canApply, required this.employerRating, this.application, this.contactPhone});
   final ApiJobModel job;
   final bool isSaved, canApply;
   final ApplicationModel? application;
+  final RatingModel employerRating;
+  final String? contactPhone;
   factory JobDetailModel.fromJson(Json json) {
     final meta = jsonMap(json['meta']);
     return JobDetailModel(
       job: ApiJobModel.fromJson(jsonMap(json['data'])),
       isSaved: jsonBool(meta['is_saved']),
       canApply: jsonBool(meta['can_apply']),
+      employerRating: RatingModel.fromJson(jsonMap(meta['employer_rating'])),
+      contactPhone: jsonMap(json['data'])['contact_phone']?.toString(),
       application: meta['application'] is Map
           ? ApplicationModel.fromJson(jsonMap(meta['application']))
           : null,
@@ -167,16 +171,34 @@ class JobDetailModel {
 }
 
 class ApplicationModel {
-  const ApplicationModel({required this.id, required this.status, required this.statusLabel, required this.createdAgo, this.job});
+  const ApplicationModel({required this.id, required this.status, required this.statusLabel, required this.createdAgo, this.job, this.statusChangedAt, this.trackingSteps = const []});
   final int id;
   final String status, statusLabel, createdAgo;
   final ApiJobModel? job;
+  final String? statusChangedAt;
+  final List<TrackingStepModel> trackingSteps;
   factory ApplicationModel.fromJson(Json json) => ApplicationModel(
     id: jsonInt(json['id']),
     status: json['status']?.toString() ?? '',
     statusLabel: json['status_label']?.toString() ?? json['status']?.toString() ?? '',
     createdAgo: json['created_ago']?.toString() ?? '',
     job: json['job'] is Map ? ApiJobModel.fromJson(jsonMap(json['job'])) : null,
+    statusChangedAt: json['status_changed_at']?.toString(),
+    trackingSteps: jsonList(json['tracking_steps'])
+        .map((e) => TrackingStepModel.fromJson(jsonMap(e)))
+        .toList(),
+  );
+}
+
+class TrackingStepModel {
+  const TrackingStepModel({required this.key, required this.state, this.at, this.result});
+  final String key, state;
+  final String? at, result;
+  factory TrackingStepModel.fromJson(Json json) => TrackingStepModel(
+    key: json['key']?.toString() ?? '',
+    state: json['state']?.toString() ?? 'upcoming',
+    at: json['at']?.toString(),
+    result: json['result']?.toString(),
   );
 }
 

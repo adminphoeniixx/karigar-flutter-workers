@@ -69,6 +69,9 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       await AuthService().logout();
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logged out successfully.')),
+      );
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const OnboardingPage()),
@@ -83,53 +86,35 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _legacyLanguages() => showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    builder: (context) => Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Choose language',
-            style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Pick your preferred app language · English, हिन्दी, தமிழ் & more',
-            style: TextStyle(color: muted, fontSize: 12),
-          ),
-          const SizedBox(height: 14),
-          ...[
-            ('English', 'English'),
-            ('हिन्दी', 'Hindi'),
-            ('தமிழ்', 'Tamil'),
-            ('తెలుగు', 'Telugu'),
-            ('বাংলা', 'Bengali'),
-          ].map(
-            (e) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-              shape: RoundedRectangleBorder(
-                side: BorderSide(color: context.borderColor),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              title: Text(
-                e.$1,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(e.$2),
-              trailing: e.$2 == 'English'
-                  ? const Icon(LucideIcons.check, color: brand)
-                  : null,
-              onTap: () => Navigator.pop(context),
-            ),
+  Future<void> _deleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete account permanently?'),
+        content: const Text('Your profile and account data will be permanently deleted. This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE11D48)),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete account'),
           ),
         ],
       ),
-    ),
-  );
+    );
+    if (confirmed != true) return;
+    try {
+      await AuthService().deleteAccount();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your account has been deleted.')),
+      );
+      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const OnboardingPage()), (_) => false);
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
 
   void _languages() => showModalBottomSheet(
     context: context,
@@ -261,6 +246,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         MenuRow(LucideIcons.fileText, 'Terms & Privacy', '', () {}),
         MenuRow(LucideIcons.circleHelp, 'Help & Support', '', () {}),
+        MenuRow(
+          LucideIcons.trash2,
+          'Delete account',
+          'Permanently remove your account',
+          _deleteAccount,
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 30, 16, 0),
           child: OutlinedButton.icon(

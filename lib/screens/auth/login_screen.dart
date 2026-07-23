@@ -9,15 +9,15 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool otp = false;
   final phone = TextEditingController();
-  final otpFields = List.generate(4, (_) => TextEditingController());
+  final otpController = TextEditingController();
+  final otpFocusNode = FocusNode();
   final auth = AuthController();
 
   @override
   void dispose() {
     phone.dispose();
-    for (final controller in otpFields) {
-      controller.dispose();
-    }
+    otpController.dispose();
+    otpFocusNode.dispose();
     auth.dispose();
     super.dispose();
   }
@@ -34,12 +34,19 @@ class _LoginPageState extends State<LoginPage> {
       _message('Enter a valid 10-digit mobile number.');
       return;
     }
-    if (await auth.sendOtp(number) && mounted) setState(() => otp = true);
+    if (await auth.sendOtp(number) && mounted) {
+      otpController.clear();
+      setState(() => otp = true);
+      _message('OTP sent successfully.');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) otpFocusNode.requestFocus();
+      });
+    }
     if (mounted && auth.error != null) _message(auth.error!);
   }
 
   Future<void> _verifyOtp() async {
-    final code = otpFields.map((e) => e.text).join();
+    final code = otpController.text;
     if (code.length != 4) {
       _message('Enter the 4-digit OTP.');
       return;
@@ -195,30 +202,51 @@ class _LoginPageState extends State<LoginPage> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(
-              4,
-              (index) => SizedBox(
-                width: 46,
-                child: TextField(
-                  controller: otpFields[index],
-                  textAlign: TextAlign.center,
-                  maxLength: 1,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (value) {
-                    if (value.isNotEmpty && index < otpFields.length - 1) {
-                      FocusScope.of(context).nextFocus();
-                    }
-                  },
-                  decoration: const InputDecoration(
-                    counterText: '',
-                    contentPadding: EdgeInsets.symmetric(vertical: 16),
+          Stack(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(4, (index) {
+                  final value = otpController.text;
+                  return Container(
+                    width: 46,
+                    height: 56,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: context.fieldColor,
+                      border: Border.all(color: context.borderColor),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      index < value.length ? value[index] : '',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 0,
+                  child: TextField(
+                    controller: otpController,
+                    focusNode: otpFocusNode,
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.oneTimeCode],
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(4),
+                    ],
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (_) => _verifyOtp(),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
           const SizedBox(height: 10),
           const Center(

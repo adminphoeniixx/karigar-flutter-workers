@@ -10,6 +10,11 @@ class JobDetailPage extends StatefulWidget {
 class _JobDetailPageState extends State<JobDetailPage> {
   bool saved = false, applied = false;
   bool loading = false;
+  bool detailLoading = true;
+  bool canApply = true;
+  RatingModel employerRating = const RatingModel(average: 0, count: 0);
+  String? contactPhone;
+  Job? detailJob;
 
   @override
   void initState() {
@@ -18,15 +23,24 @@ class _JobDetailPageState extends State<JobDetailPage> {
   }
 
   Future<void> _loadDetail() async {
-    if (widget.job.id == 0) return;
+    if (widget.job.id == 0) {
+      if (mounted) setState(() => detailLoading = false);
+      return;
+    }
     try {
       final response = await WorkerApiService().fetchJob(widget.job.id);
       if (mounted) setState(() {
+        detailJob = Job.fromApi(response.job);
         saved = response.isSaved;
         applied = response.application != null;
+        canApply = response.canApply;
+        employerRating = response.employerRating;
+        contactPhone = response.contactPhone;
       });
     } on ApiException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) setState(() => detailLoading = false);
     }
   }
 
@@ -35,7 +49,12 @@ class _JobDetailPageState extends State<JobDetailPage> {
     setState(() => loading = true);
     try {
       final result = await WorkerApiService().toggleSaved(widget.job.id);
-      if (mounted) setState(() => saved = result);
+      if (mounted) {
+        setState(() => saved = result);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(result ? 'Job saved successfully.' : 'Job removed from saved jobs.'),
+        ));
+      }
     } on ApiException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
@@ -43,15 +62,21 @@ class _JobDetailPageState extends State<JobDetailPage> {
     }
   }
 
-  Future<void> _apply() async {
+  Future<void> _apply(String? coverNote, num? expectedWage) async {
     if (widget.job.id == 0 || loading) return;
     setState(() => loading = true);
     try {
-      await WorkerApiService().apply(widget.job.id);
+      final response = await WorkerApiService().apply(
+        widget.job.id,
+        coverNote: coverNote,
+        expectedWage: expectedWage,
+      );
       if (!mounted) return;
       Navigator.pop(context);
       setState(() => applied = true);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Application submitted!')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(response['message']?.toString() ?? 'Application submitted!'),
+      ));
     } on ApiException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
@@ -60,7 +85,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
   }
   @override
   Widget build(BuildContext context) {
-    final j = widget.job;
+    final j = detailJob ?? widget.job;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -78,7 +103,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
           ),
         ],
       ),
-      body: ListView(
+      body: detailLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Tag(j.category),
@@ -89,7 +116,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
           ),
           const SizedBox(height: 4),
           Text(
-            '${j.employer} · ★ ${j.rating} (12 reviews)',
+            '${j.employer} · ★ ${employerRating.average.toStringAsFixed(1)} (${employerRating.count} reviews)',
             style: const TextStyle(color: muted, fontSize: 12),
           ),
           const SizedBox(height: 16),
@@ -175,15 +202,19 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: contactPhone == null
+                      ? null
+                      : () => ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Employer contact: $contactPhone')),
+                          ),
                   child: const Icon(LucideIcons.phone, color: brand),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: PrimaryButton(
-                  applied ? 'Applied ✓' : 'Apply Now',
-                  onPressed: applied
+                  applied ? 'Applied ✓' : canApply ? 'Apply Now' : 'Applications closed',
+                  onPressed: applied || !canApply
                       ? null
                       : () => showModalBottomSheet(
                           context: context,

@@ -114,9 +114,28 @@ class FilterSheet extends StatelessWidget {
   );
 }
 
-class ApplySheet extends StatelessWidget {
+class ApplySheet extends StatefulWidget {
   const ApplySheet({super.key, required this.onApply});
-  final VoidCallback onApply;
+  final Future<void> Function(String? coverNote, num? expectedWage) onApply;
+  @override
+  State<ApplySheet> createState() => _ApplySheetState();
+}
+
+class _ApplySheetState extends State<ApplySheet> {
+  final wage = TextEditingController();
+  final note = TextEditingController();
+  bool submitting = false;
+
+  @override
+  void dispose() { wage.dispose(); note.dispose(); super.dispose(); }
+
+  Future<void> _submit() async {
+    if (submitting) return;
+    setState(() => submitting = true);
+    await widget.onApply(note.text.trim().isEmpty ? null : note.text.trim(), num.tryParse(wage.text.trim()));
+    if (mounted) setState(() => submitting = false);
+  }
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.fromLTRB(
@@ -140,7 +159,8 @@ class ApplySheet extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         const FieldLabel('Your expected wage (optional)'),
-        const TextField(
+        TextField(
+          controller: wage,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
             prefixText: '₹ ',
@@ -150,7 +170,8 @@ class ApplySheet extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         const FieldLabel('Message to employer (optional)'),
-        const TextField(
+        TextField(
+          controller: note,
           maxLines: 3,
           decoration: InputDecoration(hintText: "I'm available from tomorrow…"),
         ),
@@ -181,7 +202,7 @@ class ApplySheet extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        PrimaryButton('Submit Application', onPressed: onApply),
+        PrimaryButton(submitting ? 'Submitting...' : 'Submit Application', onPressed: submitting ? null : _submit),
       ],
     ),
   );
@@ -453,36 +474,61 @@ class MiniStat extends StatelessWidget {
 }
 
 class MapBox extends StatelessWidget {
-  const MapBox({super.key});
+  const MapBox({super.key, this.onTap, this.label});
+  final VoidCallback? onTap;
+  final String? label;
   @override
-  Widget build(BuildContext context) => Container(
-    height: 150,
-    decoration: BoxDecoration(
-      color: context.isDark ? const Color(0xFF22262D) : const Color(0xFFF2F5F6),
-      border: Border.all(color: context.borderColor),
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: const Center(
-      child: Icon(LucideIcons.mapPin, color: brand, size: 38),
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(14),
+    child: Container(
+      height: 150,
+      decoration: BoxDecoration(
+        color: context.isDark ? const Color(0xFF22262D) : const Color(0xFFF2F5F6),
+        border: Border.all(color: context.borderColor),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(LucideIcons.mapPin, color: brand, size: 38),
+            if (label != null) ...[
+              const SizedBox(height: 7),
+              Text(label!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            ],
+          ],
+        ),
+      ),
     ),
   );
 }
 
 class UploadTile extends StatelessWidget {
-  const UploadTile(this.text, this.icon, {super.key, this.dashed = false});
+  const UploadTile(
+    this.text,
+    this.icon, {
+    super.key,
+    this.dashed = false,
+    this.onTap,
+  });
   final String text;
   final IconData icon;
   final bool dashed;
+  final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: context.surfaceColor,
-      border: Border.all(color: context.borderColor),
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: dashed
-        ? Column(
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(14),
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surfaceColor,
+        border: Border.all(color: context.borderColor),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: dashed
+          ? Column(
             children: [
               Icon(icon, color: brand),
               const SizedBox(height: 6),
@@ -497,7 +543,7 @@ class UploadTile extends StatelessWidget {
               ),
             ],
           )
-        : Row(
+          : Row(
             children: [
               Icon(icon, color: brand),
               const SizedBox(width: 12),
@@ -509,7 +555,8 @@ class UploadTile extends StatelessWidget {
               ),
               const Icon(LucideIcons.chevronRight, color: muted),
             ],
-          ),
+            ),
+    ),
   );
 }
 

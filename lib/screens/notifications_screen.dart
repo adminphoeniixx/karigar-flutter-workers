@@ -48,6 +48,9 @@ class _NotificationsTabState extends State<NotificationsTab> {
       widget.onUnreadChanged?.call(
         notes.where((note) => note['read'] != true).length,
       );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notification marked as read.')),
+      );
     } on ApiException catch (error) {
       if (mounted) _error(error.message);
     }
@@ -63,6 +66,9 @@ class _NotificationsTabState extends State<NotificationsTab> {
           }
         });
         widget.onUnreadChanged?.call(0);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All notifications marked as read.')),
+        );
       }
     } on ApiException catch (error) {
       if (mounted) _error(error.message);

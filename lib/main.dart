@@ -6,11 +6,15 @@ import 'dart:io';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+// ignore: depend_on_referenced_packages
+import 'package:firebase_core/firebase_core.dart';
 
 import 'controllers/auth_controller.dart';
+import 'firebase_options.dart';
 import 'models/api_models.dart';
 import 'services/api_client.dart';
 import 'services/auth_service.dart';
+import 'services/push_notification_service.dart';
 import 'services/worker_api_service.dart';
 
 part 'models/job.dart';
@@ -35,6 +39,14 @@ part 'widgets/common_widgets.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiClient.instance.initialize();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await PushNotificationService.instance.initialize();
+  } catch (error) {
+    debugPrint('[FCM] Firebase initialization failed: $error');
+  }
   runApp(const KarigarApp());
 }
 
