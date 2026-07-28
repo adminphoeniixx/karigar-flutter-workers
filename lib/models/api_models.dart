@@ -106,10 +106,13 @@ class ApiJobModel {
     required this.description,
     required this.createdAgo,
     required this.employer,
+    this.latitude,
+    this.longitude,
   });
   final int id, vacancies;
   final String title, category, city, state, locationLabel, wageLabel;
   final String description, createdAgo;
+  final double? latitude, longitude;
   final List<String> skills;
   final EmployerModel employer;
   factory ApiJobModel.fromJson(Json json) => ApiJobModel(
@@ -124,6 +127,8 @@ class ApiJobModel {
     vacancies: jsonInt(json['vacancies']),
     description: json['description']?.toString() ?? '',
     createdAgo: json['created_ago']?.toString() ?? '',
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
     employer: EmployerModel.fromJson(jsonMap(json['employer'])),
   );
 }

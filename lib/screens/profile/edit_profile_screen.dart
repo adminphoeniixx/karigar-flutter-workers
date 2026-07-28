@@ -321,6 +321,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
               const FieldLabel('Pin your location'),
               MapBox(
                 onTap: locating ? null : _pinCurrentLocation,
+                latitude: latitude,
+                longitude: longitude,
+                address: [city, state].whereType<String>().join(', '),
+                onLocationChanged: (position) => setState(() {
+                  latitude = position.latitude;
+                  longitude = position.longitude;
+                }),
                 label: locating
                     ? 'Detecting location...'
                     : latitude == null || longitude == null

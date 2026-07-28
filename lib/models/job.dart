@@ -12,8 +12,11 @@ class Job {
     this.skills,
     this.description, {
     this.id = 0,
+    this.latitude,
+    this.longitude,
   });
   final int id;
+  final double? latitude, longitude;
   final String title, category, employer, city, wage, rating, description;
   final int openings;
   final List<String> skills;
@@ -32,6 +35,8 @@ class Job {
       (json['skills'] as List? ?? []).map((e) => e.toString()).toList(),
       json['description']?.toString() ?? '',
       id: (json['id'] as num?)?.toInt() ?? 0,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 
@@ -46,6 +51,8 @@ class Job {
     job.skills,
     job.description,
     id: job.id,
+    latitude: job.latitude,
+    longitude: job.longitude,
   );
 }
 

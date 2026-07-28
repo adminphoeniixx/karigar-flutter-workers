@@ -118,28 +118,18 @@ class _SavedPageState extends State<SavedPage> {
                               ),
                               child: const Icon(LucideIcons.trash2, color: Colors.white),
                             ),
-                            child: Stack(
-                              children: [
-                                JobCard(job),
-                                Positioned.fill(
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(16),
-                                      onTap: () => _open(item),
-                                    ),
-                                  ),
+                            child: JobCard(
+                              job,
+                              onTap: () => _open(item),
+                              trailing: IconButton(
+                                visualDensity: VisualDensity.compact,
+                                tooltip: 'Remove saved job',
+                                onPressed: () => _remove(item),
+                                icon: const Icon(
+                                  LucideIcons.bookmarkCheck,
+                                  color: brand,
                                 ),
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: IconButton(
-                                    tooltip: 'Remove saved job',
-                                    onPressed: () => _remove(item),
-                                    icon: const Icon(LucideIcons.bookmarkCheck, color: brand),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           );
                         },

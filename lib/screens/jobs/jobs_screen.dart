@@ -293,17 +293,22 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
 }
 
 class JobCard extends StatelessWidget {
-  const JobCard(this.job, {super.key});
+  const JobCard(this.job, {super.key, this.trailing, this.onTap});
   final Job job;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => JobDetailPage(job)),
-      ),
+      onTap:
+          onTap ??
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => JobDetailPage(job)),
+          ),
       child: AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,8 +317,20 @@ class JobCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Tag(job.category),
-                if (job.id > 0)
-                  const StatusPill('New', Color(0xFFECFDF5), Color(0xFF047857)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (job.id > 0)
+                      const StatusPill(
+                        'New',
+                        Color(0xFFECFDF5),
+                        Color(0xFF047857),
+                      ),
+                    if (job.id > 0 && trailing != null)
+                      const SizedBox(width: 6),
+                    if (trailing != null) trailing!,
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 9),

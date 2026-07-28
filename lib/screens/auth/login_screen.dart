@@ -39,6 +39,12 @@ class _LoginPageState extends State<LoginPage> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _changeNumber() {
+    otpController.clear();
+    otpFocusNode.unfocus();
+    setState(() => otp = false);
+  }
+
   Future<void> _sendOtp() async {
     final number = phone.text.replaceAll(RegExp(r'\D'), '');
     if (number.length != 10) {
@@ -78,19 +84,26 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      toolbarHeight: 58,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const Border(),
-      leading: IconButton(
-        onPressed: () => Navigator.maybePop(context),
-        icon: const Icon(LucideIcons.arrowLeft),
+  Widget build(BuildContext context) => PopScope(
+    canPop: !otp,
+    onPopInvokedWithResult: (didPop, result) {
+      if (!didPop && otp) _changeNumber();
+    },
+    child: Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 58,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        shape: const Border(),
+        leading: IconButton(
+          onPressed: otp
+              ? _changeNumber
+              : () => Navigator.maybePop(context),
+          icon: const Icon(LucideIcons.arrowLeft),
+        ),
       ),
-    ),
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-      children: [
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+        children: [
         Align(
           alignment: Alignment.centerLeft,
           child: Container(
@@ -208,7 +221,7 @@ class _LoginPageState extends State<LoginPage> {
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               TextButton(
-                onPressed: () => setState(() => otp = false),
+                onPressed: _changeNumber,
                 child: const Text('Change'),
               ),
             ],
@@ -281,7 +294,8 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ],
-      ],
+        ],
+      ),
     ),
   );
 }

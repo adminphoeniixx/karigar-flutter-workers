@@ -463,6 +463,21 @@ class _RegistrationPageState extends State<RegistrationPage> {
               : (value) => setState(() => selectedCity = value),
         ),
         const SizedBox(height: 14),
+        const FieldLabel('Pin your exact location'),
+        MapBox(
+          onTap: locating ? null : _useCurrentLocation,
+          latitude: latitude,
+          longitude: longitude,
+          address: [selectedCity, selectedState].whereType<String>().join(', '),
+          onLocationChanged: (position) => setState(() {
+            latitude = position.latitude;
+            longitude = position.longitude;
+          }),
+          label: latitude == null
+              ? 'Tap map or use current location'
+              : '${latitude!.toStringAsFixed(5)}, ${longitude!.toStringAsFixed(5)}',
+        ),
+        const SizedBox(height: 14),
         const FieldLabel('How far can you travel?'),
         Wrap(
           spacing: 8,

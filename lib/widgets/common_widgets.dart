@@ -127,12 +127,19 @@ class _ApplySheetState extends State<ApplySheet> {
   bool submitting = false;
 
   @override
-  void dispose() { wage.dispose(); note.dispose(); super.dispose(); }
+  void dispose() {
+    wage.dispose();
+    note.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     if (submitting) return;
     setState(() => submitting = true);
-    await widget.onApply(note.text.trim().isEmpty ? null : note.text.trim(), num.tryParse(wage.text.trim()));
+    await widget.onApply(
+      note.text.trim().isEmpty ? null : note.text.trim(),
+      num.tryParse(wage.text.trim()),
+    );
     if (mounted) setState(() => submitting = false);
   }
 
@@ -261,10 +268,7 @@ class PrimaryButton extends StatelessWidget {
     child: AnimatedSwitcher(
       duration: const Duration(milliseconds: 180),
       child: isLoading
-          ? const Text(
-              'Please wait…',
-              key: ValueKey('loader'),
-            )
+          ? const Text('Please wait…', key: ValueKey('loader'))
           : Text(text, key: const ValueKey('label')),
     ),
   );
@@ -487,32 +491,174 @@ class MiniStat extends StatelessWidget {
   );
 }
 
-class MapBox extends StatelessWidget {
-  const MapBox({super.key, this.onTap, this.label});
+class MapBox extends StatefulWidget {
+  const MapBox({
+    super.key,
+    this.onTap,
+    this.label,
+    this.latitude,
+    this.longitude,
+    this.address,
+    this.onLocationChanged,
+  });
   final VoidCallback? onTap;
   final String? label;
+  final double? latitude, longitude;
+  final String? address;
+  final ValueChanged<LatLng>? onLocationChanged;
+
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
+  State<MapBox> createState() => _MapBoxState();
+}
+
+class _MapBoxState extends State<MapBox> {
+  static const _india = LatLng(20.5937, 78.9629);
+  late LatLng _position;
+  final MapController _controller = MapController();
+  double _zoom = 14;
+
+  @override
+  void initState() {
+    super.initState();
+    _position = _coordinates ?? _india;
+    if (_coordinates == null && (widget.address?.trim().isNotEmpty ?? false)) {
+      _geocodeAddress();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MapBox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final coordinates = _coordinates;
+    if (coordinates != null &&
+        (coordinates.latitude != _position.latitude ||
+            coordinates.longitude != _position.longitude)) {
+      _position = coordinates;
+      _controller.move(coordinates, 15);
+    } else if (coordinates == null && oldWidget.address != widget.address) {
+      _geocodeAddress();
+    }
+  }
+
+  LatLng? get _coordinates =>
+      widget.latitude == null || widget.longitude == null
+      ? null
+      : LatLng(widget.latitude!, widget.longitude!);
+
+  Future<void> _geocodeAddress() async {
+    try {
+      final matches = await locationFromAddress(widget.address!);
+      if (matches.isNotEmpty && mounted) {
+        final position = LatLng(
+          matches.first.latitude,
+          matches.first.longitude,
+        );
+        setState(() {
+          _position = position;
+        });
+        _controller.move(position, 13);
+      }
+    } catch (_) {
+      // Keep the India overview when an address cannot be resolved.
+    }
+  }
+
+  void _select(LatLng position) {
+    if (widget.onLocationChanged == null) return;
+    setState(() => _position = position);
+    _controller.move(position, _zoom);
+    widget.onLocationChanged!(position);
+  }
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(14),
-    child: Container(
+    child: SizedBox(
       height: 150,
-      decoration: BoxDecoration(
-        color: context.isDark ? const Color(0xFF22262D) : const Color(0xFFF2F5F6),
-        border: Border.all(color: context.borderColor),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(LucideIcons.mapPin, color: brand, size: 38),
-            if (label != null) ...[
-              const SizedBox(height: 7),
-              Text(label!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      child: Stack(
+        children: [
+          FlutterMap(
+            mapController: _controller,
+            options: MapOptions(
+              initialCenter: _position,
+              initialZoom: _coordinates == null && widget.address == null
+                  ? 4.2
+                  : 14,
+              minZoom: 3,
+              maxZoom: 18,
+              onPositionChanged: (camera, hasGesture) {
+                _zoom = camera.zoom;
+                if (hasGesture && widget.onLocationChanged != null) {
+                  _position = camera.center;
+                  widget.onLocationChanged!(camera.center);
+                  setState(() {});
+                }
+              },
+              onTap: (_, point) => _select(point),
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.karigar_app',
+                maxNativeZoom: 19,
+              ),
+              const RichAttributionWidget(
+                attributions: [
+                  TextSourceAttribution('OpenStreetMap contributors'),
+                ],
+              ),
             ],
-          ],
-        ),
+          ),
+          const Center(
+            child: IgnorePointer(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 42),
+                child: Icon(
+                  Icons.location_pin,
+                  size: 52,
+                  color: brand,
+                  shadows: [Shadow(color: Colors.white, blurRadius: 6)],
+                ),
+              ),
+            ),
+          ),
+          if (widget.onTap != null)
+            Positioned(
+              right: 8,
+              top: 8,
+              child: FloatingActionButton.small(
+                heroTag: null,
+                onPressed: widget.onTap,
+                backgroundColor: context.surfaceColor,
+                foregroundColor: brand,
+                child: const Icon(LucideIcons.locateFixed),
+              ),
+            ),
+          if (widget.label != null)
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: context.surfaceColor.withValues(alpha: .92),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  widget.label!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     ),
   );
@@ -543,32 +689,32 @@ class UploadTile extends StatelessWidget {
       ),
       child: dashed
           ? Column(
-            children: [
-              Icon(icon, color: brand),
-              const SizedBox(height: 6),
-              Text(
-                text,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  height: 1.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          )
-          : Row(
-            children: [
-              Icon(icon, color: brand),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
+              children: [
+                Icon(icon, color: brand),
+                const SizedBox(height: 6),
+                Text(
                   text,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const Icon(LucideIcons.chevronRight, color: muted),
-            ],
+              ],
+            )
+          : Row(
+              children: [
+                Icon(icon, color: brand),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    text,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const Icon(LucideIcons.chevronRight, color: muted),
+              ],
             ),
     ),
   );

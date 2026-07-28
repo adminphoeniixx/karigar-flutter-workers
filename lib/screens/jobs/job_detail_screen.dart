@@ -95,6 +95,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         title: const Text('Job Details', style: TextStyle(fontSize: 16)),
         actions: [
           IconButton(
+            tooltip: saved ? 'Remove saved job' : 'Save job',
             onPressed: loading ? null : _toggleSaved,
             icon: loading
                 ? const SizedBox(
@@ -103,7 +104,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Icon(
-                    LucideIcons.bookmark,
+                    saved
+                        ? LucideIcons.bookmarkCheck
+                        : LucideIcons.bookmark,
                     color: saved ? brand : context.foregroundColor,
                   ),
           ),
@@ -154,7 +157,11 @@ class _JobDetailPageState extends State<JobDetailPage> {
           const SectionTitle('Perks & benefits'),
           const Wrap(spacing: 8, children: [Tag('Food'), Tag('Accommodation')]),
           const SectionTitle('Location'),
-          const MapBox(),
+          MapBox(
+            latitude: j.latitude,
+            longitude: j.longitude,
+            address: j.city,
+          ),
           const SizedBox(height: 8),
           Text(
             '📍 ${j.city} · approx 4.2 km away',
