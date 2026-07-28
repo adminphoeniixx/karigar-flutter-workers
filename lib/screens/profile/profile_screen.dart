@@ -92,7 +92,7 @@ class _ProfileTabState extends State<ProfileTab> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Profile'),
+      title: Text(context.tr('Profile')),
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 12),

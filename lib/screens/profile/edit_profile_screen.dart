@@ -348,7 +348,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
               const FieldLabel('UPI ID'),
               TextField(controller: upi, decoration: const InputDecoration(prefixIcon: Icon(LucideIcons.indianRupee, size: 18))),
               const SizedBox(height: 20),
-              PrimaryButton(saving ? 'Saving...' : 'Save Profile', onPressed: saving ? null : _save),
+              PrimaryButton(
+                'Save Profile',
+                isLoading: saving,
+                onPressed: _save,
+              ),
             ],
           ),
   );

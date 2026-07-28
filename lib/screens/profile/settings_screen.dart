@@ -29,7 +29,10 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadLocale() async {
     try {
       final me = await AuthService().fetchMe();
-      if (mounted) setState(() => selectedLocale = me.user.locale);
+      if (mounted) {
+        setState(() => selectedLocale = me.user.locale);
+        appLocale.value = Locale(me.user.locale);
+      }
     } on ApiException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     }
@@ -49,6 +52,10 @@ class _SettingsPageState extends State<SettingsPage> {
       final result = await WorkerApiService().updateLocale(locale);
       if (!mounted) return;
       setState(() => selectedLocale = result.locale);
+      appLocale.value = Locale(result.locale);
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString('app_locale', result.locale);
+      if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Language changed to $selectedLanguageName.')),
@@ -128,14 +135,14 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Choose language',
-              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+            Text(
+              context.tr('Choose language'),
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Pick your preferred app language.',
-              style: TextStyle(color: muted, fontSize: 12),
+            Text(
+              context.tr('Pick your preferred app language.'),
+              style: const TextStyle(color: muted, fontSize: 12),
             ),
             const SizedBox(height: 14),
             Expanded(
@@ -182,15 +189,15 @@ class _SettingsPageState extends State<SettingsPage> {
         onPressed: () => Navigator.maybePop(context),
         icon: const Icon(LucideIcons.arrowLeft),
       ),
-      title: const Text('Settings', style: TextStyle(fontSize: 16)),
+      title: Text(context.tr('Settings'), style: const TextStyle(fontSize: 16)),
     ),
     body: ListView(
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 18, 20, 6),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
           child: Text(
-            'PREFERENCES',
-            style: TextStyle(
+            context.tr('Preferences').toUpperCase(),
+            style: const TextStyle(
               color: muted,
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -200,13 +207,13 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         MenuRow(
           LucideIcons.languages,
-          'Language',
+          context.tr('Language'),
           selectedLanguageName,
           _languages,
         ),
         MenuRow(
           LucideIcons.moon,
-          'Dark theme',
+          context.tr('Dark theme'),
           'Switch to a darker screen',
           () => _setDark(!dark),
           trailing: Switch(
@@ -217,7 +224,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         MenuRow(
           LucideIcons.bell,
-          'Job alerts',
+          context.tr('Job alerts'),
           'Get notified about new jobs',
           () => setState(() => alerts = !alerts),
           trailing: Switch(
@@ -226,11 +233,11 @@ class _SettingsPageState extends State<SettingsPage> {
             onChanged: (v) => setState(() => alerts = v),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 22, 20, 6),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 6),
           child: Text(
-            'ACCOUNT & SECURITY',
-            style: TextStyle(
+            context.tr('Account & security').toUpperCase(),
+            style: const TextStyle(
               color: muted,
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -240,15 +247,15 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         MenuRow(
           LucideIcons.lockKeyhole,
-          'Login & security',
+          context.tr('Login & security'),
           'OTP · device sessions',
           () {},
         ),
-        MenuRow(LucideIcons.fileText, 'Terms & Privacy', '', () {}),
-        MenuRow(LucideIcons.circleHelp, 'Help & Support', '', () {}),
+        MenuRow(LucideIcons.fileText, context.tr('Terms & Privacy'), '', () {}),
+        MenuRow(LucideIcons.circleHelp, context.tr('Help & Support'), '', () {}),
         MenuRow(
           LucideIcons.trash2,
-          'Delete account',
+          context.tr('Delete account'),
           'Permanently remove your account',
           _deleteAccount,
         ),
@@ -265,7 +272,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             onPressed: _logout,
             icon: const Icon(LucideIcons.logOut),
-            label: const Text('Log out'),
+            label: Text(context.tr('Log out')),
           ),
         ),
         const SizedBox(height: 16),

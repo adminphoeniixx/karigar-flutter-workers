@@ -14,7 +14,18 @@ class _LoginPageState extends State<LoginPage> {
   final auth = AuthController();
 
   @override
+  void initState() {
+    super.initState();
+    auth.addListener(_onAuthChanged);
+  }
+
+  void _onAuthChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    auth.removeListener(_onAuthChanged);
     phone.dispose();
     otpController.dispose();
     otpFocusNode.dispose();
@@ -181,7 +192,8 @@ class _LoginPageState extends State<LoginPage> {
           PrimaryButton(
             'Send OTP',
             height: 46,
-            onPressed: auth.loading ? null : _sendOtp,
+            isLoading: auth.loading,
+            onPressed: _sendOtp,
           ),
         ] else ...[
           const Text(
@@ -258,7 +270,8 @@ class _LoginPageState extends State<LoginPage> {
           const SizedBox(height: 18),
           PrimaryButton(
             'Verify & Continue',
-            onPressed: auth.loading ? null : _verifyOtp,
+            isLoading: auth.loading,
+            onPressed: _verifyOtp,
           ),
           const SizedBox(height: 16),
           const Center(

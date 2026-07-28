@@ -80,7 +80,11 @@ class _KycPageState extends State<KycPage> {
           const SizedBox(height: 14), const FieldLabel('Upload Aadhaar'),
           UploadTile(aadhaarDoc == null ? 'Tap to upload\nJPG / PNG · max 4MB' : aadhaarDoc!.path.split(Platform.pathSeparator).last, LucideIcons.upload, dashed: true, onTap: () => _pick(false)),
           const SizedBox(height: 16),
-          PrimaryButton(submitting ? 'Submitting...' : 'Submit for Verification', onPressed: submitting ? null : _submit),
+          PrimaryButton(
+            'Submit for Verification',
+            isLoading: submitting,
+            onPressed: _submit,
+          ),
         ],
       ],
     ),

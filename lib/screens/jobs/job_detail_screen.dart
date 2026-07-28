@@ -96,10 +96,16 @@ class _JobDetailPageState extends State<JobDetailPage> {
         actions: [
           IconButton(
             onPressed: loading ? null : _toggleSaved,
-            icon: Icon(
-              LucideIcons.bookmark,
-              color: saved ? brand : context.foregroundColor,
-            ),
+            icon: loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    LucideIcons.bookmark,
+                    color: saved ? brand : context.foregroundColor,
+                  ),
           ),
         ],
       ),
@@ -214,6 +220,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
               Expanded(
                 child: PrimaryButton(
                   applied ? 'Applied ✓' : canApply ? 'Apply Now' : 'Applications closed',
+                  isLoading: loading,
                   onPressed: applied || !canApply
                       ? null
                       : () => showModalBottomSheet(

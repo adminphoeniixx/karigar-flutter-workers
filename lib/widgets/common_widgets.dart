@@ -202,7 +202,11 @@ class _ApplySheetState extends State<ApplySheet> {
           ),
         ),
         const SizedBox(height: 14),
-        PrimaryButton(submitting ? 'Submitting...' : 'Submit Application', onPressed: submitting ? null : _submit),
+        PrimaryButton(
+          'Submit Application',
+          isLoading: submitting,
+          onPressed: _submit,
+        ),
       ],
     ),
   );
@@ -236,10 +240,12 @@ class PrimaryButton extends StatelessWidget {
     super.key,
     required this.onPressed,
     this.height = 50,
+    this.isLoading = false,
   });
   final String text;
   final VoidCallback? onPressed;
   final double height;
+  final bool isLoading;
   @override
   Widget build(BuildContext context) => FilledButton(
     style: FilledButton.styleFrom(
@@ -251,8 +257,16 @@ class PrimaryButton extends StatelessWidget {
         fontWeight: FontWeight.w600,
       ),
     ),
-    onPressed: onPressed,
-    child: Text(text),
+    onPressed: isLoading ? null : onPressed,
+    child: AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      child: isLoading
+          ? const Text(
+              'Please wait…',
+              key: ValueKey('loader'),
+            )
+          : Text(text, key: const ValueKey('label')),
+    ),
   );
 }
 

@@ -64,28 +64,28 @@ class _MainShellState extends State<MainShell> {
               children: [
                 _NavItem(
                   LucideIcons.home,
-                  'Home',
+                  context.tr('Home'),
                   0,
                   tab,
                   _selectTab,
                 ),
                 _NavItem(
                   LucideIcons.briefcaseBusiness,
-                  'Jobs',
+                  context.tr('Jobs'),
                   1,
                   tab,
                   _selectTab,
                 ),
                 _NavItem(
                   LucideIcons.fileCheck,
-                  'Applied',
+                  context.tr('Applied'),
                   2,
                   tab,
                   _selectTab,
                 ),
                 _NavItem(
                   LucideIcons.bell,
-                  'Alerts',
+                  context.tr('Alerts'),
                   3,
                   tab,
                   _selectTab,
@@ -93,7 +93,7 @@ class _MainShellState extends State<MainShell> {
                 ),
                 _NavItem(
                   LucideIcons.userRound,
-                  'Profile',
+                  context.tr('Profile'),
                   4,
                   tab,
                   _selectTab,

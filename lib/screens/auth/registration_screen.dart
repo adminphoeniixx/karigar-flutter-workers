@@ -252,8 +252,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: _finish,
-                  child: const Text('Skip for now'),
+                  onPressed: submitting ? null : _finish,
+                  child: submitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Skip for now'),
                 ),
               ),
               const SizedBox(width: 10),
@@ -262,6 +268,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
               flex: step == 5 ? 2 : 1,
               child: PrimaryButton(
                 step == 5 ? 'Finish setup' : 'Continue',
+                isLoading: step == 5 && submitting,
                 onPressed: () {
                   if (step < 5) {
                     setState(() => step++);

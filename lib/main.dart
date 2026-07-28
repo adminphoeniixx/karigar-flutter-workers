@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:io';
@@ -38,6 +40,8 @@ part 'widgets/common_widgets.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final preferences = await SharedPreferences.getInstance();
+  appLocale.value = Locale(preferences.getString('app_locale') ?? 'en');
   await ApiClient.instance.initialize();
   try {
     await Firebase.initializeApp(
@@ -56,7 +60,21 @@ const line = Color(0xFFE9EBEF);
 const ink = Color(0xFF16181D);
 const muted = Color(0xFF6B7280);
 final appThemeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+final appLocale = ValueNotifier<Locale>(const Locale('en'));
 final profileAvatarUrl = ValueNotifier<String?>(null);
+
+const _translations = <String, Map<String, String>>{
+  'hi': {'Home':'होम','Jobs':'नौकरियां','Applied':'आवेदन','Alerts':'सूचनाएं','Profile':'प्रोफ़ाइल','Settings':'सेटिंग्स','Preferences':'प्राथमिकताएं','Language':'भाषा','Dark theme':'डार्क थीम','Job alerts':'नौकरी सूचनाएं','Account & security':'खाता और सुरक्षा','Login & security':'लॉगिन और सुरक्षा','Terms & Privacy':'नियम और गोपनीयता','Help & Support':'सहायता','Delete account':'खाता हटाएं','Log out':'लॉग आउट','Choose language':'भाषा चुनें','Pick your preferred app language.':'ऐप की भाषा चुनें।'},
+  'ta': {'Home':'முகப்பு','Jobs':'வேலைகள்','Applied':'விண்ணப்பங்கள்','Alerts':'அறிவிப்புகள்','Profile':'சுயவிவரம்','Settings':'அமைப்புகள்','Preferences':'விருப்பங்கள்','Language':'மொழி','Dark theme':'இருண்ட தோற்றம்','Job alerts':'வேலை அறிவிப்புகள்','Account & security':'கணக்கு மற்றும் பாதுகாப்பு','Login & security':'உள்நுழைவு மற்றும் பாதுகாப்பு','Terms & Privacy':'விதிமுறைகள் மற்றும் தனியுரிமை','Help & Support':'உதவி','Delete account':'கணக்கை நீக்கு','Log out':'வெளியேறு','Choose language':'மொழியைத் தேர்ந்தெடுக்கவும்','Pick your preferred app language.':'உங்களுக்கு விருப்பமான மொழியைத் தேர்ந்தெடுக்கவும்.'},
+  'te': {'Home':'హోమ్','Jobs':'ఉద్యోగాలు','Applied':'దరఖాస్తులు','Alerts':'నోటిఫికేషన్లు','Profile':'ప్రొఫైల్','Settings':'సెట్టింగ్‌లు','Preferences':'ప్రాధాన్యతలు','Language':'భాష','Dark theme':'డార్క్ థీమ్','Job alerts':'ఉద్యోగ నోటిఫికేషన్లు','Account & security':'ఖాతా మరియు భద్రత','Login & security':'లాగిన్ మరియు భద్రత','Terms & Privacy':'నిబంధనలు మరియు గోప్యత','Help & Support':'సహాయం','Delete account':'ఖాతాను తొలగించండి','Log out':'లాగ్ అవుట్','Choose language':'భాషను ఎంచుకోండి','Pick your preferred app language.':'మీకు నచ్చిన యాప్ భాషను ఎంచుకోండి.'},
+  'bn': {'Home':'হোম','Jobs':'চাকরি','Applied':'আবেদন','Alerts':'বিজ্ঞপ্তি','Profile':'প্রোফাইল','Settings':'সেটিংস','Preferences':'পছন্দসমূহ','Language':'ভাষা','Dark theme':'ডার্ক থিম','Job alerts':'চাকরির বিজ্ঞপ্তি','Account & security':'অ্যাকাউন্ট ও নিরাপত্তা','Login & security':'লগইন ও নিরাপত্তা','Terms & Privacy':'শর্তাবলী ও গোপনীয়তা','Help & Support':'সহায়তা','Delete account':'অ্যাকাউন্ট মুছুন','Log out':'লগ আউট','Choose language':'ভাষা বেছে নিন','Pick your preferred app language.':'আপনার পছন্দের অ্যাপ ভাষা বেছে নিন।'},
+  'mr': {'Home':'मुख्यपृष्ठ','Jobs':'नोकऱ्या','Applied':'अर्ज','Alerts':'सूचना','Profile':'प्रोफाइल','Settings':'सेटिंग्ज','Preferences':'प्राधान्ये','Language':'भाषा','Dark theme':'डार्क थीम','Job alerts':'नोकरी सूचना','Account & security':'खाते आणि सुरक्षा','Login & security':'लॉगिन आणि सुरक्षा','Terms & Privacy':'अटी आणि गोपनीयता','Help & Support':'मदत','Delete account':'खाते हटवा','Log out':'लॉग आउट','Choose language':'भाषा निवडा','Pick your preferred app language.':'तुमची पसंतीची ॲप भाषा निवडा.'},
+};
+
+extension AppTranslations on BuildContext {
+  String tr(String english) =>
+      _translations[appLocale.value.languageCode]?[english] ?? english;
+}
 
 extension AppThemeColors on BuildContext {
   Color get surfaceColor => Theme.of(this).colorScheme.surface;
@@ -77,15 +95,21 @@ extension AppThemeColors on BuildContext {
 class KarigarApp extends StatelessWidget {
   const KarigarApp({super.key});
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
-    valueListenable: appThemeMode,
-    builder: (context, mode, _) => MaterialApp(
+  Widget build(BuildContext context) => ValueListenableBuilder<Locale>(
+    valueListenable: appLocale,
+    builder: (context, locale, _) => ValueListenableBuilder<ThemeMode>(
+      valueListenable: appThemeMode,
+      builder: (context, mode, _) => MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Karigar — Worker App',
       theme: _theme(Brightness.light),
       darkTheme: _theme(Brightness.dark),
       themeMode: mode,
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('hi'), Locale('ta'), Locale('te'), Locale('bn'), Locale('mr')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const AuthGate(),
+    ),
     ),
   );
 
