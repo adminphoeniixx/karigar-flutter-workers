@@ -162,12 +162,30 @@ class JobDetailModel {
   final String? contactPhone;
   factory JobDetailModel.fromJson(Json json) {
     final meta = jsonMap(json['meta']);
+    final data = jsonMap(json['data']);
+    final employer = jsonMap(data['employer']);
+    String? phone;
+    for (final value in [
+      data['contact_phone'],
+      data['phone'],
+      employer['contact_phone'],
+      employer['phone'],
+      meta['contact_phone'],
+      meta['phone'],
+      json['contact_phone'],
+    ]) {
+      final candidate = value?.toString().trim();
+      if (candidate != null && candidate.isNotEmpty) {
+        phone = candidate;
+        break;
+      }
+    }
     return JobDetailModel(
-      job: ApiJobModel.fromJson(jsonMap(json['data'])),
+      job: ApiJobModel.fromJson(data),
       isSaved: jsonBool(meta['is_saved']),
       canApply: jsonBool(meta['can_apply']),
       employerRating: RatingModel.fromJson(jsonMap(meta['employer_rating'])),
-      contactPhone: jsonMap(json['data'])['contact_phone']?.toString(),
+      contactPhone: phone,
       application: meta['application'] is Map
           ? ApplicationModel.fromJson(jsonMap(meta['application']))
           : null,
@@ -176,12 +194,14 @@ class JobDetailModel {
 }
 
 class ApplicationModel {
-  const ApplicationModel({required this.id, required this.status, required this.statusLabel, required this.createdAgo, this.job, this.statusChangedAt, this.trackingSteps = const []});
+  const ApplicationModel({required this.id, required this.status, required this.statusLabel, required this.createdAgo, this.job, this.statusChangedAt, this.trackingSteps = const [], this.interview, this.offer});
   final int id;
   final String status, statusLabel, createdAgo;
   final ApiJobModel? job;
   final String? statusChangedAt;
   final List<TrackingStepModel> trackingSteps;
+  final InterviewModel? interview;
+  final OfferModel? offer;
   factory ApplicationModel.fromJson(Json json) => ApplicationModel(
     id: jsonInt(json['id']),
     status: json['status']?.toString() ?? '',
@@ -192,7 +212,114 @@ class ApplicationModel {
     trackingSteps: jsonList(json['tracking_steps'])
         .map((e) => TrackingStepModel.fromJson(jsonMap(e)))
         .toList(),
+    interview: json['interview'] is Map ? InterviewModel.fromJson(jsonMap(json['interview'])) : null,
+    offer: json['offer'] is Map ? OfferModel.fromJson(jsonMap(json['offer'])) : null,
   );
+}
+
+class InterviewModel {
+  const InterviewModel({required this.atLabel, required this.mode, required this.note});
+  final String atLabel, mode, note;
+  factory InterviewModel.fromJson(Json j) => InterviewModel(atLabel: j['at_label']?.toString() ?? '', mode: j['mode']?.toString() ?? '', note: j['note']?.toString() ?? '');
+}
+
+class OfferModel {
+  const OfferModel({required this.wage, required this.startDate, required this.message});
+  final double wage;
+  final String startDate, message;
+  factory OfferModel.fromJson(Json j) => OfferModel(wage: jsonDouble(j['wage']), startDate: j['start_date']?.toString() ?? '', message: j['message']?.toString() ?? '');
+}
+
+class ResumeModel {
+  const ResumeModel({required this.name, required this.uploadedAgo, required this.characters, required this.maxCharacters});
+  final String name, uploadedAgo;
+  final int characters, maxCharacters;
+  factory ResumeModel.fromJson(Json j) => ResumeModel(name: j['name']?.toString() ?? 'Resume.pdf', uploadedAgo: j['uploaded_ago']?.toString() ?? '', characters: jsonInt(j['characters']), maxCharacters: jsonInt(j['max_characters']));
+}
+
+class PreferencesModel {
+  const PreferencesModel({required this.theme, required this.jobAlerts, required this.messageAlerts});
+  final String theme;
+  final bool jobAlerts, messageAlerts;
+  factory PreferencesModel.fromJson(Json j) => PreferencesModel(theme: j['theme']?.toString() ?? 'system', jobAlerts: jsonBool(j['job_alerts']), messageAlerts: jsonBool(j['message_alerts']));
+}
+
+class ConversationModel {
+  const ConversationModel({required this.id, required this.otherParty, required this.unread, required this.lastMessageAt, this.job});
+  final int id, unread;
+  final String otherParty, lastMessageAt;
+  final ApiJobModel? job;
+  factory ConversationModel.fromJson(Json j) => ConversationModel(
+    id: jsonInt(j['id']), otherParty: jsonMap(j['other_party'])['name']?.toString() ?? 'Employer',
+    unread: jsonInt(j['unread']), lastMessageAt: j['last_message_at']?.toString() ?? '',
+    job: j['job'] is Map ? ApiJobModel.fromJson(jsonMap(j['job'])) : null,
+  );
+}
+
+class MessageModel {
+  const MessageModel({required this.id, required this.body, required this.mine, required this.createdAt});
+  final int id;
+  final String body, createdAt;
+  final bool mine;
+  factory MessageModel.fromJson(Json j, {int? currentUserId}) {
+    final sender = jsonMap(j['sender']);
+    final explicitMine = j.containsKey('mine')
+        ? jsonBool(j['mine'])
+        : j.containsKey('is_mine')
+            ? jsonBool(j['is_mine'])
+            : null;
+    final senderRole = (sender['role'] ?? j['sender_role'] ?? j['sender_type'])
+        ?.toString()
+        .toLowerCase();
+    final senderId = jsonInt(
+      j['sender_id'] ?? j['user_id'] ?? sender['id'],
+    );
+    final sentByCurrentUser = currentUserId != null &&
+        senderId != 0 &&
+        senderId == currentUserId;
+    return MessageModel(
+      id: jsonInt(j['id']),
+      body: j['body']?.toString() ?? '',
+      mine: sentByCurrentUser || (explicitMine ?? senderRole == 'worker'),
+      createdAt: j['created_at']?.toString() ?? '',
+    );
+  }
+
+  MessageModel asMine() =>
+      MessageModel(id: id, body: body, mine: true, createdAt: createdAt);
+}
+
+class ConversationPageModel {
+  const ConversationPageModel({required this.conversations, required this.unreadTotal});
+  final List<ConversationModel> conversations;
+  final int unreadTotal;
+  factory ConversationPageModel.fromJson(Json j) => ConversationPageModel(
+    conversations: jsonList(j['conversations'] ?? j['data']).map((e) => ConversationModel.fromJson(jsonMap(e))).toList(),
+    unreadTotal: jsonInt(j['unread_total']),
+  );
+}
+
+class ConversationDetailModel {
+  const ConversationDetailModel({required this.conversation, required this.messages});
+  final ConversationModel conversation;
+  final List<MessageModel> messages;
+  factory ConversationDetailModel.fromJson(Json j, {int? currentUserId}) =>
+      ConversationDetailModel(
+    conversation: ConversationModel.fromJson(jsonMap(j['conversation'])),
+    messages: jsonList(j['messages'] is Map ? jsonMap(j['messages'])['data'] : j['messages'])
+        .map((e) => MessageModel.fromJson(
+              jsonMap(e),
+              currentUserId: currentUserId,
+            ))
+        .toList(),
+  );
+}
+
+class SessionModel {
+  const SessionModel({required this.id, required this.device, required this.current, required this.lastUsedAgo});
+  final String id, device, lastUsedAgo;
+  final bool current;
+  factory SessionModel.fromJson(Json j) => SessionModel(id: j['id']?.toString() ?? '', device: j['device']?.toString() ?? 'Unknown device', current: jsonBool(j['current']), lastUsedAgo: j['last_used_ago']?.toString() ?? '');
 }
 
 class TrackingStepModel {

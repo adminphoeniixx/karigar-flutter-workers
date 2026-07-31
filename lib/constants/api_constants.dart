@@ -24,6 +24,10 @@ class ApiConstants {
   static const dashboard = '/worker/dashboard';
   static const locale = '/locale';
   static const deviceTokens = '/device-tokens';
+  static const resume = '/worker/resume';
+  static const conversations = '/conversations';
+  static const preferences = '/preferences';
+  static const sessions = '/auth/sessions';
 
   static String job(int jobId) => '$jobs/$jobId';
   static String applyToJob(int jobId) => '$jobs/$jobId/apply';
@@ -35,4 +39,8 @@ class ApiConstants {
   static String readNotification(String notificationId) =>
       '$notifications/$notificationId/read';
   static const readAllNotifications = '$notifications/read-all';
+  static String conversation(int id) => '$conversations/$id';
+  static String conversationMessages(int id) => '$conversations/$id/messages';
+  static String conversationRead(int id) => '$conversations/$id/read';
+  static String session(String token) => '$sessions/$token';
 }

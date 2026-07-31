@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,11 +14,15 @@ class PushNotificationService {
   static final instance = PushNotificationService._();
   static const _registeredTokenKey = 'registered_fcm_token';
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging get _messaging => FirebaseMessaging.instance;
   final DeviceTokenService _deviceTokens = DeviceTokenService();
   StreamSubscription<String>? _tokenRefreshSubscription;
+  Stream<RemoteMessage> get foregroundMessages => Firebase.apps.isEmpty
+      ? const Stream<RemoteMessage>.empty()
+      : FirebaseMessaging.onMessage;
 
   Future<void> initialize() async {
+    if (Firebase.apps.isEmpty) return;
     await _messaging.requestPermission();
     _tokenRefreshSubscription ??= _messaging.onTokenRefresh.listen(
       (token) => _register(token),
@@ -30,7 +35,11 @@ class PushNotificationService {
 
   /// Registers the current FCM token after a login or session restore.
   Future<void> syncToken() async {
-    if (!ApiClient.instance.isAuthenticated || _platform == null) return;
+    if (Firebase.apps.isEmpty ||
+        !ApiClient.instance.isAuthenticated ||
+        _platform == null) {
+      return;
+    }
     try {
       final token = await _messaging.getToken();
       if (token != null && token.isNotEmpty) await _register(token);
@@ -44,6 +53,10 @@ class PushNotificationService {
   Future<void> unregisterToken() async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString(_registeredTokenKey);
+    if (Firebase.apps.isEmpty) {
+      await prefs.remove(_registeredTokenKey);
+      return;
+    }
     try {
       token ??= await _messaging.getToken();
       if (token != null && token.isNotEmpty) {

@@ -2,6 +2,7 @@ import 'dart:io';
 import '../constants/api_constants.dart';
 import '../models/api_models.dart';
 import 'api_client.dart';
+import 'auth_service.dart';
 
 class WorkerApiService {
   WorkerApiService([ApiClient? client]) : _api = client ?? ApiClient.instance;
@@ -94,4 +95,46 @@ class WorkerApiService {
   Future<String> setLocale(String locale) async => (await _api.post(ApiConstants.locale, {'locale': locale}))['locale']?.toString() ?? locale;
   Future<LocaleModel> updateLocale(String locale) async =>
       LocaleModel.fromJson(await _api.post(ApiConstants.locale, {'locale': locale}));
+  Future<ResumeModel?> fetchResume() async {
+    final value = (await _api.get(ApiConstants.resume))['resume'];
+    return value is Map ? ResumeModel.fromJson(jsonMap(value)) : null;
+  }
+  Future<ResumeModel> uploadResume(File file) async =>
+      ResumeModel.fromJson(jsonMap((await _api.multipart(ApiConstants.resume, {}, {'resume': file}))['resume']));
+  Future<void> removeResume() async {
+    await _api.delete(ApiConstants.resume);
+  }
+  Future<PreferencesModel> fetchPreferences() async =>
+      PreferencesModel.fromJson(jsonMap((await _api.get(ApiConstants.preferences))['preferences']));
+  Future<PreferencesModel> updatePreferences(Map<String, dynamic> values) async =>
+      PreferencesModel.fromJson(jsonMap((await _api.patch(ApiConstants.preferences, values))['preferences']));
+  Future<ConversationPageModel> fetchConversations() async =>
+      ConversationPageModel.fromJson(await _api.get(ApiConstants.conversations));
+  Future<ConversationModel> openConversation({required int employerId, required int jobId, String? body}) async =>
+      ConversationModel.fromJson(jsonMap((await _api.post(ApiConstants.conversations, {
+        'employer_id': employerId, 'job_id': jobId, if (body?.trim().isNotEmpty == true) 'body': body!.trim(),
+      }))['conversation']));
+  Future<ConversationDetailModel> fetchConversation(int id) async {
+    final results = await Future.wait<dynamic>([
+      _api.get(ApiConstants.conversation(id)),
+      AuthService(_api).me(),
+    ]);
+    return ConversationDetailModel.fromJson(
+      results[0] as Map<String, dynamic>,
+      currentUserId: (results[1] as UserModel).id,
+    );
+  }
+  Future<MessageModel> sendMessage(int id, String body) async =>
+      MessageModel.fromJson(jsonMap((await _api.post(
+        ApiConstants.conversationMessages(id),
+        {'body': body.trim()},
+      ))['message'])).asMine();
+  Future<void> markConversationRead(int id) async {
+    await _api.post(ApiConstants.conversationRead(id));
+  }
+  Future<List<SessionModel>> fetchSessions() async =>
+      jsonList((await _api.get(ApiConstants.sessions))['sessions']).map((e) => SessionModel.fromJson(jsonMap(e))).toList();
+  Future<void> removeSession(String id) async {
+    await _api.delete(ApiConstants.session(Uri.encodeComponent(id)));
+  }
 }

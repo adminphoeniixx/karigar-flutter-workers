@@ -214,6 +214,8 @@ class _ProfileTabState extends State<ProfileTab> {
                   () => _open(const KycPage()),
                   trailing: StatusPill(stats['kyc_status_label']?.toString() ?? 'Not submitted', const Color(0xFFFFF7ED), const Color(0xFFB45309)),
                 ),
+                MenuRow(LucideIcons.fileText, 'My Resume', 'Improve your application match score', () => _open(const ResumePage())),
+                MenuRow(LucideIcons.messageCircle, 'Messages', 'Chat with employers you applied to', () => _open(const ConversationsPage())),
                 MenuRow(LucideIcons.bookmark, 'Saved Jobs', '${stats['saved_jobs'] ?? 0} saved jobs', () => _open(const SavedPage())),
                 MenuRow(LucideIcons.star, 'Reviews & Ratings', 'View employer reviews', () => _open(const ReviewsPage())),
                 MenuRow(LucideIcons.settings, 'Settings', 'Language, alerts & security', () => _open(const SettingsPage())),

@@ -10,8 +10,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'controllers/auth_controller.dart';
 import 'firebase_options.dart';
@@ -38,6 +41,9 @@ part 'screens/profile/kyc_screen.dart';
 part 'screens/jobs/saved_screen.dart';
 part 'screens/profile/reviews_screen.dart';
 part 'screens/profile/settings_screen.dart';
+part 'screens/profile/resume_screen.dart';
+part 'screens/profile/sessions_screen.dart';
+part 'screens/conversations_screen.dart';
 part 'widgets/common_widgets.dart';
 
 Future<void> main() async {

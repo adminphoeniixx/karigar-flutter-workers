@@ -7,7 +7,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool dark = false, alerts = true;
+  bool dark = false, alerts = true, messageAlerts = true, preferencesLoading = true;
   String selectedLocale = 'en';
   bool languageSaving = false;
   static const supportedLanguages = [
@@ -24,6 +24,25 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     dark = appThemeMode.value == ThemeMode.dark;
     _loadLocale();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final value = await WorkerApiService().fetchPreferences();
+      if (!mounted) return;
+      setState(() {
+        alerts = value.jobAlerts; messageAlerts = value.messageAlerts;
+        appThemeMode.value = switch (value.theme) { 'dark' => ThemeMode.dark, 'light' => ThemeMode.light, _ => ThemeMode.system };
+        dark = value.theme == 'dark';
+      });
+    } on ApiException catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message))); }
+    finally { if (mounted) setState(() => preferencesLoading = false); }
+  }
+
+  Future<void> _savePreference(String key, dynamic value) async {
+    try { await WorkerApiService().updatePreferences({key: value}); }
+    on ApiException catch (e) { if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message))); await _loadPreferences(); } }
   }
 
   Future<void> _loadLocale() async {
@@ -70,6 +89,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _setDark(bool value) {
     setState(() => dark = value);
     appThemeMode.value = value ? ThemeMode.dark : ThemeMode.light;
+    _savePreference('theme', value ? 'dark' : 'light');
   }
 
   Future<void> _logout() async {
@@ -230,8 +250,15 @@ class _SettingsPageState extends State<SettingsPage> {
           trailing: Switch(
             value: alerts,
             activeTrackColor: brand,
-            onChanged: (v) => setState(() => alerts = v),
+            onChanged: preferencesLoading ? null : (v) { setState(() => alerts = v); _savePreference('job_alerts', v); },
           ),
+        ),
+        MenuRow(
+          LucideIcons.messageCircle,
+          'Message alerts',
+          'Get notified about employer messages',
+          () { setState(() => messageAlerts = !messageAlerts); _savePreference('message_alerts', messageAlerts); },
+          trailing: Switch(value: messageAlerts, activeTrackColor: brand, onChanged: preferencesLoading ? null : (v) { setState(() => messageAlerts = v); _savePreference('message_alerts', v); }),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 6),
@@ -249,7 +276,7 @@ class _SettingsPageState extends State<SettingsPage> {
           LucideIcons.lockKeyhole,
           context.tr('Login & security'),
           'OTP · device sessions',
-          () {},
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SessionsPage())),
         ),
         MenuRow(LucideIcons.fileText, context.tr('Terms & Privacy'), '', () {}),
         MenuRow(LucideIcons.circleHelp, context.tr('Help & Support'), '', () {}),

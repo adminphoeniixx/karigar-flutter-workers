@@ -29,7 +29,8 @@ class _JobDetailPageState extends State<JobDetailPage> {
     }
     try {
       final response = await WorkerApiService().fetchJob(widget.job.id);
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         detailJob = Job.fromApi(response.job);
         saved = response.isSaved;
         applied = response.application != null;
@@ -37,6 +38,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         employerRating = response.employerRating;
         contactPhone = response.contactPhone;
       });
+      }
     } on ApiException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
@@ -59,6 +61,27 @@ class _JobDetailPageState extends State<JobDetailPage> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
       if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _callEmployer() async {
+    final phone = contactPhone?.trim();
+    if (phone == null || phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Employer phone number is not available for this job.'),
+        ),
+      );
+      return;
+    }
+    final dialNumber = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    final uri = Uri(scheme: 'tel', path: dialNumber);
+    if (!await launchUrl(uri)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to call $phone on this device.')),
+        );
+      }
     }
   }
 
@@ -215,11 +238,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: contactPhone == null
-                      ? null
-                      : () => ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Employer contact: $contactPhone')),
-                          ),
+                  onPressed: _callEmployer,
                   child: const Icon(LucideIcons.phone, color: brand),
                 ),
               ),

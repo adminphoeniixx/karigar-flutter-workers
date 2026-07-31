@@ -5,6 +5,7 @@ import 'package:karigar_app/main.dart';
 void main() {
   testWidgets('worker onboarding opens mobile login', (tester) async {
     await tester.pumpWidget(const KarigarApp());
+    await tester.pump(const Duration(milliseconds: 1500));
 
     expect(find.text('Find work,\nnear your home.'), findsOneWidget);
     expect(find.text('Get Started'), findsOneWidget);
