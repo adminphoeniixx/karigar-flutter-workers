@@ -28,13 +28,21 @@ class AppSplash extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 22),
-            const Text(
-              'Karigar',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 34,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -.6,
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Super Karigar Worker',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.6,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 7),

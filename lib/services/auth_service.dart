@@ -8,7 +8,7 @@ class AuthService {
   final ApiClient _api;
   Future<int> sendOtp(String phone) async => ((await _api.post(ApiConstants.otpSend, {'phone': phone}))['cooldown'] as num?)?.toInt() ?? 30;
   Future<AuthResult> verifyOtp(String phone, String otp) async {
-    final json = await _api.post(ApiConstants.otpVerify, {'phone': phone, 'otp': otp, 'role': 'worker', 'device_name': 'Karigar Worker App'});
+    final json = await _api.post(ApiConstants.otpVerify, {'phone': phone, 'otp': otp, 'role': 'worker', 'device_name': 'Super Karigar Worker'});
     final result = AuthResult.fromJson(json);
     await _api.setToken(result.token);
     await PushNotificationService.instance.syncToken();

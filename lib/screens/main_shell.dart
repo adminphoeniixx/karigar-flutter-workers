@@ -140,7 +140,7 @@ class _NavItem extends StatelessWidget {
                   Icon(
                     icon,
                     size: 23,
-                    color: active ? brand : const Color(0xFF9AA1AD),
+                    color: active ? brand : muted,
                   ),
                   if (badge != null)
                     Positioned(
@@ -171,7 +171,7 @@ class _NavItem extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  color: active ? brand : const Color(0xFF9AA1AD),
+                  color: active ? brand : muted,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),

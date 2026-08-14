@@ -305,7 +305,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 16),
         const Center(
           child: Text(
-            'Karigar · v1.0.0',
+            'Super Karigar Worker · v1.0.0',
             style: TextStyle(color: muted, fontSize: 12),
           ),
         ),

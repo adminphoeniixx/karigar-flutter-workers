@@ -62,11 +62,13 @@ Future<void> main() async {
   runApp(const KarigarApp());
 }
 
-const brand = Color(0xFFF4470F);
-const bg = Color(0xFFF6F7F9);
-const line = Color(0xFFE9EBEF);
-const ink = Color(0xFF16181D);
-const muted = Color(0xFF6B7280);
+// Warm "Paper & Ink" palette shared with the approved worker-app HTML.
+const brand = Color(0xFFBF3A16);
+const bg = Color(0xFFF4EFE7);
+const card = Color(0xFFFBF8F3);
+const line = Color(0xFFE3DBD0);
+const ink = Color(0xFF1E1712);
+const muted = Color(0xFF6B5F55);
 final appThemeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
 final appLocale = ValueNotifier<Locale>(const Locale('en'));
 final profileAvatarUrl = ValueNotifier<String?>(null);
@@ -187,13 +189,13 @@ extension AppThemeColors on BuildContext {
   Color get fieldColor => Theme.of(this).inputDecorationTheme.fillColor!;
   bool get isDark => Theme.of(this).brightness == Brightness.dark;
   Color get brandTint =>
-      isDark ? const Color(0xFF30221D) : const Color(0xFFFFF3EE);
+      isDark ? const Color(0xFF3A2119) : const Color(0xFFFDF3EE);
   Color get amberTint =>
-      isDark ? const Color(0xFF332719) : const Color(0xFFFFF7ED);
+      isDark ? const Color(0xFF332719) : const Color(0xFFFDF3E3);
   Color get greenTint =>
-      isDark ? const Color(0xFF162A24) : const Color(0xFFECFDF5);
+      isDark ? const Color(0xFF1D2C1B) : const Color(0xFFEEF4EC);
   Color get subduedColor =>
-      isDark ? const Color(0xFF252932) : const Color(0xFFF0F1F4);
+      isDark ? const Color(0xFF2B251F) : const Color(0xFFECE5DA);
 }
 
 class KarigarApp extends StatelessWidget {
@@ -205,7 +207,7 @@ class KarigarApp extends StatelessWidget {
       valueListenable: appThemeMode,
       builder: (context, mode, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Karigar — Worker App',
+        title: 'Super Karigar Worker',
         theme: _theme(Brightness.light),
         darkTheme: _theme(Brightness.dark),
         themeMode: mode,
@@ -226,16 +228,21 @@ class KarigarApp extends StatelessWidget {
 
   ThemeData _theme(Brightness brightness) {
     final dark = brightness == Brightness.dark;
-    final surface = dark ? const Color(0xFF1B1E24) : Colors.white;
-    final canvas = dark ? const Color(0xFF121419) : bg;
-    final border = dark ? const Color(0xFF30343D) : line;
-    final foreground = dark ? const Color(0xFFF5F6F8) : ink;
+    final surface = dark ? const Color(0xFF211B17) : card;
+    final canvas = dark ? const Color(0xFF17120F) : bg;
+    final border = dark ? const Color(0xFF443A32) : line;
+    final foreground = dark ? const Color(0xFFF7F0E8) : ink;
     final scheme = ColorScheme.fromSeed(
       seedColor: brand,
       brightness: brightness,
       primary: brand,
       surface: surface,
       onSurface: foreground,
+      onPrimary: Colors.white,
+      surfaceContainerHighest: dark
+          ? const Color(0xFF2B251F)
+          : const Color(0xFFECE5DA),
+      outline: border,
     );
     return ThemeData(
       useMaterial3: true,
@@ -270,7 +277,9 @@ class KarigarApp extends StatelessWidget {
           horizontal: 14,
           vertical: 13,
         ),
-        hintStyle: const TextStyle(color: Color(0xFF9AA1AD)),
+        hintStyle: TextStyle(
+          color: dark ? const Color(0xFFA99B90) : const Color(0xFF8A7C70),
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: border),
@@ -292,7 +301,18 @@ class KarigarApp extends StatelessWidget {
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
       ),
-      navigationBarTheme: NavigationBarThemeData(backgroundColor: surface),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surface,
+        indicatorColor: dark
+            ? const Color(0xFF3A2119)
+            : const Color(0xFFFDF3EE),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            color: states.contains(WidgetState.selected) ? brand : foreground,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -61,9 +61,11 @@ class _ProfileTabState extends State<ProfileTab> {
       if (picked == null) return;
       final file = File(picked.path);
       if (await file.length() > 2 * 1024 * 1024) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Avatar image must be 2 MB or smaller.')),
         );
+        }
         return;
       }
       setState(() => uploadingAvatar = true);
@@ -77,13 +79,17 @@ class _ProfileTabState extends State<ProfileTab> {
     } on ApiException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     } on MissingPluginException {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Stop the app and run it again to initialize photo picker.')),
       );
+      }
     } on PlatformException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message ?? 'Unable to open photo picker.')),
       );
+      }
     } finally {
       if (mounted) setState(() => uploadingAvatar = false);
     }

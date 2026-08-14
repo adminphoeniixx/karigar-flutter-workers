@@ -2,7 +2,7 @@ name: karigar_app
 description: "A new Flutter project."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.11.4
@@ -28,6 +28,7 @@ dependencies:
   latlong2: ^0.10.1
 
 dev_dependencies:
+  change_app_package_name: ^1.5.0
   flutter_test:
     sdk: flutter
 

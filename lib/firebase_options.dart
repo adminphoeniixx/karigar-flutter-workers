@@ -52,28 +52,26 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCGv623hEb-k0ryUzmaXSTI2i9hOwFSJpU',
-    appId: '1:1046076081470:android:1b3ca2484515e01468186f',
+    appId: '1:1046076081470:android:982eb72c727060bd68186f',
     messagingSenderId: '1046076081470',
     projectId: 'kariger-da3ac',
     storageBucket: 'kariger-da3ac.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDd-HX_ofJVl9KLHNiCrVsneEGRAlNrxIw',
-    appId: '1:1046076081470:ios:66ac9a21d9233d6968186f',
+    appId: '1:1046076081470:ios:e67de741b350329b68186f',
     messagingSenderId: '1046076081470',
     projectId: 'kariger-da3ac',
     storageBucket: 'kariger-da3ac.firebasestorage.app',
-    iosBundleId: 'com.example.karigarApp',
+    iosBundleId: 'com.superkarigar.workerapp',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDd-HX_ofJVl9KLHNiCrVsneEGRAlNrxIw',
-    appId: '1:1046076081470:ios:66ac9a21d9233d6968186f',
+    appId: '1:1046076081470:ios:e67de741b350329b68186f',
     messagingSenderId: '1046076081470',
     projectId: 'kariger-da3ac',
     storageBucket: 'kariger-da3ac.firebasestorage.app',
-    iosBundleId: 'com.example.karigarApp',
+    iosBundleId: 'com.superkarigar.workerapp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

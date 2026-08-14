@@ -1,6 +1,6 @@
 {
-    "name": "karigar_app",
-    "short_name": "karigar_app",
+    "name": "Super Karigar Worker",
+    "short_name": "Super Karigar Worker",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -1,4 +1,4 @@
-package com.example.karigar_app
+package com.superkarigar.workerapp
 
 import io.flutter.embedding.android.FlutterActivity
 
