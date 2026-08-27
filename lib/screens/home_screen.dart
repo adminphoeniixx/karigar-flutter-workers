@@ -6,8 +6,10 @@ class HomeTab extends StatefulWidget {
     required this.onBrowse,
     required this.onAlerts,
     required this.onProfile,
+    required this.onUnreadChanged,
   });
   final VoidCallback onBrowse, onAlerts, onProfile;
+  final ValueChanged<int> onUnreadChanged;
   @override
   State<HomeTab> createState() => _HomeTabState();
 }
@@ -23,9 +25,10 @@ class _HomeTabState extends State<HomeTab> {
   Map<String, dynamic> get profile =>
       Map<String, dynamic>.from(dashboard['profile'] as Map? ?? {});
   String get workerName =>
-      dashboard['greeting']?.toString() ?? profile['name']?.toString() ?? 'Worker';
-  int get completion =>
-      (stats['profile_completion'] as num?)?.toInt() ?? 0;
+      dashboard['greeting']?.toString() ??
+      profile['name']?.toString() ??
+      'Worker';
+  int get completion => (stats['profile_completion'] as num?)?.toInt() ?? 0;
   int get unreadNotifications =>
       (stats['unread_notifications'] as num?)?.toInt() ?? 0;
 
@@ -59,11 +62,16 @@ class _HomeTabState extends State<HomeTab> {
           },
         };
         available = response.profile.available;
-        profileAvatarUrl.value = response.profile.data['avatar_url']?.toString();
+        profileAvatarUrl.value = response.profile.data['avatar_url']
+            ?.toString();
         latestJobs = homeJobs.map(Job.fromApi).toList();
       });
+      widget.onUnreadChanged(response.stats.unreadNotifications);
     } on ApiException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -76,14 +84,22 @@ class _HomeTabState extends State<HomeTab> {
       final saved = await WorkerApiService().setAvailability(value);
       if (mounted) {
         setState(() => available = saved);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(saved ? 'You are now available for work.' : 'Availability turned off.'),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              saved
+                  ? 'You are now available for work.'
+                  : 'Availability turned off.',
+            ),
+          ),
+        );
       }
     } on ApiException catch (error) {
       if (mounted) {
         setState(() => available = previous);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
   }
@@ -105,7 +121,13 @@ class _HomeTabState extends State<HomeTab> {
             child: avatarUrl?.isNotEmpty == true
                 ? null
                 : Text(
-                    workerName.trim().split(RegExp(r'\s+')).take(2).map((e) => e.isEmpty ? '' : e[0]).join().toUpperCase(),
+                    workerName
+                        .trim()
+                        .split(RegExp(r'\s+'))
+                        .take(2)
+                        .map((e) => e.isEmpty ? '' : e[0])
+                        .join()
+                        .toUpperCase(),
                     style: const TextStyle(
                       color: Color(0xFFC93A06),
                       fontWeight: FontWeight.w700,
@@ -328,11 +350,7 @@ class _HomeTabState extends State<HomeTab> {
           AppCard(
             child: Column(
               children: [
-                Icon(
-                  LucideIcons.briefcaseBusiness,
-                  color: muted,
-                  size: 28,
-                ),
+                Icon(LucideIcons.briefcaseBusiness, color: muted, size: 28),
                 SizedBox(height: 8),
                 Text(
                   'No jobs available near you yet',

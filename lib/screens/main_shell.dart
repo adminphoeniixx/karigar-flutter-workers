@@ -10,47 +10,53 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int tab = 0;
   int unreadAlerts = 0;
+  late final List<Widget?> _pages;
 
   @override
   void initState() {
     super.initState();
-    _loadUnread();
+    _pages = List<Widget?>.filled(5, null);
+    _pages[0] = _buildPage(0);
   }
 
-  Future<void> _loadUnread() async {
-    try {
-      final dashboard = await WorkerApiService().fetchDashboard();
-      if (mounted) {
-        setState(() => unreadAlerts = dashboard.stats.unreadNotifications);
-      }
-    } on ApiException {
-      // A badge should never show stale or invented data on request failure.
-      if (mounted) setState(() => unreadAlerts = 0);
+  void _setUnread(int value) {
+    if (mounted && unreadAlerts != value) {
+      setState(() => unreadAlerts = value);
     }
   }
 
+  Widget _buildPage(int index) {
+    return switch (index) {
+      0 => HomeTab(
+        onBrowse: () => _selectTab(1),
+        onAlerts: () => _selectTab(3),
+        onProfile: () => _selectTab(4),
+        onUnreadChanged: _setUnread,
+      ),
+      1 => const JobsTab(),
+      2 => const ApplicationsTab(),
+      3 => NotificationsTab(onUnreadChanged: _setUnread),
+      4 => const ProfileTab(),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
   void _selectTab(int value) {
+    if (value == tab) return;
+    _pages[value] ??= _buildPage(value);
     setState(() => tab = value);
-    if (value == 3) _loadUnread();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      HomeTab(
-        onBrowse: () => setState(() => tab = 1),
-        onAlerts: () => _selectTab(3),
-        onProfile: () => setState(() => tab = 4),
-      ),
-      const JobsTab(),
-      const ApplicationsTab(),
-      NotificationsTab(
-        onUnreadChanged: (value) => setState(() => unreadAlerts = value),
-      ),
-      const ProfileTab(),
-    ];
     return Scaffold(
-      body: IndexedStack(index: tab, children: pages),
+      body: IndexedStack(
+        index: tab,
+        children: List<Widget>.generate(
+          _pages.length,
+          (index) => _pages[index] ?? const SizedBox.shrink(),
+        ),
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: context.surfaceColor,
@@ -137,11 +143,7 @@ class _NavItem extends StatelessWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Icon(
-                    icon,
-                    size: 23,
-                    color: active ? brand : muted,
-                  ),
+                  Icon(icon, size: 23, color: active ? brand : muted),
                   if (badge != null)
                     Positioned(
                       top: -6,

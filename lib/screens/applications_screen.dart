@@ -317,156 +317,179 @@ class _ApiApplicationCard extends StatelessWidget {
         : const Color(0xFFFFF1F2);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: job == null
-            ? null
-            : () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => JobDetailPage(Job.fromApi(job)),
-                ),
-              ),
-        child: AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: job == null
+                ? null
+                : () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => JobDetailPage(Job.fromApi(job)),
+                    ),
+                  ),
+            child: AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          job?.title ?? 'Job',
-                          style: const TextStyle(
-                            fontSize: 15.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          job?.employer.name ?? '',
-                          style: const TextStyle(color: muted, fontSize: 12),
-                        ),
+                  Text(
+                    job?.title ?? 'Job',
+                    style: const TextStyle(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    job?.employer.name ?? '',
+                    style: const TextStyle(color: muted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 7),
+                  StatusPill(application.statusLabel, background, color),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 6,
+                    children: [
+                      Meta(LucideIcons.mapPin, job?.locationLabel ?? ''),
+                      Meta(
+                        LucideIcons.indianRupee,
+                        job?.wageLabel ?? '',
+                        bold: true,
+                      ),
+                      Meta(
+                        LucideIcons.calendarDays,
+                        'Applied ${application.createdAgo}',
+                      ),
+                    ],
+                  ),
+                  if (accepted ||
+                      application.trackingSteps.any(
+                        (step) =>
+                            step.key == 'shortlisted' && step.state == 'done',
+                      )) ...[
+                    const SizedBox(height: 9),
+                    const Text(
+                      '★ Shortlisted by employer',
+                      style: TextStyle(
+                        color: Color(0xFF047857),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  if (application.trackingSteps.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _ApplicationTracker(
+                      steps: application.trackingSteps,
+                      applicationStatus: status,
+                    ),
+                  ],
+                  if (application.interview case final interview?) ...[
+                    const SizedBox(height: 12),
+                    _ApplicationInfo(
+                      icon: LucideIcons.calendarCheck,
+                      title: 'Interview • ${interview.mode}',
+                      lines: [
+                        interview.atLabel,
+                        if (interview.note.isNotEmpty) interview.note,
                       ],
                     ),
-                  ),
-                  StatusPill(application.statusLabel, background, color),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 12,
-                runSpacing: 6,
-                children: [
-                  Meta(LucideIcons.mapPin, job?.locationLabel ?? ''),
-                  Meta(
-                    LucideIcons.indianRupee,
-                    job?.wageLabel ?? '',
-                    bold: true,
-                  ),
-                  Meta(
-                    LucideIcons.calendarDays,
-                    'Applied ${application.createdAgo}',
-                  ),
-                ],
-              ),
-              if (accepted ||
-                  application.trackingSteps.any(
-                    (step) => step.key == 'shortlisted' && step.state == 'done',
-                  )) ...[
-                const SizedBox(height: 9),
-                const Text(
-                  '★ Shortlisted by employer',
-                  style: TextStyle(
-                    color: Color(0xFF047857),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-              if (application.trackingSteps.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                _ApplicationTracker(
-                  steps: application.trackingSteps,
-                  applicationStatus: status,
-                ),
-              ],
-              if (application.interview case final interview?) ...[
-                const SizedBox(height: 12),
-                _ApplicationInfo(
-                  icon: LucideIcons.calendarCheck,
-                  title: 'Interview • ${interview.mode}',
-                  lines: [
-                    interview.atLabel,
-                    if (interview.note.isNotEmpty) interview.note,
                   ],
-                ),
-              ],
-              if (application.offer case final offer?) ...[
-                const SizedBox(height: 12),
-                _ApplicationInfo(
-                  icon: LucideIcons.partyPopper,
-                  title: 'Job offer',
-                  lines: [
-                    '₹${offer.wage.toStringAsFixed(2)} • Starts ${offer.startDate}',
-                    if (offer.message.isNotEmpty) offer.message,
+                  if (application.offer case final offer?) ...[
+                    const SizedBox(height: 12),
+                    _ApplicationInfo(
+                      icon: LucideIcons.partyPopper,
+                      title: 'Job offer',
+                      lines: [
+                        '₹${offer.wage.toStringAsFixed(2)} • Starts ${offer.startDate}',
+                        if (offer.message.isNotEmpty) offer.message,
+                      ],
+                    ),
                   ],
-                ),
-              ],
-              if (pending) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
+                  if (pending) ...[
+                    const SizedBox(height: 12),
+                    _ResponsiveApplicationActions(
+                      first: OutlinedButton(
                         onPressed: onWithdraw,
-                        child: const Text('Withdraw'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: onContact,
-                        child: const Text('Message employer'),
-                      ),
-                    ),
-                  ],
-                ),
-              ] else if (accepted) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: brand,
-                          minimumSize: const Size.fromHeight(44),
+                        child: const Text(
+                          'Withdraw',
+                          textAlign: TextAlign.center,
                         ),
+                      ),
+                      second: FilledButton(
                         onPressed: onContact,
-                        child: const Text('Contact employer'),
+                        child: const Text(
+                          'Message employer',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(44),
+                  ] else if (accepted) ...[
+                    const SizedBox(height: 12),
+                    _ResponsiveApplicationActions(
+                      first: FilledButton(
+                        style: FilledButton.styleFrom(backgroundColor: brand),
+                        onPressed: onContact,
+                        child: const Text(
+                          'Contact employer',
+                          textAlign: TextAlign.center,
                         ),
+                      ),
+                      second: OutlinedButton(
                         onPressed: onReview,
-                        child: const Text('Leave review'),
+                        child: const Text(
+                          'Leave review',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   ],
-                ),
-              ],
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _ResponsiveApplicationActions extends StatelessWidget {
+  const _ResponsiveApplicationActions({
+    required this.first,
+    required this.second,
+  });
+
+  final Widget first, second;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+      final stack = constraints.maxWidth < 350 || textScale > 1.15;
+      if (stack) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(height: 46, child: first),
+            const SizedBox(height: 8),
+            SizedBox(height: 46, child: second),
+          ],
+        );
+      }
+      return Row(
+        children: [
+          Expanded(child: SizedBox(height: 46, child: first)),
+          const SizedBox(width: 10),
+          Expanded(child: SizedBox(height: 46, child: second)),
+        ],
+      );
+    },
+  );
 }
 
 class _ApplicationInfo extends StatelessWidget {

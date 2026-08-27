@@ -72,6 +72,34 @@ int jsonInt(dynamic value) => value is num ? value.toInt() : int.tryParse('$valu
 double jsonDouble(dynamic value) => value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
 bool jsonBool(dynamic value) => value == true || value == 1 || value == '1' || value == 'true';
 
+String jobWageLabel(Json json) {
+  final label = json['wage_label']?.toString().trim();
+  if (label != null && label.isNotEmpty) return label;
+
+  String? amount(dynamic value) {
+    final raw = value?.toString().trim();
+    if (raw == null || raw.isEmpty) return null;
+    final number = num.tryParse(raw);
+    if (number == null) return raw;
+    final plain = number == number.roundToDouble()
+        ? number.toInt().toString()
+        : number.toString();
+    return plain.replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (_) => ',',
+    );
+  }
+
+  final minimum = amount(json['wage_min']);
+  final maximum = amount(json['wage_max']);
+  final wageType = json['wage_type']?.toString().trim();
+  final suffix = wageType == null || wageType.isEmpty ? '' : ' / $wageType';
+  if (minimum == null && maximum == null) return 'Not disclosed';
+  if (minimum == null) return '₹$maximum$suffix';
+  if (maximum == null || minimum == maximum) return '₹$minimum$suffix';
+  return '₹$minimum – ₹$maximum$suffix';
+}
+
 class RatingModel {
   const RatingModel({required this.average, required this.count});
   final double average;
@@ -123,7 +151,7 @@ class ApiJobModel {
     city: json['city']?.toString() ?? '',
     state: json['state']?.toString() ?? '',
     locationLabel: json['location_label']?.toString() ?? '',
-    wageLabel: json['wage_label']?.toString() ?? '',
+    wageLabel: jobWageLabel(json),
     vacancies: jsonInt(json['vacancies']),
     description: json['description']?.toString() ?? '',
     createdAgo: json['created_ago']?.toString() ?? '',
@@ -162,7 +190,10 @@ class JobDetailModel {
   final String? contactPhone;
   factory JobDetailModel.fromJson(Json json) {
     final meta = jsonMap(json['meta']);
-    final data = jsonMap(json['data']);
+    final responseData = jsonMap(json['data']);
+    final data = responseData['job'] is Map
+        ? jsonMap(responseData['job'])
+        : responseData;
     final employer = jsonMap(data['employer']);
     String? phone;
     for (final value in [

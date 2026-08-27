@@ -182,6 +182,19 @@ class _ApplySheetState extends State<ApplySheet> {
           maxLines: 3,
           decoration: InputDecoration(hintText: "I'm available from tomorrow…"),
         ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: submitting
+              ? null
+              : () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(builder: (_) => const ResumePage()),
+                  );
+                },
+          icon: const Icon(LucideIcons.fileUp, size: 18),
+          label: const Text('Add a resume to improve your match'),
+        ),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(12),
@@ -269,7 +282,12 @@ class PrimaryButton extends StatelessWidget {
       duration: const Duration(milliseconds: 180),
       child: isLoading
           ? const Text('Please wait…', key: ValueKey('loader'))
-          : Text(text, key: const ValueKey('label')),
+          : Text(
+              text,
+              key: const ValueKey('label'),
+              maxLines: 2,
+              textAlign: TextAlign.center,
+            ),
     ),
   );
 }
@@ -355,12 +373,15 @@ class Meta extends StatelessWidget {
     children: [
       Icon(icon, size: 15, color: muted),
       const SizedBox(width: 4),
-      Text(
-        text,
-        style: TextStyle(
-          color: bold ? context.foregroundColor : muted,
-          fontSize: 12.5,
-          fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+      Flexible(
+        child: Text(
+          text,
+          softWrap: true,
+          style: TextStyle(
+            color: bold ? context.foregroundColor : muted,
+            fontSize: 12.5,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+          ),
         ),
       ),
     ],
@@ -482,9 +503,13 @@ class MiniStat extends StatelessWidget {
         const SizedBox(height: 5),
         Text(
           value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          maxLines: 3,
+          softWrap: true,
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.2,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ],
     ),

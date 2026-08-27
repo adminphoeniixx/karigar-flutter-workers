@@ -10,6 +10,9 @@ class NotificationsTab extends StatefulWidget {
 class _NotificationsTabState extends State<NotificationsTab> {
   List<Map<String, dynamic>> notes = [];
   bool loading = true;
+  bool markingAll = false;
+
+  bool get hasUnread => notes.any((note) => note['read'] != true);
 
   @override
   void initState() {
@@ -50,8 +53,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notification marked as read.')),
-      );
+          const SnackBar(content: Text('Notification marked as read.')),
+        );
       }
     } on ApiException catch (error) {
       if (mounted) _error(error.message);
@@ -59,6 +62,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
   }
 
   Future<void> _readAll() async {
+    if (markingAll || !hasUnread) return;
+    setState(() => markingAll = true);
     try {
       await WorkerApiService().readAllNotifications();
       if (mounted) {
@@ -74,23 +79,43 @@ class _NotificationsTabState extends State<NotificationsTab> {
       }
     } on ApiException catch (error) {
       if (mounted) _error(error.message);
+    } finally {
+      if (mounted) setState(() => markingAll = false);
     }
   }
 
-  void _error(String message) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
-  );
+  void _error(String message) => ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text(message)));
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Notifications'),
       actions: [
-        TextButton.icon(
-          onPressed: _readAll,
-          icon: const Icon(LucideIcons.checkCheck, size: 16),
-          label: const Text('Mark all read'),
-        ),
+        if (!loading && hasUnread)
+          if (MediaQuery.sizeOf(context).width < 380)
+            IconButton(
+              tooltip: 'Mark all as read',
+              onPressed: markingAll ? null : _readAll,
+              icon: markingAll
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(LucideIcons.checkCheck),
+            )
+          else
+            TextButton.icon(
+              onPressed: markingAll ? null : _readAll,
+              icon: markingAll
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(LucideIcons.checkCheck, size: 16),
+              label: const Text('Mark all read'),
+            ),
       ],
     ),
     body: loading
@@ -136,62 +161,105 @@ class _NotificationsTabState extends State<NotificationsTab> {
                     ],
                   )
                 : ListView.builder(
-              itemCount: notes.length,
-              itemBuilder: (context, index) {
-                final note = notes[index];
-                final unread = note['read'] != true;
-                return InkWell(
-                  onTap: () => _read(index),
-                  child: Container(
-                    color: unread
-                        ? (context.isDark
-                              ? const Color(0xFF30221D)
-                              : const Color(0xFFFFF3EE))
-                        : context.surfaceColor,
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 5),
-                          width: 9,
-                          height: 9,
-                          decoration: BoxDecoration(
-                            color: unread ? brand : Colors.transparent,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                note['message']?.toString() ?? '',
-                                style: TextStyle(
-                                  height: 1.4,
-                                  fontWeight: unread
-                                      ? FontWeight.w600
-                                      : FontWeight.w400,
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                    itemCount: notes.length,
+                    itemBuilder: (context, index) {
+                      final note = notes[index];
+                      final unread = note['read'] != true;
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 720),
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Material(
+                              color: unread
+                                  ? (context.isDark
+                                        ? const Color(0xFF30221D)
+                                        : const Color(0xFFFFF3EE))
+                                  : context.surfaceColor,
+                              shape: RoundedRectangleBorder(
+                                side: BorderSide(color: context.borderColor),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: InkWell(
+                                onTap: unread ? () => _read(index) : null,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(15),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: 38,
+                                        height: 38,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: unread
+                                              ? brand.withValues(alpha: .12)
+                                              : context.subduedColor,
+                                          borderRadius: BorderRadius.circular(
+                                            11,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          LucideIcons.bell,
+                                          color: unread ? brand : muted,
+                                          size: 19,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              note['message']?.toString() ?? '',
+                                              softWrap: true,
+                                              style: TextStyle(
+                                                height: 1.4,
+                                                fontWeight: unread
+                                                    ? FontWeight.w600
+                                                    : FontWeight.w400,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              note['created_ago']?.toString() ??
+                                                  '',
+                                              softWrap: true,
+                                              style: const TextStyle(
+                                                color: muted,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (unread) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 5),
+                                          width: 8,
+                                          height: 8,
+                                          decoration: const BoxDecoration(
+                                            color: brand,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                note['created_ago']?.toString() ?? '',
-                                style: const TextStyle(
-                                  color: muted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
   );
 }

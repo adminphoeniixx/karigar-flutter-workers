@@ -38,9 +38,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/icons/karigar_launcher.png
-  adaptive_icon_background: "#F4470F"
-  adaptive_icon_foreground: assets/icons/karigar_launcher.png
+  image_path: assets/images/superkarigar.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/images/superkarigar.png
   remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the
@@ -55,7 +55,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/icons/karigar_launcher.png
+    - assets/images/superkarigar.png
 
   fonts:
     - family: Outfit

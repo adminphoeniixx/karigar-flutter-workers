@@ -29,10 +29,10 @@ class _JobsTabState extends State<JobsTab> {
       final reference = await WorkerApiService().reference();
       if (mounted) {
         setState(() {
-        states = reference.states;
-        skills = reference.skills;
-        categories = ['All', ...reference.jobCategories];
-      });
+          states = reference.states;
+          skills = reference.skills;
+          categories = ['All', ...reference.jobCategories];
+        });
       }
     } on ApiException catch (e) {
       if (mounted) setState(() => error = e.message);
@@ -76,16 +76,21 @@ class _JobsTabState extends State<JobsTab> {
   }
 
   Future<void> _load() async {
-    setState(() { loading = true; error = null; });
+    setState(() {
+      loading = true;
+      error = null;
+    });
     try {
       final service = WorkerApiService();
-      final response = await service.fetchJobs(filters: {
-        if (query.trim().isNotEmpty) 'q': query.trim(),
-        if (cat != 'All') 'category': cat,
-        if (filterState != null) 'state': filterState,
-        if (filterCity != null) 'city': filterCity,
-        if (filterSkill != null) 'skill': filterSkill,
-      });
+      final response = await service.fetchJobs(
+        filters: {
+          if (query.trim().isNotEmpty) 'q': query.trim(),
+          if (cat != 'All') 'category': cat,
+          if (filterState != null) 'state': filterState,
+          if (filterCity != null) 'city': filterCity,
+          if (filterSkill != null) 'skill': filterSkill,
+        },
+      );
       if (!mounted) return;
       setState(() {
         apiJobs = response.jobs.map(Job.fromApi).toList();
@@ -96,11 +101,13 @@ class _JobsTabState extends State<JobsTab> {
       if (mounted) setState(() => loading = false);
     }
   }
+
   @override
   void dispose() {
     searchTimer?.cancel();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final filtered = apiJobs;
@@ -137,47 +144,42 @@ class _JobsTabState extends State<JobsTab> {
                   height: 34,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
-                    children:
-                        categories.map((e) {
-                          final active = cat == e;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: InkWell(
+                    children: categories.map((e) {
+                      final active = cat == e;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () {
+                            setState(() => cat = e);
+                            _load();
+                          },
+                          child: Container(
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(horizontal: 11),
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? const Color(0xFFFFF3EE)
+                                  : context.surfaceColor,
+                              border: Border.all(
+                                color: active
+                                    ? const Color(0xFFFFE3D8)
+                                    : context.borderColor,
+                              ),
                               borderRadius: BorderRadius.circular(20),
-                              onTap: () {
-                                setState(() => cat = e);
-                                _load();
-                              },
-                              child: Container(
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 11,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: active
-                                      ? const Color(0xFFFFF3EE)
-                                      : context.surfaceColor,
-                                  border: Border.all(
-                                    color: active
-                                        ? const Color(0xFFFFE3D8)
-                                        : context.borderColor,
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  e,
-                                  style: TextStyle(
-                                    color: active
-                                        ? const Color(0xFFC93A06)
-                                        : muted,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                            ),
+                            child: Text(
+                              e,
+                              style: TextStyle(
+                                color: active ? const Color(0xFFC93A06) : muted,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          );
-                        }).toList(),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
               ],
@@ -201,7 +203,10 @@ class _JobsTabState extends State<JobsTab> {
                         const Icon(LucideIcons.triangleAlert, color: brand),
                         const SizedBox(height: 8),
                         Text(error!, textAlign: TextAlign.center),
-                        TextButton(onPressed: _load, child: const Text('Try again')),
+                        TextButton(
+                          onPressed: _load,
+                          child: const Text('Try again'),
+                        ),
                       ],
                     ),
                   )
@@ -211,9 +216,15 @@ class _JobsTabState extends State<JobsTab> {
                       children: [
                         Icon(LucideIcons.searchX, color: muted, size: 30),
                         SizedBox(height: 8),
-                        Text('No matching jobs found', style: TextStyle(fontWeight: FontWeight.w700)),
+                        Text(
+                          'No matching jobs found',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
                         SizedBox(height: 3),
-                        Text('Try changing your search or filters.', style: TextStyle(color: muted)),
+                        Text(
+                          'Try changing your search or filters.',
+                          style: TextStyle(color: muted),
+                        ),
                       ],
                     ),
                   )
@@ -229,7 +240,16 @@ class _JobsTabState extends State<JobsTab> {
 }
 
 class JobsApiFilterSheet extends StatefulWidget {
-  const JobsApiFilterSheet({super.key, required this.states, required this.skills, required this.categories, this.selectedState, this.selectedCity, this.selectedCategory, this.selectedSkill});
+  const JobsApiFilterSheet({
+    super.key,
+    required this.states,
+    required this.skills,
+    required this.categories,
+    this.selectedState,
+    this.selectedCity,
+    this.selectedCategory,
+    this.selectedSkill,
+  });
   final List<String> states, skills, categories;
   final String? selectedState, selectedCity, selectedCategory, selectedSkill;
   @override
@@ -252,12 +272,19 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
   }
 
   Future<void> _loadCities(String value, {bool keepCity = false}) async {
-    setState(() { state = value; if (!keepCity) city = null; loading = true; });
+    setState(() {
+      state = value;
+      if (!keepCity) city = null;
+      loading = true;
+    });
     try {
       final result = await WorkerApiService().cities(value);
       if (mounted && state == value) setState(() => cities = result);
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -267,27 +294,89 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
     child: SingleChildScrollView(
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Filter jobs', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 14),
-        const FieldLabel('Category'),
-        DropdownButtonFormField<String>(initialValue: category, isExpanded: true, hint: const Text('All categories'), items: widget.categories.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) => setState(() => category = v)),
-        const SizedBox(height: 14),
-        const FieldLabel('Skill'),
-        DropdownButtonFormField<String>(initialValue: skill, isExpanded: true, menuMaxHeight: 400, hint: const Text('All skills'), items: widget.skills.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) => setState(() => skill = v)),
-        const SizedBox(height: 14),
-        const FieldLabel('State'),
-        DropdownButtonFormField<String>(initialValue: state, isExpanded: true, menuMaxHeight: 400, hint: const Text('All states'), items: widget.states.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) { if (v != null) _loadCities(v); }),
-        const SizedBox(height: 14),
-        const FieldLabel('City'),
-        DropdownButtonFormField<String>(key: ValueKey(state), initialValue: city, isExpanded: true, menuMaxHeight: 400, hint: Text(loading ? 'Loading cities...' : 'All cities'), items: cities.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: loading ? null : (v) => setState(() => city = v)),
-        const SizedBox(height: 18),
-        Row(children: [
-          Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context, <String, String?>{}), child: const Text('Reset'))),
-          const SizedBox(width: 10),
-          Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, {'state': state, 'city': city, 'category': category, 'skill': skill}), child: const Text('Apply'))),
-        ]),
-      ]),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Filter jobs',
+            style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 14),
+          const FieldLabel('Category'),
+          DropdownButtonFormField<String>(
+            initialValue: category,
+            isExpanded: true,
+            hint: const Text('All categories'),
+            items: widget.categories
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
+            onChanged: (v) => setState(() => category = v),
+          ),
+          const SizedBox(height: 14),
+          const FieldLabel('Skill'),
+          DropdownButtonFormField<String>(
+            initialValue: skill,
+            isExpanded: true,
+            menuMaxHeight: 400,
+            hint: const Text('All skills'),
+            items: widget.skills
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
+            onChanged: (v) => setState(() => skill = v),
+          ),
+          const SizedBox(height: 14),
+          const FieldLabel('State'),
+          DropdownButtonFormField<String>(
+            initialValue: state,
+            isExpanded: true,
+            menuMaxHeight: 400,
+            hint: const Text('All states'),
+            items: widget.states
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) _loadCities(v);
+            },
+          ),
+          const SizedBox(height: 14),
+          const FieldLabel('City'),
+          DropdownButtonFormField<String>(
+            key: ValueKey(state),
+            initialValue: city,
+            isExpanded: true,
+            menuMaxHeight: 400,
+            hint: Text(loading ? 'Loading cities...' : 'All cities'),
+            items: cities
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
+            onChanged: loading ? null : (v) => setState(() => city = v),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, <String, String?>{}),
+                  child: const Text('Reset'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context, {
+                    'state': state,
+                    'city': city,
+                    'category': category,
+                    'skill': skill,
+                  }),
+                  child: const Text('Apply'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -301,63 +390,62 @@ class JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap:
-          onTap ??
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => JobDetailPage(job)),
-          ),
-      child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    child: Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap:
+              onTap ??
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => JobDetailPage(job)),
+              ),
+          child: AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Tag(job.category),
                 Row(
-                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (job.id > 0)
-                      const StatusPill(
-                        'New',
-                        Color(0xFFECFDF5),
-                        Color(0xFF047857),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Tag(job.category),
                       ),
-                    if (job.id > 0 && trailing != null)
-                      const SizedBox(width: 6),
+                    ),
+                    if (trailing != null) const SizedBox(width: 8),
                     if (trailing != null) trailing!,
+                  ],
+                ),
+                const SizedBox(height: 9),
+                Text(
+                  job.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.2,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${job.employer} · ★ ${job.rating}',
+                  style: const TextStyle(color: muted, fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 7,
+                  children: [
+                    Meta(LucideIcons.mapPin, job.city),
+                    Meta(LucideIcons.indianRupee, job.wage, bold: true),
+                    Meta(LucideIcons.calendarDays, '${job.openings} openings'),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 9),
-            Text(
-              job.title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -.2,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              '${job.employer} · ★ ${job.rating}',
-              style: const TextStyle(color: muted, fontSize: 12),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 12,
-              runSpacing: 7,
-              children: [
-                Meta(LucideIcons.mapPin, job.city),
-                Meta(LucideIcons.indianRupee, job.wage, bold: true),
-                Meta(LucideIcons.calendarDays, '${job.openings} openings'),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     ),

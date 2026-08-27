@@ -29,7 +29,7 @@ class Job {
       employer['name']?.toString() ?? '',
       json['location_label']?.toString() ??
           [json['city'], json['state']].where((e) => e != null).join(', '),
-      json['wage_label']?.toString() ?? '',
+      jobWageLabel(json),
       '0',
       (json['vacancies'] as num?)?.toInt() ?? 0,
       (json['skills'] as List? ?? []).map((e) => e.toString()).toList(),

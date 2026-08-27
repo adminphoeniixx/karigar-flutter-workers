@@ -18,7 +18,10 @@ class _SavedPageState extends State<SavedPage> {
   }
 
   Future<void> _load() async {
-    setState(() { loading = true; error = null; });
+    setState(() {
+      loading = true;
+      error = null;
+    });
     try {
       final result = await WorkerApiService().fetchSavedJobs();
       if (mounted) setState(() => saved = result);
@@ -29,12 +32,14 @@ class _SavedPageState extends State<SavedPage> {
     }
   }
 
-  Future<bool> _remove(SavedJobModel item) async {
+  Future<bool> _remove(SavedJobModel item, {bool updateList = true}) async {
     try {
       final isStillSaved = await WorkerApiService().toggleSaved(item.job.id);
       if (!mounted) return !isStillSaved;
       if (!isStillSaved) {
-        setState(() => saved.removeWhere((e) => e.job.id == item.job.id));
+        if (updateList) {
+          setState(() => saved.removeWhere((e) => e.job.id == item.job.id));
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Job removed from saved jobs.')),
         );
@@ -42,7 +47,10 @@ class _SavedPageState extends State<SavedPage> {
       }
       return false;
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       return false;
     }
   }
@@ -67,73 +75,93 @@ class _SavedPageState extends State<SavedPage> {
     body: loading
         ? const Center(child: CircularProgressIndicator())
         : error != null
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(error!, textAlign: TextAlign.center),
-                    TextButton(onPressed: _load, child: const Text('Try again')),
-                  ],
-                ),
-              )
-            : RefreshIndicator(
-                onRefresh: _load,
-                child: saved.isEmpty
-                    ? ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(top: 120),
-                        children: const [
-                          Icon(LucideIcons.bookmarkX, color: muted, size: 42),
-                          SizedBox(height: 12),
-                          Text(
-                            'No saved jobs yet',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Tap the bookmark icon on a job to save it here.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: muted),
-                          ),
-                        ],
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: saved.length,
-                        itemBuilder: (context, index) {
-                          final item = saved[index];
-                          final job = Job.fromApi(item.job);
-                          return Dismissible(
-                            key: ValueKey(item.job.id),
-                            direction: DismissDirection.endToStart,
-                            confirmDismiss: (_) => _remove(item),
-                            background: Container(
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 24),
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE11D48),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const Icon(LucideIcons.trash2, color: Colors.white),
-                            ),
-                            child: JobCard(
-                              job,
-                              onTap: () => _open(item),
-                              trailing: IconButton(
-                                visualDensity: VisualDensity.compact,
-                                tooltip: 'Remove saved job',
-                                onPressed: () => _remove(item),
-                                icon: const Icon(
-                                  LucideIcons.bookmarkCheck,
-                                  color: brand,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
+        ? Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(error!, textAlign: TextAlign.center),
+                TextButton(onPressed: _load, child: const Text('Try again')),
+              ],
+            ),
+          )
+        : RefreshIndicator(
+            onRefresh: _load,
+            child: saved.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(top: 120),
+                    children: const [
+                      Icon(LucideIcons.bookmarkX, color: muted, size: 42),
+                      SizedBox(height: 12),
+                      Text(
+                        'No saved jobs yet',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-              ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Tap the bookmark icon on a job to save it here.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: muted),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: saved.length,
+                    itemBuilder: (context, index) {
+                      final item = saved[index];
+                      final job = Job.fromApi(item.job);
+                      return Dismissible(
+                        key: ValueKey(item.job.id),
+                        direction: DismissDirection.endToStart,
+                        confirmDismiss: (_) => _remove(item, updateList: false),
+                        onDismissed: (_) {
+                          if (mounted) {
+                            setState(
+                              () => saved.removeWhere(
+                                (entry) => entry.job.id == item.job.id,
+                              ),
+                            );
+                          }
+                        },
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 24),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE11D48),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            LucideIcons.trash2,
+                            color: Colors.white,
+                          ),
+                        ),
+                        child: JobCard(
+                          job,
+                          onTap: () => _open(item),
+                          trailing: SizedBox.square(
+                            dimension: 34,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              tooltip: 'Remove saved job',
+                              onPressed: () => _remove(item),
+                              icon: const Icon(
+                                LucideIcons.bookmarkCheck,
+                                color: brand,
+                                size: 21,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
   );
 }

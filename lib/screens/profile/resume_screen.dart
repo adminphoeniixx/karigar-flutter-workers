@@ -16,6 +16,16 @@ class _ResumePageState extends State<ResumePage> {
     finally { if (mounted) setState(() => loading = false); }
   }
   void _message(String value) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+  String _resumeError(ApiException error) {
+    final resumeErrors = error.errors['resume'];
+    if (resumeErrors is List && resumeErrors.isNotEmpty) {
+      return resumeErrors.first.toString();
+    }
+    if (resumeErrors is String && resumeErrors.trim().isNotEmpty) {
+      return resumeErrors;
+    }
+    return error.message;
+  }
   Future<void> _pick() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -40,7 +50,7 @@ class _ResumePageState extends State<ResumePage> {
     } on PlatformException catch (e) {
       if (mounted) _message(e.message ?? 'Unable to open the PDF picker.');
     } on ApiException catch (e) {
-      if (mounted) _message(e.message); // Includes the actionable unreadable-PDF 422 message.
+      if (mounted) _message(_resumeError(e));
     } finally { if (mounted) setState(() => saving = false); }
   }
   Future<void> _remove() async {
