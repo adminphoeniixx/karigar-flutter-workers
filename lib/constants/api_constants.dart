@@ -1,8 +1,7 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const baseUrl =
-      'https://projects-karigar.rmsiry.easypanel.host/api/v1';
+  static const baseUrl = 'https://superkarigar.com/api/v1';
 
   static const otpSend = '/auth/otp/send';
   static const otpVerify = '/auth/otp/verify';
@@ -28,6 +27,9 @@ class ApiConstants {
   static const conversations = '/conversations';
   static const preferences = '/preferences';
   static const sessions = '/auth/sessions';
+  static const support =
+      'https://superkarigar.com/api/v1/support?audience=worker';
+  static const legal = 'https://superkarigar.com/api/v1/legal';
 
   static String job(int jobId) => '$jobs/$jobId';
   static String applyToJob(int jobId) => '$jobs/$jobId/apply';
@@ -43,4 +45,5 @@ class ApiConstants {
   static String conversationMessages(int id) => '$conversations/$id/messages';
   static String conversationRead(int id) => '$conversations/$id/read';
   static String session(String token) => '$sessions/$token';
+  static String legalDocument(String key) => '$legal/$key';
 }

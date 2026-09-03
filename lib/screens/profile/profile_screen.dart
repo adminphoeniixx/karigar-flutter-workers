@@ -25,7 +25,10 @@ class _ProfileTabState extends State<ProfileTab> {
   Future<void> _load() async {
     try {
       final service = WorkerApiService();
-      final results = await Future.wait([service.profile(), service.dashboard()]);
+      final results = await Future.wait([
+        service.profile(),
+        service.dashboard(),
+      ]);
       if (!mounted) return;
       final worker = results[0] as WorkerProfileModel;
       final dashboard = results[1] as Map<String, dynamic>;
@@ -36,9 +39,9 @@ class _ProfileTabState extends State<ProfileTab> {
       });
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) setState(() => loading = false);
@@ -63,8 +66,10 @@ class _ProfileTabState extends State<ProfileTab> {
       if (await file.length() > 2 * 1024 * 1024) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Avatar image must be 2 MB or smaller.')),
-        );
+            const SnackBar(
+              content: Text('Avatar image must be 2 MB or smaller.'),
+            ),
+          );
         }
         return;
       }
@@ -73,22 +78,31 @@ class _ProfileTabState extends State<ProfileTab> {
       if (!mounted) return;
       setState(() => profile['avatar_url'] = url);
       profileAvatarUrl.value = url;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile photo updated.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile photo updated.')));
     } on ApiException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
     } on MissingPluginException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Stop the app and run it again to initialize photo picker.')),
-      );
+          const SnackBar(
+            content: Text(
+              'Stop the app and run it again to initialize photo picker.',
+            ),
+          ),
+        );
       }
     } on PlatformException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Unable to open photo picker.')),
-      );
+          SnackBar(
+            content: Text(error.message ?? 'Unable to open photo picker.'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => uploadingAvatar = false);
@@ -123,7 +137,10 @@ class _ProfileTabState extends State<ProfileTab> {
             child: ListView(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 20,
+                  ),
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
@@ -139,30 +156,53 @@ class _ProfileTabState extends State<ProfileTab> {
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
-                          CircleAvatar(
-                            radius: 32,
-                            backgroundColor: const Color(0xFFFFE3D8),
-                            backgroundImage: profile['avatar_url']?.toString().isNotEmpty == true
-                                ? NetworkImage(profile['avatar_url'].toString())
-                                : null,
-                            child: uploadingAvatar
-                                ? const CircularProgressIndicator()
-                                : profile['avatar_url']?.toString().isNotEmpty != true
-                                ? Text(
-                                    name.trim().split(RegExp(r'\s+')).take(2).map((e) => e.isEmpty ? '' : e[0]).join().toUpperCase(),
-                                    style: const TextStyle(color: Color(0xFFC93A06), fontSize: 26, fontWeight: FontWeight.w700),
-                                  )
-                                : null,
-                          ),
-                          const Positioned(
-                            bottom: -2,
-                            right: -2,
-                            child: CircleAvatar(
-                              radius: 12,
-                              backgroundColor: Colors.white,
-                              child: Icon(LucideIcons.camera, color: brand, size: 13),
+                            CircleAvatar(
+                              radius: 32,
+                              backgroundColor: const Color(0xFFFFE3D8),
+                              backgroundImage:
+                                  profile['avatar_url']
+                                          ?.toString()
+                                          .isNotEmpty ==
+                                      true
+                                  ? NetworkImage(
+                                      profile['avatar_url'].toString(),
+                                    )
+                                  : null,
+                              child: uploadingAvatar
+                                  ? const CircularProgressIndicator()
+                                  : profile['avatar_url']
+                                            ?.toString()
+                                            .isNotEmpty !=
+                                        true
+                                  ? Text(
+                                      name
+                                          .trim()
+                                          .split(RegExp(r'\s+'))
+                                          .take(2)
+                                          .map((e) => e.isEmpty ? '' : e[0])
+                                          .join()
+                                          .toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Color(0xFFC93A06),
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    )
+                                  : null,
                             ),
-                          ),
+                            const Positioned(
+                              bottom: -2,
+                              right: -2,
+                              child: CircleAvatar(
+                                radius: 12,
+                                backgroundColor: Colors.white,
+                                child: Icon(
+                                  LucideIcons.camera,
+                                  color: brand,
+                                  size: 13,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -171,15 +211,40 @@ class _ProfileTabState extends State<ProfileTab> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(name, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                             const SizedBox(height: 2),
-                            Text('${skills.isEmpty ? 'Worker' : skills.first} · ${profile['experience_years'] ?? 0} yrs exp', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                            Text(
+                              '${skills.isEmpty ? 'Worker' : skills.first} · ${profile['experience_years'] ?? 0} yrs exp',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                const Icon(LucideIcons.mapPin, color: Colors.white, size: 16),
+                                const Icon(
+                                  LucideIcons.mapPin,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
                                 const SizedBox(width: 4),
-                                Expanded(child: Text('${profile['city'] ?? ''}, ${profile['state'] ?? ''}', style: const TextStyle(color: Colors.white, fontSize: 13))),
+                                Expanded(
+                                  child: Text(
+                                    '${profile['city'] ?? ''}, ${profile['state'] ?? ''}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ],
@@ -196,11 +261,16 @@ class _ProfileTabState extends State<ProfileTab> {
                       backgroundColor: context.brandTint,
                       side: const BorderSide(color: Color(0xFFFFC5B0)),
                       minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     onPressed: () => _open(const EditProfilePage()),
                     icon: const Icon(LucideIcons.pencil, size: 19),
-                    label: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.w600)),
+                    label: const Text(
+                      'Edit Profile',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
                 const Padding(
@@ -209,7 +279,11 @@ class _ProfileTabState extends State<ProfileTab> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Wrap(spacing: 8, runSpacing: 8, children: skills.map(Tag.new).toList()),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: skills.map(Tag.new).toList(),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Divider(height: 1, color: context.borderColor),
@@ -218,13 +292,42 @@ class _ProfileTabState extends State<ProfileTab> {
                   'KYC Verification',
                   'Verify your PAN & Aadhaar',
                   () => _open(const KycPage()),
-                  trailing: StatusPill(stats['kyc_status_label']?.toString() ?? 'Not submitted', const Color(0xFFFFF7ED), const Color(0xFFB45309)),
+                  trailing: StatusPill(
+                    stats['kyc_status_label']?.toString() ?? 'Not submitted',
+                    const Color(0xFFFFF7ED),
+                    const Color(0xFFB45309),
+                  ),
                 ),
-                MenuRow(LucideIcons.fileText, 'My Resume', 'Improve your application match score', () => _open(const ResumePage())),
-                MenuRow(LucideIcons.messageCircle, 'Messages', 'Chat with employers you applied to', () => _open(const ConversationsPage())),
-                MenuRow(LucideIcons.bookmark, 'Saved Jobs', '${stats['saved_jobs'] ?? 0} saved jobs', () => _open(const SavedPage())),
-                MenuRow(LucideIcons.star, 'Reviews & Ratings', 'View employer reviews', () => _open(const ReviewsPage())),
-                MenuRow(LucideIcons.settings, 'Settings', 'Language, alerts & security', () => _open(const SettingsPage())),
+                MenuRow(
+                  LucideIcons.fileText,
+                  'My Resume',
+                  'Improve your application match score',
+                  () => _open(const ResumePage()),
+                ),
+                MenuRow(
+                  LucideIcons.messageCircle,
+                  'Messages',
+                  'Chat with employers you applied to',
+                  () => _open(const ConversationsPage()),
+                ),
+                MenuRow(
+                  LucideIcons.bookmark,
+                  'Saved Jobs',
+                  '${stats['saved_jobs'] ?? 0} saved jobs',
+                  () => _open(const SavedPage()),
+                ),
+                MenuRow(
+                  LucideIcons.star,
+                  'Reviews & Ratings',
+                  'Ratings employers gave you',
+                  () => _open(const ReviewsPage()),
+                ),
+                MenuRow(
+                  LucideIcons.settings,
+                  'Settings',
+                  'Language, alerts & security',
+                  () => _open(const SettingsPage()),
+                ),
               ],
             ),
           ),

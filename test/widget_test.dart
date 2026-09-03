@@ -1,8 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karigar_app/main.dart';
+import 'package:karigar_app/models/api_models.dart';
 
 void main() {
+  test('review API fields are parsed according to the worker contract', () {
+    final reviewed = ApplicationModel.fromJson({
+      'id': 10,
+      'status': 'accepted',
+      'can_review': false,
+      'has_reviewed': true,
+    });
+    final reviewable = ApplicationModel.fromJson({
+      'id': 11,
+      'status': 'accepted',
+      'can_review': true,
+      'has_reviewed': false,
+    });
+
+    expect(reviewed.canReview, isFalse);
+    expect(reviewable.canReview, isTrue);
+  });
+
   testWidgets('worker onboarding opens mobile login', (tester) async {
     await tester.pumpWidget(const KarigarApp());
     await tester.pump(const Duration(milliseconds: 1500));

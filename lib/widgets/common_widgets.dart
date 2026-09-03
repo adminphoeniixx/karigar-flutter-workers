@@ -854,8 +854,17 @@ class MenuRow extends StatelessWidget {
 }
 
 class Review extends StatelessWidget {
-  const Review(this.employer, this.text, this.date, {super.key});
+  const Review(
+    this.employer,
+    this.text,
+    this.date, {
+    this.rating = 0,
+    this.jobTitle,
+    super.key,
+  });
   final String employer, text, date;
+  final int rating;
+  final String? jobTitle;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
@@ -871,14 +880,32 @@ class Review extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-              const Text('★★★★★', style: TextStyle(color: Color(0xFFFBBF24))),
+              Semantics(
+                label: '$rating out of 5 stars',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    5,
+                    (index) => Icon(
+                      index < rating.clamp(0, 5)
+                          ? Icons.star
+                          : Icons.star_border,
+                      color: const Color(0xFFFBBF24),
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            text,
-            style: const TextStyle(height: 1.5, color: Color(0xFF374151)),
-          ),
+          if (jobTitle?.isNotEmpty == true) ...[
+            const SizedBox(height: 3),
+            Text(jobTitle!, style: const TextStyle(color: muted, fontSize: 12)),
+          ],
+          if (text.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(text, style: const TextStyle(height: 1.5, color: muted)),
+          ],
           const SizedBox(height: 8),
           Text(date, style: const TextStyle(color: muted, fontSize: 12)),
         ],

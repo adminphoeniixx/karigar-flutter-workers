@@ -94,17 +94,18 @@ class _ApplicationsTabState extends State<ApplicationsTab>
 
   Future<void> _review(ApplicationModel application) async {
     var rating = 5;
-    final comment = TextEditingController();
+    var comment = '';
     final submit = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          scrollable: true,
           title: const Text('Rate employer'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
                 children: List.generate(
                   5,
                   (index) => IconButton(
@@ -117,8 +118,10 @@ class _ApplicationsTabState extends State<ApplicationsTab>
                 ),
               ),
               TextField(
-                controller: comment,
+                key: const ValueKey('employer-review-comment'),
+                onChanged: (value) => comment = value,
                 maxLines: 3,
+                maxLength: 1000,
                 decoration: const InputDecoration(
                   hintText: 'Comment (optional)',
                 ),
@@ -138,25 +141,59 @@ class _ApplicationsTabState extends State<ApplicationsTab>
         ),
       ),
     );
-    if (submit == true) {
+    if (submit != true || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        scrollable: true,
+        title: const Text('Submit this rating?'),
+        content: Text(
+          '$rating out of 5 stars${comment.trim().isEmpty ? '' : '\n\n${comment.trim()}'}\n\nA rating cannot be edited or deleted after submission.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Go back'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Confirm & submit'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
       try {
         await WorkerApiService().reviewEmployer(
           application.id,
           rating,
-          comment: comment.text.trim().isEmpty ? null : comment.text.trim(),
+          comment: comment.trim().isEmpty ? null : comment.trim(),
         );
+        await _load();
         if (mounted)
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('Review submitted.')));
       } on ApiException catch (e) {
-        if (mounted)
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(e.message)));
+        final alreadyReviewed =
+            e.statusCode == 422 &&
+            e.message.toLowerCase().contains('already reviewed');
+        if (alreadyReviewed) {
+          await _load();
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                alreadyReviewed
+                    ? 'You have already reviewed this employer.'
+                    : e.message,
+              ),
+            ),
+          );
+        }
       }
     }
-    comment.dispose();
   }
 
   Future<void> _contact(ApplicationModel application) async {
@@ -275,6 +312,7 @@ class _ApplicationsTabState extends State<ApplicationsTab>
                               .map(
                                 (application) => _ApiApplicationCard(
                                   application: application,
+                                  canReview: application.canReview,
                                   onWithdraw: () => _withdraw(application),
                                   onReview: () => _review(application),
                                   onContact: () => _contact(application),
@@ -292,11 +330,13 @@ class _ApplicationsTabState extends State<ApplicationsTab>
 class _ApiApplicationCard extends StatelessWidget {
   const _ApiApplicationCard({
     required this.application,
+    required this.canReview,
     required this.onWithdraw,
     required this.onReview,
     required this.onContact,
   });
   final ApplicationModel application;
+  final bool canReview;
   final VoidCallback onWithdraw, onReview, onContact;
 
   @override
@@ -439,13 +479,21 @@ class _ApiApplicationCard extends StatelessWidget {
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      second: OutlinedButton(
-                        onPressed: onReview,
-                        child: const Text(
-                          'Leave review',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+                      second: canReview
+                          ? OutlinedButton(
+                              onPressed: onReview,
+                              child: const Text(
+                                'Rate employer',
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : const Center(
+                              child: StatusPill(
+                                'Review submitted',
+                                Color(0xFFECFDF5),
+                                Color(0xFF047857),
+                              ),
+                            ),
                     ),
                   ],
                 ],

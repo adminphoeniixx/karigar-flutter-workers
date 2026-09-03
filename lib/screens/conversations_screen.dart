@@ -2,20 +2,259 @@ part of '../main.dart';
 
 class ConversationsPage extends StatefulWidget {
   const ConversationsPage({super.key});
-  @override State<ConversationsPage> createState()=>_ConversationsPageState();
+  @override
+  State<ConversationsPage> createState() => _ConversationsPageState();
 }
-class _ConversationsPageState extends State<ConversationsPage>{
-  List<ConversationModel> items=[]; bool loading=true; StreamSubscription<RemoteMessage>? push;
-  @override void initState(){super.initState();push=PushNotificationService.instance.foregroundMessages.where((m)=>m.data['type']=='chat.message').listen((_){_load();});_load();}
-  @override void dispose(){push?.cancel();super.dispose();}
-  Future<void> _load()async{try{final v=await WorkerApiService().fetchConversations();if(mounted)setState(()=>items=v.conversations);}on ApiException catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.message)));}finally{if(mounted)setState(()=>loading=false);}}
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Messages')),body:loading?const Center(child:CircularProgressIndicator()):RefreshIndicator(onRefresh:_load,child:items.isEmpty?ListView(padding:const EdgeInsets.only(top:120),children:const[Icon(LucideIcons.messageCircle,color:muted,size:42),SizedBox(height:12),Text('No conversations yet',textAlign:TextAlign.center)]):ListView(children:items.map((c)=>ListTile(leading:const CircleAvatar(child:Icon(LucideIcons.building2)),title:Text(c.otherParty),subtitle:Text(c.job?.title??'Job conversation'),trailing:c.unread>0?StatusPill('${c.unread}',brand,Colors.white):null,onTap:()async{await Navigator.push(context,MaterialPageRoute(builder:(_)=>ConversationPage(c.id)));_load();})).toList())));
+
+class _ConversationsPageState extends State<ConversationsPage> {
+  List<ConversationModel> items = [];
+  bool loading = true;
+  StreamSubscription<RemoteMessage>? push;
+  @override
+  void initState() {
+    super.initState();
+    push = PushNotificationService.instance.foregroundMessages
+        .where((m) => m.data['type'] == 'chat.message')
+        .listen((_) {
+          _load();
+        });
+    _load();
+  }
+
+  @override
+  void dispose() {
+    push?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final v = await WorkerApiService().fetchConversations();
+      if (mounted) setState(() => items = v.conversations);
+    } on ApiException catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Messages')),
+    body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : RefreshIndicator(
+            onRefresh: _load,
+            child: items.isEmpty
+                ? ListView(
+                    padding: const EdgeInsets.only(top: 120),
+                    children: const [
+                      Icon(LucideIcons.messageCircle, color: muted, size: 42),
+                      SizedBox(height: 12),
+                      Text('No conversations yet', textAlign: TextAlign.center),
+                    ],
+                  )
+                : ListView(
+                    children: items
+                        .map(
+                          (c) => ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(LucideIcons.building2),
+                            ),
+                            title: Text(c.otherParty),
+                            subtitle: Text(c.job?.title ?? 'Job conversation'),
+                            trailing: c.unread > 0
+                                ? StatusPill('${c.unread}', brand, Colors.white)
+                                : null,
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ConversationPage(c.id),
+                                ),
+                              );
+                              _load();
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+          ),
+  );
 }
-class ConversationPage extends StatefulWidget{const ConversationPage(this.id,{super.key});final int id;@override State<ConversationPage> createState()=>_ConversationPageState();}
-class _ConversationPageState extends State<ConversationPage>{
-  final input=TextEditingController();List<MessageModel> messages=[];ConversationModel? conversation;bool loading=true,sending=false;StreamSubscription<RemoteMessage>? push;
-  @override void initState(){super.initState();push=PushNotificationService.instance.foregroundMessages.where((m)=>m.data['type']=='chat.message'&&m.data['conversation_id']?.toString()==widget.id.toString()).listen((_){_load();});_load();} @override void dispose(){push?.cancel();input.dispose();super.dispose();}
-  Future<void> _load()async{try{final v=await WorkerApiService().fetchConversation(widget.id);if(mounted)setState((){conversation=v.conversation;messages=v.messages;});}on ApiException catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.message)));}finally{if(mounted)setState(()=>loading=false);}}
-  Future<void> _send()async{final body=input.text.trim();if(body.isEmpty||sending)return;setState(()=>sending=true);try{final m=await WorkerApiService().sendMessage(widget.id,body);if(mounted)setState((){messages.add(m);input.clear();});}on ApiException catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.message)));}finally{if(mounted)setState(()=>sending=false);}}
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(conversation?.otherParty??'Conversation'),if(conversation?.job!=null)Text(conversation!.job!.title,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w400))])),body:loading?const Center(child:CircularProgressIndicator()):Column(children:[Expanded(child:ListView(reverse:true,padding:const EdgeInsets.all(16),children:messages.reversed.map((m)=>Align(alignment:m.mine?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.only(top:8),padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.76),decoration:BoxDecoration(color:m.mine?brand:context.surfaceColor,borderRadius:BorderRadius.circular(14),border:m.mine?null:Border.all(color:context.borderColor)),child:Text(m.body,style:TextStyle(color:m.mine?Colors.white:context.foregroundColor))))).toList())),SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:TextField(controller:input,textInputAction:TextInputAction.send,onSubmitted:(_)=>_send(),decoration:const InputDecoration(hintText:'Type a message'))),const SizedBox(width:8),IconButton.filled(onPressed:sending?null:_send,icon:const Icon(LucideIcons.send))])))]));
+
+class ConversationPage extends StatefulWidget {
+  const ConversationPage(this.id, {super.key});
+  final int id;
+  @override
+  State<ConversationPage> createState() => _ConversationPageState();
+}
+
+class _ConversationPageState extends State<ConversationPage> {
+  final input = TextEditingController();
+  List<MessageModel> messages = [];
+  ConversationModel? conversation;
+  bool loading = true, sending = false;
+  StreamSubscription<RemoteMessage>? push;
+  @override
+  void initState() {
+    super.initState();
+    push = PushNotificationService.instance.foregroundMessages
+        .where(
+          (m) =>
+              m.data['type'] == 'chat.message' &&
+              m.data['conversation_id']?.toString() == widget.id.toString(),
+        )
+        .listen((_) {
+          _load();
+        });
+    _load();
+  }
+
+  @override
+  void dispose() {
+    push?.cancel();
+    input.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final v = await WorkerApiService().fetchConversation(widget.id);
+      if (mounted)
+        setState(() {
+          conversation = v.conversation;
+          messages = v.messages;
+        });
+    } on ApiException catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _send() async {
+    final body = input.text.trim();
+    if (body.isEmpty || sending) return;
+    setState(() => sending = true);
+    try {
+      final m = await WorkerApiService().sendMessage(widget.id, body);
+      if (mounted)
+        setState(() {
+          messages.add(m);
+          input.clear();
+        });
+    } on ApiException catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            conversation?.otherParty ?? 'Conversation',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (conversation?.job != null)
+            Text(
+              conversation!.job!.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w400),
+            ),
+        ],
+      ),
+    ),
+    body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  reverse: true,
+                  padding: const EdgeInsets.all(16),
+                  children: messages.reversed
+                      .map(
+                        (m) => Align(
+                          alignment: m.mine
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 9,
+                            ),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.sizeOf(context).width * .76,
+                            ),
+                            decoration: BoxDecoration(
+                              color: m.mine ? brand : context.surfaceColor,
+                              borderRadius: BorderRadius.circular(14),
+                              border: m.mine
+                                  ? null
+                                  : Border.all(color: context.borderColor),
+                            ),
+                            child: Text(
+                              m.body,
+                              style: TextStyle(
+                                color: m.mine
+                                    ? Colors.white
+                                    : context.foregroundColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: input,
+                          minLines: 1,
+                          maxLines: 4,
+                          textInputAction: TextInputAction.newline,
+                          onSubmitted: (_) => _send(),
+                          decoration: const InputDecoration(
+                            hintText: 'Type a message',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        onPressed: sending ? null : _send,
+                        icon: const Icon(LucideIcons.send),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+  );
 }
