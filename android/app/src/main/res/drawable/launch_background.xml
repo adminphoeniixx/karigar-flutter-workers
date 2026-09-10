@@ -6,9 +6,5 @@
             <solid android:color="#F4470F" />
         </shape>
     </item>
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@drawable/splash_logo" />
-    </item>
+    <item android:drawable="@drawable/splash_logo_circle" android:gravity="center" />
 </layer-list>
