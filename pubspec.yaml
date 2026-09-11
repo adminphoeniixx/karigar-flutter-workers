@@ -38,9 +38,10 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/images/superkarigar.png
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: assets/images/superkarigar.png
+  image_path: assets/icons/karigar_launcher.png
+  adaptive_icon_background: "#F4F1EC"
+  adaptive_icon_foreground: assets/icons/karigar_launcher.png
+  adaptive_icon_foreground_inset: 20
   remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the

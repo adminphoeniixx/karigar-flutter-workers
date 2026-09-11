@@ -46,8 +46,12 @@ part 'screens/profile/sessions_screen.dart';
 part 'screens/conversations_screen.dart';
 part 'widgets/common_widgets.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(const KarigarApp(onInitialize: _initializeApp));
+}
+
+Future<void> _initializeApp() async {
   final preferences = await SharedPreferences.getInstance();
   appLocale.value = Locale(preferences.getString('app_locale') ?? 'en');
   await ApiClient.instance.initialize();
@@ -59,7 +63,6 @@ Future<void> main() async {
   } catch (error) {
     debugPrint('[FCM] Firebase initialization failed: $error');
   }
-  runApp(const KarigarApp());
 }
 
 // Warm "Paper & Ink" palette shared with the approved worker-app HTML.
@@ -199,7 +202,10 @@ extension AppThemeColors on BuildContext {
 }
 
 class KarigarApp extends StatelessWidget {
-  const KarigarApp({super.key});
+  const KarigarApp({super.key, this.initialization, this.onInitialize});
+
+  final Future<void>? initialization;
+  final Future<void> Function()? onInitialize;
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<Locale>(
     valueListenable: appLocale,
@@ -221,7 +227,10 @@ class KarigarApp extends StatelessWidget {
           Locale('mr'),
         ],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        home: const AuthGate(),
+        home: AuthGate(
+          initialization: initialization,
+          onInitialize: onInitialize,
+        ),
       ),
     ),
   );
@@ -318,7 +327,10 @@ class KarigarApp extends StatelessWidget {
 }
 
 class AuthGate extends StatefulWidget {
-  const AuthGate({super.key});
+  const AuthGate({super.key, this.initialization, this.onInitialize});
+
+  final Future<void>? initialization;
+  final Future<void> Function()? onInitialize;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -336,6 +348,11 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<bool> _restoreSession() async {
+    // The first frame always renders AppSplash before platform initialization.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return false;
+    await widget.initialization;
+    await widget.onInitialize?.call();
     if (!ApiClient.instance.isAuthenticated) return false;
     try {
       await AuthService().me();

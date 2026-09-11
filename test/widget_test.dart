@@ -1,9 +1,34 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karigar_app/main.dart';
 import 'package:karigar_app/models/api_models.dart';
 
 void main() {
+  testWidgets('first frame shows splash while startup is pending', (tester) async {
+    final initialization = Completer<void>();
+    var initializationStarted = false;
+    await tester.pumpWidget(KarigarApp(onInitialize: () {
+      initializationStarted = true;
+      return initialization.future;
+    }));
+    expect(initializationStarted, isTrue);
+
+    expect(find.byType(AppSplash), findsOneWidget);
+    expect(find.text('Super Karigar Worker'), findsOneWidget);
+    expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor, brand);
+
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.byType(AppSplash), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    initialization.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(AppSplash), findsNothing);
+    expect(find.byType(OnboardingPage), findsOneWidget);
+  });
+
   test('review API fields are parsed according to the worker contract', () {
     final reviewed = ApplicationModel.fromJson({
       'id': 10,
