@@ -16,8 +16,10 @@ void main() {
     expect(initializationStarted, isTrue);
 
     expect(find.byType(AppSplash), findsOneWidget);
-    expect(find.text('Super Karigar Worker'), findsOneWidget);
-    expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor, brand);
+    expect(
+      tester.widget<Image>(find.byType(Image)).semanticLabel,
+      'Super Karigar. Kaam. Hunar. Bharosa.',
+    );
 
     await tester.pump(const Duration(seconds: 2));
     expect(find.byType(AppSplash), findsOneWidget);
@@ -102,6 +104,7 @@ void main() {
     );
 
     appThemeMode.value = ThemeMode.dark;
+    await tester.pump(const Duration(milliseconds: 1500));
     await tester.pumpAndSettle();
     expect(
       Theme.of(tester.element(find.byType(Scaffold).first)).brightness,

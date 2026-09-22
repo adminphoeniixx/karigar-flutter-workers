@@ -45,10 +45,11 @@ class _SettingsPageState extends State<SettingsPage> {
         dark = value.theme == 'dark';
       });
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } finally {
       if (mounted) setState(() => preferencesLoading = false);
     }
@@ -75,10 +76,11 @@ class _SettingsPageState extends State<SettingsPage> {
         appLocale.value = Locale(me.user.locale);
       }
     } on ApiException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
     }
   }
 
@@ -108,10 +110,11 @@ class _SettingsPageState extends State<SettingsPage> {
         SnackBar(content: Text('Language changed to $selectedLanguageName.')),
       );
     } on ApiException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
     } finally {
       if (mounted) setState(() => languageSaving = false);
     }
@@ -180,10 +183,11 @@ class _SettingsPageState extends State<SettingsPage> {
         (_) => false,
       );
     } on ApiException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
     }
   }
 
