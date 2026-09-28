@@ -12,6 +12,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
   bool loading = false;
   bool detailLoading = true;
   bool canApply = true;
+  bool _viewLogged = false;
   RatingModel employerRating = const RatingModel(average: 0, count: 0);
   String? contactPhone;
   Job? detailJob;
@@ -30,6 +31,10 @@ class _JobDetailPageState extends State<JobDetailPage> {
     try {
       final response = await WorkerApiService().fetchJob(widget.job.id);
       if (mounted) {
+        if (!_viewLogged) {
+          _viewLogged = true;
+          unawaited(MetaEventsService.instance.jobViewed(widget.job.id));
+        }
         setState(() {
           detailJob = Job.fromApi(response.job);
           saved = response.isSaved;
@@ -88,7 +93,10 @@ class _JobDetailPageState extends State<JobDetailPage> {
     }
     final dialNumber = phone.replaceAll(RegExp(r'[^\d+]'), '');
     final uri = Uri(scheme: 'tel', path: dialNumber);
-    if (!await launchUrl(uri)) {
+    final opened = await launchUrl(uri);
+    if (opened) {
+      unawaited(MetaEventsService.instance.employerDialerOpened(widget.job.id));
+    } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Unable to call $phone on this device.')),

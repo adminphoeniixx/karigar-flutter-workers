@@ -16,6 +16,8 @@ class _JobsTabState extends State<JobsTab> {
   bool loading = true;
   String? error;
   Timer? searchTimer;
+  int _loadSequence = 0;
+  String? _lastLoggedSearch;
 
   @override
   void initState() {
@@ -76,29 +78,47 @@ class _JobsTabState extends State<JobsTab> {
   }
 
   Future<void> _load() async {
+    final sequence = ++_loadSequence;
+    final filters = <String, dynamic>{
+      if (query.trim().isNotEmpty) 'q': query.trim(),
+      if (cat != 'All') 'category': cat,
+      if (filterState != null) 'state': filterState,
+      if (filterCity != null) 'city': filterCity,
+      if (filterSkill != null) 'skill': filterSkill,
+    };
+    // This key stays in memory only; free text and locations never go to Meta.
+    final searchKey = filters.toString();
     setState(() {
       loading = true;
       error = null;
     });
     try {
       final service = WorkerApiService();
-      final response = await service.fetchJobs(
-        filters: {
-          if (query.trim().isNotEmpty) 'q': query.trim(),
-          if (cat != 'All') 'category': cat,
-          if (filterState != null) 'state': filterState,
-          if (filterCity != null) 'city': filterCity,
-          if (filterSkill != null) 'skill': filterSkill,
-        },
-      );
-      if (!mounted) return;
+      final response = await service.fetchJobs(filters: filters);
+      if (!mounted || sequence != _loadSequence) return;
+      if (filters.isNotEmpty && _lastLoggedSearch != searchKey) {
+        _lastLoggedSearch = searchKey;
+        unawaited(
+          MetaEventsService.instance.jobsSearched(
+            hasQuery: filters.containsKey('q'),
+            hasFilters: filters.keys.any((key) => key != 'q'),
+            resultCount: response.jobs.length,
+          ),
+        );
+      } else if (filters.isEmpty) {
+        _lastLoggedSearch = null;
+      }
       setState(() {
         apiJobs = response.jobs.map(Job.fromApi).toList();
       });
     } on ApiException catch (error) {
-      if (mounted) setState(() => this.error = error.message);
+      if (mounted && sequence == _loadSequence) {
+        setState(() => this.error = error.message);
+      }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted && sequence == _loadSequence) {
+        setState(() => loading = false);
+      }
     }
   }
 
@@ -286,7 +306,9 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
           context,
         ).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
   }
 

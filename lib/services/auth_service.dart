@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'meta_events_service.dart';
 import '../constants/api_constants.dart';
 import '../models/api_models.dart';
 import 'api_client.dart';
@@ -12,6 +14,7 @@ class AuthService {
     final result = AuthResult.fromJson(json);
     await _api.setToken(result.token);
     await PushNotificationService.instance.syncToken();
+    unawaited(MetaEventsService.instance.login());
     return result;
   }
   Future<UserModel> me() async => UserModel.fromJson(Map<String, dynamic>.from((await _api.get(ApiConstants.me))['user'] as Map));

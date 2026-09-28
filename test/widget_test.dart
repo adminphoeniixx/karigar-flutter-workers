@@ -18,7 +18,7 @@ void main() {
     expect(find.byType(AppSplash), findsOneWidget);
     expect(
       tester.widget<Image>(find.byType(Image)).semanticLabel,
-      'Super Karigar. Kaam. Hunar. Bharosa.',
+      'Super Karigar',
     );
 
     await tester.pump(const Duration(seconds: 2));

@@ -102,6 +102,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         'payout_upi': upi.text.trim(),
       }..removeWhere((key, value) => value == null);
       await WorkerApiService().updateProfile(values);
+      unawaited(MetaEventsService.instance.profileUpdated());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully.')),

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'meta_events_service.dart';
 import '../constants/api_constants.dart';
 import '../models/api_models.dart';
 import 'api_client.dart';
@@ -70,10 +72,15 @@ class WorkerApiService {
     int jobId, {
     String? coverNote,
     num? expectedWage,
-  }) => _api.post(ApiConstants.applyToJob(jobId), {
-    if (coverNote != null) 'cover_note': coverNote,
-    if (expectedWage != null) 'expected_wage': expectedWage,
-  });
+  }) async {
+    final response = await _api.post(ApiConstants.applyToJob(jobId), {
+      if (coverNote != null) 'cover_note': coverNote,
+      if (expectedWage != null) 'expected_wage': expectedWage,
+    });
+    unawaited(MetaEventsService.instance.applicationSubmitted(jobId));
+    return response;
+  }
+
   Future<Map<String, dynamic>> applications({String? status, int? page}) =>
       _api.get(
         ApiConstants.applications,
@@ -90,6 +97,7 @@ class WorkerApiService {
   );
   Future<void> withdraw(int applicationId) async {
     await _api.delete(ApiConstants.application(applicationId));
+    unawaited(MetaEventsService.instance.applicationWithdrawn());
   }
 
   Future<Map<String, dynamic>> savedJobs({int? page}) =>
@@ -97,8 +105,17 @@ class WorkerApiService {
   Future<List<SavedJobModel>> fetchSavedJobs({int? page}) async => jsonList(
     (await savedJobs(page: page))['data'],
   ).map((e) => SavedJobModel.fromJson(jsonMap(e))).toList();
-  Future<bool> toggleSaved(int jobId) async =>
-      (await _api.post(ApiConstants.saveJob(jobId)))['saved'] == true;
+  Future<bool> toggleSaved(int jobId) async {
+    final saved =
+        (await _api.post(ApiConstants.saveJob(jobId)))['saved'] == true;
+    unawaited(
+      saved
+          ? MetaEventsService.instance.jobSaved(jobId)
+          : MetaEventsService.instance.jobUnsaved(jobId),
+    );
+    return saved;
+  }
+
   Future<Map<String, dynamic>> kyc() => _api.get(ApiConstants.kyc);
   Future<KycModel?> fetchKyc() async {
     final response = await kyc();
@@ -161,6 +178,7 @@ class WorkerApiService {
       'rating': rating,
       if (comment != null) 'comment': comment,
     });
+    unawaited(MetaEventsService.instance.employerReviewSubmitted());
   }
 
   Future<String> setLocale(String locale) async =>

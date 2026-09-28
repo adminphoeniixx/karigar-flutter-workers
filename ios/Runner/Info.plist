@@ -2,6 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- Meta App Events configuration. Automatic logging and ID collection remain off. -->
+    <key>FacebookAppID</key>
+    <string>2316068148934163</string>
+    <key>FacebookClientToken</key>
+    <string>1628db7652dbf9ec3f13057d20c530a6</string>
+    <key>FacebookDisplayName</key>
+    <string>Super Karigar</string>
+    <key>FacebookAutoLogAppEventsEnabled</key>
+    <false/>
+    <key>FacebookAdvertiserIDCollectionEnabled</key>
+    <false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Karigar uses your location to select your city and show nearby jobs.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

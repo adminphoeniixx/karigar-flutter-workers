@@ -40,6 +40,7 @@ class _ResumePageState extends State<ResumePage> {
       }
       setState(() => saving = true);
       final value = await WorkerApiService().uploadResume(file);
+      unawaited(MetaEventsService.instance.resumeUploaded());
       if (mounted) { setState(() => resume = value); _message('Resume uploaded successfully.'); }
     } on MissingPluginException {
       if (mounted) {
@@ -60,7 +61,7 @@ class _ResumePageState extends State<ResumePage> {
     ));
     if (yes != true) return;
     setState(() => saving = true);
-    try { await WorkerApiService().removeResume(); if (mounted) setState(() => resume = null); }
+    try { await WorkerApiService().removeResume(); unawaited(MetaEventsService.instance.resumeRemoved()); if (mounted) setState(() => resume = null); }
     on ApiException catch (e) { if (mounted) _message(e.message); }
     finally { if (mounted) setState(() => saving = false); }
   }

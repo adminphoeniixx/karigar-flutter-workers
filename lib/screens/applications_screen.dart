@@ -205,6 +205,7 @@ class _ApplicationsTabState extends State<ApplicationsTab>
         jobId: job.id,
       );
       if (!mounted) return;
+      unawaited(MetaEventsService.instance.employerChatOpened(job.id));
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => ConversationPage(conversation.id)),

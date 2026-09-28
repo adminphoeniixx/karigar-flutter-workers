@@ -20,6 +20,7 @@ import 'controllers/auth_controller.dart';
 import 'firebase_options.dart';
 import 'models/api_models.dart';
 import 'services/api_client.dart';
+import 'services/meta_events_service.dart';
 import 'services/auth_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/worker_api_service.dart';
@@ -55,6 +56,7 @@ Future<void> _initializeApp() async {
   final preferences = await SharedPreferences.getInstance();
   appLocale.value = Locale(preferences.getString('app_locale') ?? 'en');
   await ApiClient.instance.initialize();
+  unawaited(MetaEventsService.instance.initialize());
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,

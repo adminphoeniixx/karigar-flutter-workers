@@ -64,10 +64,13 @@ class OnboardingPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginPage()),
-            ),
+            onPressed: () {
+              unawaited(MetaEventsService.instance.onboardingContinued());
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+              );
+            },
             child: const Text(
               'Get Started',
               style: TextStyle(fontWeight: FontWeight.w700),

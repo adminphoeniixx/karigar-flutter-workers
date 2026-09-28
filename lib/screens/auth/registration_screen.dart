@@ -329,6 +329,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         }
         await workerApi.submitKyc(pan: pan, aadhaar: aadhaar, panDoc: panDoc!, aadhaarDoc: aadhaarDoc!);
       }
+      unawaited(MetaEventsService.instance.registrationCompleted());
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile created successfully. You can submit KYC from your profile.')),
