@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="StartupWindowTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">#BF3A16</item>
-        <item name="android:statusBarColor">#BF3A16</item>
-        <item name="android:navigationBarColor">#BF3A16</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">#F5F4EF</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
     <!-- FlutterActivity keeps its first draw pending until AppSplash is ready.
          Disable the separate system preview on every API level, including 31+. -->

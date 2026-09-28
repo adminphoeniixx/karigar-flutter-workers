@@ -49,6 +49,7 @@ part 'widgets/common_widgets.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const KarigarApp(onInitialize: _initializeApp));
 }
 

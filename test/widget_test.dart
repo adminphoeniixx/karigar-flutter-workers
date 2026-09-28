@@ -6,18 +6,33 @@ import 'package:karigar_app/main.dart';
 import 'package:karigar_app/models/api_models.dart';
 
 void main() {
-  testWidgets('first frame shows splash while startup is pending', (tester) async {
+  testWidgets('first frame shows splash while startup is pending', (
+    tester,
+  ) async {
     final initialization = Completer<void>();
     var initializationStarted = false;
-    await tester.pumpWidget(KarigarApp(onInitialize: () {
-      initializationStarted = true;
-      return initialization.future;
-    }));
+    await tester.pumpWidget(
+      KarigarApp(
+        onInitialize: () {
+          initializationStarted = true;
+          return initialization.future;
+        },
+      ),
+    );
     expect(initializationStarted, isTrue);
 
     expect(find.byType(AppSplash), findsOneWidget);
     expect(
-      tester.widget<Image>(find.byType(Image)).semanticLabel,
+      tester
+          .widget<Semantics>(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is Semantics &&
+                  widget.properties.label == 'Super Karigar',
+            ),
+          )
+          .properties
+          .label,
       'Super Karigar',
     );
 
