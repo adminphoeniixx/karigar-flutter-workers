@@ -41,7 +41,7 @@ class _ProfileTabState extends State<ProfileTab> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
       }
     } finally {
       if (mounted) setState(() => loading = false);
@@ -56,18 +56,18 @@ class _ProfileTabState extends State<ProfileTab> {
   Future<void> _changeAvatar() async {
     if (uploadingAvatar) return;
     try {
-      final picked = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
+      final picked = await pickAppImage(
+        context,
         imageQuality: 85,
         maxWidth: 1200,
       );
-      if (picked == null) return;
+      if (picked == null || !mounted) return;
       final file = File(picked.path);
       if (await file.length() > 2 * 1024 * 1024) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Avatar image must be 2 MB or smaller.'),
+              content: AppText('Avatar image must be 2 MB or smaller.'),
             ),
           );
         }
@@ -78,19 +78,19 @@ class _ProfileTabState extends State<ProfileTab> {
       if (!mounted) return;
       setState(() => profile['avatar_url'] = url);
       profileAvatarUrl.value = url;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Profile photo updated.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: AppText('Profile photo updated.')),
+      );
     } on ApiException catch (error) {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
     } on MissingPluginException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
+            content: AppText(
               'Stop the app and run it again to initialize photo picker.',
             ),
           ),
@@ -100,7 +100,7 @@ class _ProfileTabState extends State<ProfileTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(error.message ?? 'Unable to open photo picker.'),
+            content: AppText(error.message ?? 'Unable to open photo picker.'),
           ),
         );
       }
@@ -112,7 +112,7 @@ class _ProfileTabState extends State<ProfileTab> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(context.tr('Profile')),
+      title: AppText(context.tr('Profile')),
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 12),
@@ -174,7 +174,7 @@ class _ProfileTabState extends State<ProfileTab> {
                                             ?.toString()
                                             .isNotEmpty !=
                                         true
-                                  ? Text(
+                                  ? AppText(
                                       name
                                           .trim()
                                           .split(RegExp(r'\s+'))
@@ -211,7 +211,7 @@ class _ProfileTabState extends State<ProfileTab> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            AppText(
                               name,
                               style: const TextStyle(
                                 color: Colors.white,
@@ -220,8 +220,8 @@ class _ProfileTabState extends State<ProfileTab> {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              '${skills.isEmpty ? 'Worker' : skills.first} · ${profile['experience_years'] ?? 0} yrs exp',
+                            AppText(
+                              '${context.tr(skills.isEmpty ? 'Worker' : skills.first)} · ${context.trArgs('{count} years of experience', {'count': '${profile['experience_years'] ?? 0}'})}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
@@ -237,8 +237,8 @@ class _ProfileTabState extends State<ProfileTab> {
                                 ),
                                 const SizedBox(width: 4),
                                 Expanded(
-                                  child: Text(
-                                    '${profile['city'] ?? ''}, ${profile['state'] ?? ''}',
+                                  child: AppText(
+                                    WorkerProfileModel(profile).fullAddress,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 13,
@@ -267,7 +267,7 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                     onPressed: () => _open(const EditProfilePage()),
                     icon: const Icon(LucideIcons.pencil, size: 19),
-                    label: const Text(
+                    label: const AppText(
                       'Edit Profile',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
@@ -313,7 +313,9 @@ class _ProfileTabState extends State<ProfileTab> {
                 MenuRow(
                   LucideIcons.bookmark,
                   'Saved Jobs',
-                  '${stats['saved_jobs'] ?? 0} saved jobs',
+                  context.trArgs('{count} saved jobs', {
+                    'count': '${stats['saved_jobs'] ?? 0}',
+                  }),
                   () => _open(const SavedPage()),
                 ),
                 MenuRow(
@@ -325,7 +327,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 MenuRow(
                   LucideIcons.settings,
                   'Settings',
-                  'Language, alerts & security',
+                  'Alerts & security',
                   () => _open(const SettingsPage()),
                 ),
               ],

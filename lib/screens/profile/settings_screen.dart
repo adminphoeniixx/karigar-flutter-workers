@@ -11,22 +11,10 @@ class _SettingsPageState extends State<SettingsPage> {
       alerts = true,
       messageAlerts = true,
       preferencesLoading = true;
-  String selectedLocale = 'en';
-  bool languageSaving = false;
-  static const supportedLanguages = [
-    ('en', 'English', 'English'),
-    ('hi', 'हिन्दी', 'Hindi'),
-    ('ta', 'தமிழ்', 'Tamil'),
-    ('te', 'తెలుగు', 'Telugu'),
-    ('bn', 'বাংলা', 'Bengali'),
-    ('mr', 'मराठी', 'Marathi'),
-  ];
-
   @override
   void initState() {
     super.initState();
     dark = appThemeMode.value == ThemeMode.dark;
-    _loadLocale();
     _loadPreferences();
   }
 
@@ -48,7 +36,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
       }
     } finally {
       if (mounted) setState(() => preferencesLoading = false);
@@ -62,61 +50,9 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
         await _loadPreferences();
       }
-    }
-  }
-
-  Future<void> _loadLocale() async {
-    try {
-      final me = await AuthService().fetchMe();
-      if (mounted) {
-        setState(() => selectedLocale = me.user.locale);
-        appLocale.value = Locale(me.user.locale);
-      }
-    } on ApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
-      }
-    }
-  }
-
-  String get selectedLanguageName => supportedLanguages
-      .firstWhere(
-        (item) => item.$1 == selectedLocale,
-        orElse: () => supportedLanguages.first,
-      )
-      .$3;
-
-  Future<void> _setLanguage(String locale) async {
-    if (languageSaving || locale == selectedLocale) {
-      if (locale == selectedLocale && mounted) Navigator.pop(context);
-      return;
-    }
-    setState(() => languageSaving = true);
-    try {
-      final result = await WorkerApiService().updateLocale(locale);
-      if (!mounted) return;
-      setState(() => selectedLocale = result.locale);
-      appLocale.value = Locale(result.locale);
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.setString('app_locale', result.locale);
-      if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Language changed to $selectedLanguageName.')),
-      );
-    } on ApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
-      }
-    } finally {
-      if (mounted) setState(() => languageSaving = false);
     }
   }
 
@@ -130,9 +66,9 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       await AuthService().logout();
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Logged out successfully.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: AppText('Logged out successfully.')),
+      );
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const OnboardingPage()),
@@ -142,7 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
       }
     }
   }
@@ -151,21 +87,21 @@ class _SettingsPageState extends State<SettingsPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete account permanently?'),
-        content: const Text(
+        title: const AppText('Delete account permanently?'),
+        content: const AppText(
           'Your profile and account data will be permanently deleted. This cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: const AppText('Cancel'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFE11D48),
             ),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete account'),
+            child: const AppText('Delete account'),
           ),
         ],
       ),
@@ -175,7 +111,7 @@ class _SettingsPageState extends State<SettingsPage> {
       await AuthService().deleteAccount();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Your account has been deleted.')),
+        const SnackBar(content: AppText('Your account has been deleted.')),
       );
       Navigator.pushAndRemoveUntil(
         context,
@@ -186,69 +122,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
       }
     }
   }
-
-  void _languages() => showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (sheetContext) => SizedBox(
-      height: MediaQuery.sizeOf(sheetContext).height * .56,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.tr('Choose language'),
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              context.tr('Pick your preferred app language.'),
-              style: const TextStyle(color: muted, fontSize: 12),
-            ),
-            const SizedBox(height: 14),
-            Expanded(
-              child: ListView.separated(
-                itemCount: supportedLanguages.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (_, index) {
-                  final language = supportedLanguages[index];
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(
-                        color: language.$1 == selectedLocale
-                            ? brand
-                            : sheetContext.borderColor,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    title: Text(
-                      language.$2,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(language.$3),
-                    trailing: language.$1 == selectedLocale
-                        ? const Icon(LucideIcons.check, color: brand)
-                        : null,
-                    onTap: languageSaving
-                        ? null
-                        : () => _setLanguage(language.$1),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -257,13 +134,16 @@ class _SettingsPageState extends State<SettingsPage> {
         onPressed: () => Navigator.maybePop(context),
         icon: const Icon(LucideIcons.arrowLeft),
       ),
-      title: Text(context.tr('Settings'), style: const TextStyle(fontSize: 16)),
+      title: AppText(
+        context.tr('Settings'),
+        style: const TextStyle(fontSize: 16),
+      ),
     ),
     body: ListView(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
-          child: Text(
+          child: AppText(
             context.tr('Preferences').toUpperCase(),
             style: const TextStyle(
               color: muted,
@@ -272,12 +152,6 @@ class _SettingsPageState extends State<SettingsPage> {
               letterSpacing: .6,
             ),
           ),
-        ),
-        MenuRow(
-          LucideIcons.languages,
-          context.tr('Language'),
-          selectedLanguageName,
-          _languages,
         ),
         MenuRow(
           LucideIcons.moon,
@@ -327,7 +201,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 6),
-          child: Text(
+          child: AppText(
             context.tr('Account & security').toUpperCase(),
             style: const TextStyle(
               color: muted,
@@ -383,12 +257,12 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             onPressed: _logout,
             icon: const Icon(LucideIcons.logOut),
-            label: Text(context.tr('Log out')),
+            label: AppText(context.tr('Log out')),
           ),
         ),
         const SizedBox(height: 16),
         const Center(
-          child: Text(
+          child: AppText(
             'Super Karigar Worker · v1.0.0',
             style: TextStyle(color: muted, fontSize: 12),
           ),
@@ -427,7 +301,7 @@ class _LegalDocumentsPageState extends State<LegalDocumentsPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Terms & Privacy')),
+    appBar: AppBar(title: const AppText('Terms & Privacy')),
     body: error != null
         ? _SettingsLoadError(message: error!, onRetry: _load)
         : documents.isEmpty
@@ -444,14 +318,14 @@ class _LegalDocumentsPageState extends State<LegalDocumentsPage> {
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(LucideIcons.fileText, color: brand),
-                    title: Text(
+                    title: AppText(
                       document['title']?.toString() ?? 'Legal document',
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        '${document['summary'] ?? ''}\nUpdated ${document['updated_label'] ?? ''}',
+                      child: AppText(
+                        '${document['summary'] ?? ''}\n${context.trArgs('Updated {date}', {'date': '${document['updated_label'] ?? ''}'})}',
                       ),
                     ),
                     trailing: const Icon(LucideIcons.chevronRight),
@@ -508,7 +382,7 @@ class _LegalDocumentPageState extends State<LegalDocumentPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(document?['title']?.toString() ?? widget.initialTitle),
+      title: AppText(document?['title']?.toString() ?? widget.initialTitle),
     ),
     body: error != null
         ? _SettingsLoadError(message: error!, onRetry: _load)
@@ -517,12 +391,14 @@ class _LegalDocumentPageState extends State<LegalDocumentPage> {
         : ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text(
-                'Updated ${document!['updated_label'] ?? ''}',
+              AppText(
+                context.trArgs('Updated {date}', {
+                  'date': '${document!['updated_label'] ?? ''}',
+                }),
                 style: const TextStyle(color: muted, fontSize: 12),
               ),
               const SizedBox(height: 16),
-              Text(
+              AppText(
                 document!['intro']?.toString() ?? '',
                 style: const TextStyle(height: 1.55),
               ),
@@ -530,7 +406,7 @@ class _LegalDocumentPageState extends State<LegalDocumentPage> {
                 final section = jsonMap(value);
                 return <Widget>[
                   const SizedBox(height: 24),
-                  Text(
+                  AppText(
                     section['title']?.toString() ?? '',
                     style: const TextStyle(
                       fontSize: 18,
@@ -559,9 +435,9 @@ class _LegalDocumentPageState extends State<LegalDocumentPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('•  ', style: TextStyle(height: 1.5)),
+                      const AppText('•  ', style: TextStyle(height: 1.5)),
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           item.toString(),
                           style: const TextStyle(height: 1.5),
                         ),
@@ -577,7 +453,7 @@ class _LegalDocumentPageState extends State<LegalDocumentPage> {
     if (type == 'heading') {
       return Padding(
         padding: const EdgeInsets.only(top: 8, bottom: 6),
-        child: Text(
+        child: AppText(
           block['text']?.toString() ?? '',
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
@@ -585,7 +461,7 @@ class _LegalDocumentPageState extends State<LegalDocumentPage> {
     }
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
+      child: AppText(
         block['text']?.toString() ?? '',
         style: const TextStyle(height: 1.5),
       ),
@@ -620,11 +496,21 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     }
   }
 
+  Future<void> _openChannel(Uri uri) async {
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {}
+    if (mounted)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: AppText('Unable to open this link.')),
+      );
+  }
+
   Future<void> _email(String address) async {
     final opened = await launchUrl(Uri(scheme: 'mailto', path: address));
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No email app is available.')),
+        const SnackBar(content: AppText('No email app is available.')),
       );
     }
   }
@@ -634,7 +520,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     final channels = jsonMap(support?['channels']);
     final faqs = jsonList(support?['faqs']);
     return Scaffold(
-      appBar: AppBar(title: const Text('Help & Support')),
+      appBar: AppBar(title: const AppText('Help & Support')),
       body: error != null
           ? _SettingsLoadError(message: error!, onRetry: _load)
           : support == null
@@ -648,7 +534,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        const AppText(
                           'Contact support',
                           style: TextStyle(
                             fontSize: 17,
@@ -656,23 +542,49 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                           ),
                         ),
                         const SizedBox(height: 5),
-                        Text(
+                        AppText(
                           channels['hours']?.toString() ?? '',
                           style: const TextStyle(color: muted),
                         ),
                         const SizedBox(height: 14),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: channels['email'] == null
-                                ? null
-                                : () => _email(channels['email'].toString()),
-                            icon: const Icon(LucideIcons.mail, size: 18),
-                            label: Text(
-                              channels['email']?.toString() ?? 'Email support',
+                        if (channels['email']?.toString().trim().isNotEmpty ==
+                            true)
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: () =>
+                                  _email(channels['email'].toString()),
+                              icon: const Icon(LucideIcons.mail, size: 18),
+                              label: Text(channels['email'].toString()),
                             ),
                           ),
-                        ),
+                        if (channels['phone']?.toString().trim().isNotEmpty ==
+                            true)
+                          TextButton.icon(
+                            onPressed: () => _openChannel(
+                              Uri(
+                                scheme: 'tel',
+                                path: channels['phone'].toString(),
+                              ),
+                            ),
+                            icon: const Icon(LucideIcons.phone, size: 18),
+                            label: Text(channels['phone'].toString()),
+                          ),
+                        if (channels['whatsapp']
+                                ?.toString()
+                                .trim()
+                                .isNotEmpty ==
+                            true)
+                          TextButton.icon(
+                            onPressed: () => _openChannel(
+                              Uri.https('wa.me', '/${channels['whatsapp']}'),
+                            ),
+                            icon: const Icon(
+                              LucideIcons.messageCircle,
+                              size: 18,
+                            ),
+                            label: const Text('WhatsApp'),
+                          ),
                       ],
                     ),
                   ),
@@ -683,7 +595,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 9),
                       child: ExpansionTile(
-                        title: Text(
+                        title: AppText(
                           faq['question']?.toString() ?? '',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
@@ -694,7 +606,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                           16,
                         ),
                         children: [
-                          Text(
+                          AppText(
                             faq['answer']?.toString() ?? '',
                             style: const TextStyle(height: 1.5),
                           ),
@@ -723,12 +635,12 @@ class _SettingsLoadError extends StatelessWidget {
         children: [
           const Icon(LucideIcons.wifiOff, color: muted, size: 40),
           const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center),
+          AppText(message, textAlign: TextAlign.center),
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: onRetry,
             icon: const Icon(LucideIcons.refreshCw, size: 18),
-            label: const Text('Try again'),
+            label: const AppText('Try again'),
           ),
         ],
       ),

@@ -60,18 +60,18 @@ class _ApplicationsTabState extends State<ApplicationsTab>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Withdraw application?'),
-        content: const Text(
+        title: const AppText('Withdraw application?'),
+        content: const AppText(
           'This application will be withdrawn from the employer.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const AppText('Cancel'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Withdraw'),
+            child: const AppText('Withdraw'),
           ),
         ],
       ),
@@ -81,14 +81,14 @@ class _ApplicationsTabState extends State<ApplicationsTab>
       await WorkerApiService().withdraw(application.id);
       await _load();
       if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Application withdrawn.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: AppText('Application withdrawn.')),
+        );
     } on ApiException catch (e) {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
     }
   }
 
@@ -100,7 +100,7 @@ class _ApplicationsTabState extends State<ApplicationsTab>
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           scrollable: true,
-          title: const Text('Rate employer'),
+          title: const AppText('Rate employer'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -122,8 +122,8 @@ class _ApplicationsTabState extends State<ApplicationsTab>
                 onChanged: (value) => comment = value,
                 maxLines: 3,
                 maxLength: 1000,
-                decoration: const InputDecoration(
-                  hintText: 'Comment (optional)',
+                decoration: InputDecoration(
+                  hintText: context.tr('Comment (optional)'),
                 ),
               ),
             ],
@@ -131,11 +131,11 @@ class _ApplicationsTabState extends State<ApplicationsTab>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: const AppText('Cancel'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Submit'),
+              child: const AppText('Submit'),
             ),
           ],
         ),
@@ -146,18 +146,18 @@ class _ApplicationsTabState extends State<ApplicationsTab>
       context: context,
       builder: (dialogContext) => AlertDialog(
         scrollable: true,
-        title: const Text('Submit this rating?'),
-        content: Text(
-          '$rating out of 5 stars${comment.trim().isEmpty ? '' : '\n\n${comment.trim()}'}\n\nA rating cannot be edited or deleted after submission.',
+        title: const AppText('Submit this rating?'),
+        content: AppText(
+          '${context.trArgs('{rating} out of 5 stars', {'rating': '$rating'})}${comment.trim().isEmpty ? '' : '\n\n${comment.trim()}'}\n\n${context.tr('A rating cannot be edited or deleted after submission.')}',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Go back'),
+            child: const AppText('Go back'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Confirm & submit'),
+            child: const AppText('Confirm & submit'),
           ),
         ],
       ),
@@ -173,7 +173,7 @@ class _ApplicationsTabState extends State<ApplicationsTab>
         if (mounted)
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Review submitted.')));
+          ).showSnackBar(const SnackBar(content: AppText('Review submitted.')));
       } on ApiException catch (e) {
         final alreadyReviewed =
             e.statusCode == 422 &&
@@ -184,7 +184,7 @@ class _ApplicationsTabState extends State<ApplicationsTab>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
+              content: AppText(
                 alreadyReviewed
                     ? 'You have already reviewed this employer.'
                     : e.message,
@@ -214,13 +214,13 @@ class _ApplicationsTabState extends State<ApplicationsTab>
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
     }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('My Applications')),
+    appBar: AppBar(title: const AppText('My Applications')),
     body: Column(
       children: [
         Container(
@@ -250,7 +250,7 @@ class _ApplicationsTabState extends State<ApplicationsTab>
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(9),
                       ),
-                      child: Text(
+                      child: AppText(
                         item,
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -274,10 +274,10 @@ class _ApplicationsTabState extends State<ApplicationsTab>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(error!),
+                      AppText(error!),
                       TextButton(
                         onPressed: _load,
-                        child: const Text('Try again'),
+                        child: const AppText('Try again'),
                       ),
                     ],
                   ),
@@ -291,7 +291,7 @@ class _ApplicationsTabState extends State<ApplicationsTab>
                           children: const [
                             Icon(LucideIcons.fileX, color: muted, size: 42),
                             SizedBox(height: 12),
-                            Text(
+                            AppText(
                               'No applications found',
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -300,7 +300,7 @@ class _ApplicationsTabState extends State<ApplicationsTab>
                               ),
                             ),
                             SizedBox(height: 4),
-                            Text(
+                            AppText(
                               'Jobs you apply to will appear here.',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: muted),
@@ -376,7 +376,7 @@ class _ApiApplicationCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  AppText(
                     job?.title ?? 'Job',
                     style: const TextStyle(
                       fontSize: 15.5,
@@ -384,7 +384,7 @@ class _ApiApplicationCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
+                  AppText(
                     job?.employer.name ?? '',
                     style: const TextStyle(color: muted, fontSize: 12),
                   ),
@@ -413,7 +413,7 @@ class _ApiApplicationCard extends StatelessWidget {
                             step.key == 'shortlisted' && step.state == 'done',
                       )) ...[
                     const SizedBox(height: 9),
-                    const Text(
+                    const AppText(
                       '★ Shortlisted by employer',
                       style: TextStyle(
                         color: Color(0xFF047857),
@@ -433,7 +433,8 @@ class _ApiApplicationCard extends StatelessWidget {
                     const SizedBox(height: 12),
                     _ApplicationInfo(
                       icon: LucideIcons.calendarCheck,
-                      title: 'Interview • ${interview.mode}',
+                      title:
+                          '${context.tr('Interview')} • ${context.tr(interview.mode)}',
                       lines: [
                         interview.atLabel,
                         if (interview.note.isNotEmpty) interview.note,
@@ -446,7 +447,7 @@ class _ApiApplicationCard extends StatelessWidget {
                       icon: LucideIcons.partyPopper,
                       title: 'Job offer',
                       lines: [
-                        '₹${offer.wage.toStringAsFixed(2)} • Starts ${offer.startDate}',
+                        '₹${offer.wage.toStringAsFixed(2)} ${context.tr('/month')} • ${offer.startDate}',
                         if (offer.message.isNotEmpty) offer.message,
                       ],
                     ),
@@ -456,14 +457,14 @@ class _ApiApplicationCard extends StatelessWidget {
                     _ResponsiveApplicationActions(
                       first: OutlinedButton(
                         onPressed: onWithdraw,
-                        child: const Text(
+                        child: const AppText(
                           'Withdraw',
                           textAlign: TextAlign.center,
                         ),
                       ),
                       second: FilledButton(
                         onPressed: onContact,
-                        child: const Text(
+                        child: const AppText(
                           'Message employer',
                           textAlign: TextAlign.center,
                         ),
@@ -475,7 +476,7 @@ class _ApiApplicationCard extends StatelessWidget {
                       first: FilledButton(
                         style: FilledButton.styleFrom(backgroundColor: brand),
                         onPressed: onContact,
-                        child: const Text(
+                        child: const AppText(
                           'Contact employer',
                           textAlign: TextAlign.center,
                         ),
@@ -483,7 +484,7 @@ class _ApiApplicationCard extends StatelessWidget {
                       second: canReview
                           ? OutlinedButton(
                               onPressed: onReview,
-                              child: const Text(
+                              child: const AppText(
                                 'Rate employer',
                                 textAlign: TextAlign.center,
                               ),
@@ -566,10 +567,15 @@ class _ApplicationInfo extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+              AppText(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
               ...lines.map(
-                (e) =>
-                    Text(e, style: const TextStyle(color: muted, fontSize: 12)),
+                (e) => AppText(
+                  e,
+                  style: const TextStyle(color: muted, fontSize: 12),
+                ),
               ),
             ],
           ),
@@ -604,7 +610,7 @@ class _ApplicationTracker extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        const AppText(
           'Application status',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
         ),
@@ -676,7 +682,7 @@ class _ApplicationTracker extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 1),
-                  child: Text(
+                  child: AppText(
                     label,
                     style: TextStyle(
                       fontSize: 12,

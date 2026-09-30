@@ -12,9 +12,16 @@ class Job {
     this.skills,
     this.description, {
     this.id = 0,
+    this.employerVerified = false,
+    this.distanceKm,
+    this.experienceLabel = '',
+    this.shiftHoursLabel = '',
     this.latitude,
     this.longitude,
   });
+  final bool employerVerified;
+  final double? distanceKm;
+  final String experienceLabel, shiftHoursLabel;
   final int id;
   final double? latitude, longitude;
   final String title, category, employer, city, wage, rating, description;
@@ -35,6 +42,10 @@ class Job {
       (json['skills'] as List? ?? []).map((e) => e.toString()).toList(),
       json['description']?.toString() ?? '',
       id: (json['id'] as num?)?.toInt() ?? 0,
+      employerVerified: jsonBool(employer['verified']),
+      distanceKm: num.tryParse('${json['distance_km']}')?.toDouble(),
+      experienceLabel: json['experience_label']?.toString() ?? '',
+      shiftHoursLabel: json['shift_hours_label']?.toString() ?? '',
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
     );
@@ -51,6 +62,10 @@ class Job {
     job.skills,
     job.description,
     id: job.id,
+    employerVerified: job.employer.verified,
+    distanceKm: job.distanceKm,
+    experienceLabel: job.experienceLabel,
+    shiftHoursLabel: job.shiftHoursLabel,
     latitude: job.latitude,
     longitude: job.longitude,
   );
@@ -62,7 +77,7 @@ const jobs = [
     'Plumbing',
     'Sri Sai Constructions',
     'Chennai, TN',
-    '₹800–1,000/day',
+    '₹20,800–26,000/month',
     '4.7',
     3,
     ['Plumbing', 'Pipe Fitting', 'Waterproofing'],
@@ -73,7 +88,7 @@ const jobs = [
     'Electrical',
     'Kumar Interiors',
     'Chennai, TN',
-    '₹900–1,200/day',
+    '₹23,400–31,200/month',
     '4.9',
     2,
     ['Electrical Wiring', 'Electrician'],
@@ -84,7 +99,7 @@ const jobs = [
     'Carpentry',
     'WoodCraft Studio',
     'Coimbatore, TN',
-    '₹1,000–1,400/day',
+    '₹26,000–36,400/month',
     '4.6',
     1,
     ['Carpentry', 'Woodwork'],
@@ -95,7 +110,7 @@ const jobs = [
     'Painting',
     'ColorHome Painters',
     'Chennai, TN',
-    '₹700–850/day',
+    '₹18,200–22,100/month',
     '4.5',
     2,
     ['Painting', 'Wall Putty'],
@@ -106,7 +121,7 @@ const jobs = [
     'Masonry',
     'BuildRight',
     'Madurai, TN',
-    '₹850–1,000/day',
+    '₹22,100–26,000/month',
     '4.4',
     4,
     ['Masonry', 'Plastering'],
@@ -117,7 +132,7 @@ const jobs = [
     'AC Repair',
     'CoolFix Services',
     'Chennai, TN',
-    '₹600–900/day',
+    '₹15,600–23,400/month',
     '4.8',
     2,
     ['AC Repair', 'Appliance Repair'],

@@ -3,11 +3,17 @@ part of '../main.dart';
 class HomeTab extends StatefulWidget {
   const HomeTab({
     super.key,
+    this.refreshToken = 0,
+    this.api,
+    this.locationService,
     required this.onBrowse,
     required this.onAlerts,
     required this.onProfile,
     required this.onUnreadChanged,
   });
+  final int refreshToken;
+  final WorkerApiService? api;
+  final FeedLocationService? locationService;
   final VoidCallback onBrowse, onAlerts, onProfile;
   final ValueChanged<int> onUnreadChanged;
   @override
@@ -15,9 +21,11 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
+  int _loadSequence = 0;
   bool available = true;
   bool loading = true;
   String? loadError;
+  bool accessDenied = false;
   Map<String, dynamic> dashboard = {};
   List<Job> latestJobs = [];
 
@@ -39,22 +47,29 @@ class _HomeTabState extends State<HomeTab> {
     _loadDashboard();
   }
 
+  @override
+  void didUpdateWidget(covariant HomeTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshToken != widget.refreshToken) _loadDashboard();
+  }
+
   Future<void> _loadDashboard() async {
+    final sequence = ++_loadSequence;
     if (mounted) {
       setState(() {
         loading = true;
         loadError = null;
+        accessDenied = false;
       });
     }
     try {
-      final service = WorkerApiService();
-      final response = await service.fetchDashboard();
-      var homeJobs = response.latestJobs;
-      if (homeJobs.isEmpty) {
-        final jobsPage = await service.fetchJobs(page: 1);
-        homeJobs = jobsPage.jobs.take(3).toList();
-      }
-      if (!mounted) return;
+      final service = widget.api ?? WorkerApiService();
+      final position = await (widget.locationService ?? FeedLocationService())
+          .current();
+      if (!mounted || sequence != _loadSequence) return;
+      final response = await service.fetchDashboard(location: position?.query);
+      final homeJobs = response.latestJobs;
+      if (!mounted || sequence != _loadSequence) return;
       setState(() {
         dashboard = {
           'greeting': response.greeting,
@@ -75,12 +90,29 @@ class _HomeTabState extends State<HomeTab> {
       });
       widget.onUnreadChanged(response.stats.unreadNotifications);
     } on ApiException catch (error) {
-      if (mounted) {
-        setState(() => loadError = error.message);
+      if (mounted && sequence == _loadSequence) {
+        setState(() {
+          accessDenied = error.statusCode == 401 || error.statusCode == 403;
+          loadError = error.statusCode == 401
+              ? 'Your session has expired. Please sign in again.'
+              : error.statusCode == 403
+              ? 'This account cannot access the worker dashboard. Sign in with a worker account. If this is a worker account, contact support.'
+              : error.message;
+        });
       }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted && sequence == _loadSequence) setState(() => loading = false);
     }
+  }
+
+  Future<void> _signInAgain() async {
+    await ApiClient.instance.setToken(null);
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (_) => false,
+    );
   }
 
   Future<void> _setAvailability(bool value) async {
@@ -92,7 +124,7 @@ class _HomeTabState extends State<HomeTab> {
         setState(() => available = saved);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
+            content: AppText(
               saved
                   ? 'You are now available for work.'
                   : 'Availability turned off.',
@@ -105,7 +137,7 @@ class _HomeTabState extends State<HomeTab> {
         setState(() => available = previous);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
       }
     }
   }
@@ -113,7 +145,7 @@ class _HomeTabState extends State<HomeTab> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: loading || loadError != null
-        ? null
+        ? AppBar(actions: const [AppLanguageButton(), SizedBox(width: 12)])
         : AppBar(
             toolbarHeight: 59,
             leadingWidth: 58,
@@ -128,7 +160,7 @@ class _HomeTabState extends State<HomeTab> {
                       : null,
                   child: avatarUrl?.isNotEmpty == true
                       ? null
-                      : Text(
+                      : AppText(
                           workerName
                               .trim()
                               .split(RegExp(r'\s+'))
@@ -148,15 +180,15 @@ class _HomeTabState extends State<HomeTab> {
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Welcome back 👋',
+                AppText(
+                  context.tr('Welcome back 👋'),
                   style: TextStyle(
                     fontSize: 12,
                     color: muted,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-                Text(
+                AppText(
                   workerName,
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                 ),
@@ -165,35 +197,7 @@ class _HomeTabState extends State<HomeTab> {
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: Stack(
-                  children: [
-                    IconButton.filledTonal(
-                      style: IconButton.styleFrom(
-                        backgroundColor: context.surfaceColor,
-                        side: BorderSide(color: context.borderColor),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: widget.onAlerts,
-                      icon: const Icon(LucideIcons.bell, size: 21),
-                    ),
-                    if (unreadNotifications > 0)
-                      Positioned(
-                        top: 9,
-                        right: 9,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: brand,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                child: const AppLanguageButton(),
               ),
             ],
           ),
@@ -206,14 +210,22 @@ class _HomeTabState extends State<HomeTab> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(LucideIcons.wifiOff, color: muted, size: 40),
+                  Icon(
+                    accessDenied
+                        ? LucideIcons.lockKeyhole
+                        : LucideIcons.wifiOff,
+                    color: muted,
+                    size: 40,
+                  ),
                   const SizedBox(height: 12),
-                  Text(loadError!, textAlign: TextAlign.center),
+                  AppText(loadError!, textAlign: TextAlign.center),
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: _loadDashboard,
+                    onPressed: accessDenied ? _signInAgain : _loadDashboard,
                     icon: const Icon(LucideIcons.refreshCw, size: 18),
-                    label: const Text('Try again'),
+                    label: AppText(
+                      accessDenied ? 'Sign in again' : 'Try again',
+                    ),
                   ),
                 ],
               ),
@@ -231,17 +243,17 @@ class _HomeTabState extends State<HomeTab> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Available for work',
+                            AppText(
+                              context.tr('Available for work'),
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            Text(
+                            AppText(
                               available
-                                  ? 'Employers can discover you'
-                                  : "You're hidden from employers",
+                                  ? context.tr('Employers can discover you')
+                                  : context.tr("You're hidden from employers"),
                               style: const TextStyle(
                                 color: muted,
                                 fontSize: 12,
@@ -264,7 +276,7 @@ class _HomeTabState extends State<HomeTab> {
                     Expanded(
                       child: StatCard(
                         stats['available_jobs']?.toString() ?? '0',
-                        'Available Jobs',
+                        context.tr('Available Jobs'),
                         LucideIcons.briefcaseBusiness,
                         Color(0xFFFFF3EE),
                         brand,
@@ -275,7 +287,7 @@ class _HomeTabState extends State<HomeTab> {
                       child: StatCard(
                         stats['kyc_status_label']?.toString() ??
                             'Not submitted',
-                        'KYC Status',
+                        context.tr('KYC Status'),
                         LucideIcons.shieldCheck,
                         Color(0xFFFFF7ED),
                         Color(0xFFB45309),
@@ -290,7 +302,7 @@ class _HomeTabState extends State<HomeTab> {
                     Expanded(
                       child: StatCard(
                         stats['applications']?.toString() ?? '0',
-                        'Applications',
+                        context.tr('Applications'),
                         LucideIcons.check,
                         Color(0xFFECFDF5),
                         Color(0xFF047857),
@@ -300,7 +312,7 @@ class _HomeTabState extends State<HomeTab> {
                     Expanded(
                       child: StatCard(
                         '$completion%',
-                        'Profile complete',
+                        context.tr('Profile complete'),
                         LucideIcons.clock,
                         Color(0xFFEEF2FF),
                         Color(0xFF4F46E5),
@@ -329,13 +341,15 @@ class _HomeTabState extends State<HomeTab> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Profile $completion% complete',
+                                AppText(
+                                  '${context.tr('Profile complete')}: $completion%',
                                   style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 SizedBox(height: 2),
-                                Text(
-                                  'Add skills & KYC to get more jobs',
+                                AppText(
+                                  context.tr(
+                                    'Add skills & KYC to get more jobs',
+                                  ),
                                   style: TextStyle(color: muted, fontSize: 12),
                                 ),
                               ],
@@ -353,8 +367,8 @@ class _HomeTabState extends State<HomeTab> {
                               ),
                             ),
                             onPressed: widget.onProfile,
-                            child: const Text(
-                              'Complete',
+                            child: AppText(
+                              context.tr('Complete'),
                               style: TextStyle(fontSize: 13),
                             ),
                           ),
@@ -375,8 +389,8 @@ class _HomeTabState extends State<HomeTab> {
                 ),
                 const SizedBox(height: 17),
                 SectionHeader(
-                  'LATEST JOBS NEAR YOU',
-                  action: 'See all →',
+                  context.tr('LATEST JOBS NEAR YOU'),
+                  action: context.tr('See all →'),
                   onTap: widget.onBrowse,
                 ),
                 const SizedBox(height: 4),
@@ -390,13 +404,13 @@ class _HomeTabState extends State<HomeTab> {
                           size: 28,
                         ),
                         SizedBox(height: 8),
-                        Text(
-                          'No jobs available near you yet',
+                        AppText(
+                          context.tr('No jobs available near you yet'),
                           style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                         SizedBox(height: 3),
-                        Text(
-                          'New matching jobs will appear here.',
+                        AppText(
+                          context.tr('New matching jobs will appear here.'),
                           style: TextStyle(color: muted, fontSize: 12),
                         ),
                       ],

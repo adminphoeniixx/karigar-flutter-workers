@@ -41,7 +41,7 @@ class _SavedPageState extends State<SavedPage> {
           setState(() => saved.removeWhere((e) => e.job.id == item.job.id));
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Job removed from saved jobs.')),
+          const SnackBar(content: AppText('Job removed from saved jobs.')),
         );
         return true;
       }
@@ -50,7 +50,7 @@ class _SavedPageState extends State<SavedPage> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
       return false;
     }
   }
@@ -70,7 +70,7 @@ class _SavedPageState extends State<SavedPage> {
         onPressed: () => Navigator.maybePop(context),
         icon: const Icon(LucideIcons.arrowLeft),
       ),
-      title: const Text('Saved Jobs', style: TextStyle(fontSize: 16)),
+      title: const AppText('Saved Jobs', style: TextStyle(fontSize: 16)),
     ),
     body: loading
         ? const Center(child: CircularProgressIndicator())
@@ -79,8 +79,8 @@ class _SavedPageState extends State<SavedPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(error!, textAlign: TextAlign.center),
-                TextButton(onPressed: _load, child: const Text('Try again')),
+                AppText(error!, textAlign: TextAlign.center),
+                TextButton(onPressed: _load, child: const AppText('Try again')),
               ],
             ),
           )
@@ -93,7 +93,7 @@ class _SavedPageState extends State<SavedPage> {
                     children: const [
                       Icon(LucideIcons.bookmarkX, color: muted, size: 42),
                       SizedBox(height: 12),
-                      Text(
+                      AppText(
                         'No saved jobs yet',
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -102,7 +102,7 @@ class _SavedPageState extends State<SavedPage> {
                         ),
                       ),
                       SizedBox(height: 4),
-                      Text(
+                      AppText(
                         'Tap the bookmark icon on a job to save it here.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: muted),
@@ -149,7 +149,7 @@ class _SavedPageState extends State<SavedPage> {
                             child: IconButton(
                               padding: EdgeInsets.zero,
                               visualDensity: VisualDensity.compact,
-                              tooltip: 'Remove saved job',
+                              tooltip: context.tr('Remove saved job'),
                               onPressed: () => _remove(item),
                               icon: const Icon(
                                 LucideIcons.bookmarkCheck,

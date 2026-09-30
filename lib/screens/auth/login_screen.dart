@@ -8,6 +8,8 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool otp = false;
+  int resendSeconds = 0;
+  Timer? resendTimer;
   final phone = TextEditingController();
   final otpController = TextEditingController();
   final otpFocusNode = FocusNode();
@@ -26,6 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void dispose() {
     auth.removeListener(_onAuthChanged);
+    resendTimer?.cancel();
     phone.dispose();
     otpController.dispose();
     otpFocusNode.dispose();
@@ -36,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
   void _message(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(SnackBar(content: AppText(message)));
   }
 
   void _changeNumber() {
@@ -46,6 +49,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _sendOtp() async {
+    if (auth.loading || (otp && resendSeconds > 0)) return;
     final number = phone.text.replaceAll(RegExp(r'\D'), '');
     if (number.length != 10) {
       _message('Enter a valid 10-digit mobile number.');
@@ -53,7 +57,21 @@ class _LoginPageState extends State<LoginPage> {
     }
     if (await auth.sendOtp(number) && mounted) {
       otpController.clear();
-      setState(() => otp = true);
+      resendTimer?.cancel();
+      setState(() {
+        otp = true;
+        resendSeconds = auth.cooldown;
+      });
+      resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        setState(
+          () => resendSeconds = (resendSeconds - 1).clamp(0, auth.cooldown),
+        );
+        if (resendSeconds == 0) timer.cancel();
+      });
       _message('OTP sent successfully.');
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) otpFocusNode.requestFocus();
@@ -95,205 +113,232 @@ class _LoginPageState extends State<LoginPage> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         shape: const Border(),
         leading: IconButton(
-          onPressed: otp
-              ? _changeNumber
-              : () => Navigator.maybePop(context),
+          onPressed: otp ? _changeNumber : () => Navigator.maybePop(context),
           icon: const Icon(LucideIcons.arrowLeft),
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
         children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            width: 56,
-            height: 56,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: context.brandTint,
-              borderRadius: BorderRadius.circular(16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: context.brandTint,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(LucideIcons.smartphone, color: brand, size: 28),
             ),
-            child: const Icon(LucideIcons.smartphone, color: brand, size: 28),
           ),
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'Login with Mobile',
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -.5,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          "Worker · We'll send you a one-time code",
-          style: TextStyle(color: muted, fontSize: 15),
-        ),
-        const SizedBox(height: 24),
-        if (!otp) ...[
-          const FieldLabel('Mobile number'),
-          Container(
-            height: 66,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: context.surfaceColor,
-              border: Border.all(color: context.borderColor),
-              borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 20),
+          const AppText(
+            'Login with Mobile',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -.5,
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 64,
-                  height: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  color: context.isDark
-                      ? const Color(0xFF292D35)
-                      : const Color(0xFFF0F1F4),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'IN',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+          ),
+          const SizedBox(height: 6),
+          const AppText(
+            "Worker · We'll send you a one-time code",
+            style: TextStyle(color: muted, fontSize: 15),
+          ),
+          const SizedBox(height: 24),
+          if (!otp) ...[
+            const FieldLabel('Mobile number'),
+            Container(
+              height: 66,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: context.surfaceColor,
+                border: Border.all(color: context.borderColor),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    height: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    color: context.isDark
+                        ? const Color(0xFF292D35)
+                        : const Color(0xFFF0F1F4),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AppText(
+                          'IN',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        '+91',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                        SizedBox(width: 8),
+                        AppText(
+                          '+91',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: phone,
-                    keyboardType: TextInputType.phone,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    maxLength: 10,
-                    decoration: const InputDecoration(
-                      counterText: '',
-                      hintText: '98765 43210',
-                      filled: false,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 21,
+                  Expanded(
+                    child: TextField(
+                      controller: phone,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      maxLength: 10,
+                      decoration: InputDecoration(
+                        counterText: '',
+                        hintText: context.tr('98765 43210'),
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 21,
+                        ),
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            const AppText(
+              'Job updates will be sent to this number.',
+              style: TextStyle(color: muted, fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            PrimaryButton(
+              'Send OTP',
+              height: 46,
+              isLoading: auth.loading,
+              onPressed: _sendOtp,
+            ),
+          ] else ...[
+            const AppText(
+              'Enter the 4-digit code sent to',
+              style: TextStyle(fontSize: 15),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                AppText(
+                  '+91 ${phone.text.isEmpty ? '98765 43210' : phone.text}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                TextButton(
+                  onPressed: _changeNumber,
+                  child: const AppText('Change'),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Job updates will be sent to this number.',
-            style: TextStyle(color: muted, fontSize: 12),
-          ),
-          const SizedBox(height: 14),
-          PrimaryButton(
-            'Send OTP',
-            height: 46,
-            isLoading: auth.loading,
-            onPressed: _sendOtp,
-          ),
-        ] else ...[
-          const Text(
-            'Enter the 4-digit code sent to',
-            style: TextStyle(fontSize: 15),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Text(
-                '+91 ${phone.text.isEmpty ? '98765 43210' : phone.text}',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              TextButton(
-                onPressed: _changeNumber,
-                child: const Text('Change'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Stack(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(4, (index) {
-                  final value = otpController.text;
-                  return Container(
-                    width: 46,
-                    height: 56,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: context.fieldColor,
-                      border: Border.all(color: context.borderColor),
-                      borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 12),
+            Center(
+              child: SizedBox(
+                width: 232,
+                child: Stack(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(4, (index) {
+                        final value = otpController.text;
+                        return Container(
+                          width: 46,
+                          height: 56,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: context.fieldColor,
+                            border: Border.all(color: context.borderColor),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: AppText(
+                            index < value.length ? value[index] : '',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      }),
                     ),
-                    child: Text(
-                      index < value.length ? value[index] : '',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: 0,
+                        child: TextField(
+                          controller: otpController,
+                          focusNode: otpFocusNode,
+                          autofocus: true,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.oneTimeCode],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(4),
+                          ],
+                          onChanged: (_) => setState(() {}),
+                          onSubmitted: (_) => _verifyOtp(),
+                        ),
                       ),
                     ),
-                  );
-                }),
-              ),
-              Positioned.fill(
-                child: Opacity(
-                  opacity: 0,
-                  child: TextField(
-                    controller: otpController,
-                    focusNode: otpFocusNode,
-                    autofocus: true,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.done,
-                    autofillHints: const [AutofillHints.oneTimeCode],
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(4),
-                    ],
-                    onChanged: (_) => setState(() {}),
-                    onSubmitted: (_) => _verifyOtp(),
-                  ),
+                  ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Center(
+              child: TextButton(
+                onPressed: resendSeconds > 0 || auth.loading ? null : _sendOtp,
+                child: AppText(
+                  resendSeconds > 0
+                      ? context.trArgs('Resend available in {seconds}s', {
+                          'seconds': '$resendSeconds',
+                        })
+                      : 'Resend OTP',
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            PrimaryButton(
+              'Verify & Continue',
+              isLoading: auth.loading,
+              onPressed: _verifyOtp,
+            ),
+            const SizedBox(height: 16),
+            const Center(
+              child: AppText(
+                'By continuing you agree to our Terms & Privacy Policy.',
+                style: TextStyle(color: muted, fontSize: 12),
+              ),
+            ),
+          ],
+          Wrap(
+            alignment: WrapAlignment.center,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LegalDocumentsPage()),
+                ),
+                child: const AppText('Terms & Privacy'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HelpSupportPage()),
+                ),
+                child: const AppText('Help & Support'),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          const Center(
-            child: Text(
-              'Resend available in 30s',
-              style: TextStyle(color: muted, fontSize: 12),
-            ),
-          ),
-          const SizedBox(height: 18),
-          PrimaryButton(
-            'Verify & Continue',
-            isLoading: auth.loading,
-            onPressed: _verifyOtp,
-          ),
-          const SizedBox(height: 16),
-          const Center(
-            child: Text(
-              'By continuing you agree to our Terms & Privacy Policy.',
-              style: TextStyle(color: muted, fontSize: 12),
-            ),
-          ),
-        ],
         ],
       ),
     ),

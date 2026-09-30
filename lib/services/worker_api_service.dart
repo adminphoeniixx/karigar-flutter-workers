@@ -5,6 +5,7 @@ import '../constants/api_constants.dart';
 import '../models/api_models.dart';
 import 'api_client.dart';
 import 'auth_service.dart';
+import 'india_locations.dart';
 
 class WorkerApiService {
   WorkerApiService([ApiClient? client]) : _api = client ?? ApiClient.instance;
@@ -14,19 +15,33 @@ class WorkerApiService {
     return data is Map ? Map<String, dynamic>.from(data) : response;
   }
 
-  Future<ReferenceData> reference() async =>
-      ReferenceData.fromJson(_payload(await _api.get(ApiConstants.reference)));
-  Future<List<String>> cities(String state) async =>
-      (_payload(
-                    await _api.get(
-                      ApiConstants.cities,
-                      query: {'state': state},
-                    ),
-                  )['cities']
-                  as List? ??
-              [])
-          .map((e) => e.toString())
-          .toList();
+  Future<ReferenceData> reference() async {
+    final data = _payload(await _api.get(ApiConstants.reference));
+    data['states'] = IndiaLocations.merge(
+      (data['states'] as List? ?? []).map((value) => value.toString()),
+      await IndiaLocations.states(),
+    );
+    return ReferenceData.fromJson(data);
+  }
+
+  Future<List<String>> cities(String state) async {
+    final bundled = await IndiaLocations.cities(state);
+    try {
+      final data = _payload(
+        await _api.get(ApiConstants.cities, query: {'state': state}),
+      );
+      return IndiaLocations.merge(
+        (data['cities'] as List? ?? []).map((value) => value.toString()),
+        bundled,
+      );
+    } on ApiException catch (error) {
+      // Authentication failures must not be hidden by the offline fallback.
+      if (bundled.isEmpty || error.statusCode == 401 || error.statusCode == 403)
+        rethrow;
+      return bundled;
+    }
+  }
+
   Future<List<String>> jobCategories() async =>
       ((_payload(await _api.get(ApiConstants.jobCategories)))['job_categories']
                   as List? ??
@@ -50,10 +65,10 @@ class WorkerApiService {
         'available': value,
       }))['available'] ==
       true;
-  Future<Map<String, dynamic>> dashboard() async =>
-      _payload(await _api.get(ApiConstants.dashboard));
-  Future<DashboardModel> fetchDashboard() async =>
-      DashboardModel.fromJson(await dashboard());
+  Future<Map<String, dynamic>> dashboard({Map<String, dynamic>? location}) async =>
+      _payload(await _api.get(ApiConstants.dashboard, query: location));
+  Future<DashboardModel> fetchDashboard({Map<String, dynamic>? location}) async =>
+      DashboardModel.fromJson(await dashboard(location: location));
   Future<Map<String, dynamic>> jobs({
     Map<String, dynamic>? filters,
     int? page,

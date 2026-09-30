@@ -14,7 +14,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
   bool canApply = true;
   bool _viewLogged = false;
   RatingModel employerRating = const RatingModel(average: 0, count: 0);
-  String? contactPhone;
+  String? contactPhone, contactName, contactDesignation;
   Job? detailJob;
 
   @override
@@ -42,13 +42,15 @@ class _JobDetailPageState extends State<JobDetailPage> {
           canApply = response.canApply;
           employerRating = response.employerRating;
           contactPhone = response.contactPhone;
+          contactName = response.contactName;
+          contactDesignation = response.contactDesignation;
         });
       }
     } on ApiException catch (error) {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
     } finally {
       if (mounted) setState(() => detailLoading = false);
     }
@@ -63,7 +65,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         setState(() => saved = result);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
+            content: AppText(
               result
                   ? 'Job saved successfully.'
                   : 'Job removed from saved jobs.',
@@ -75,7 +77,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -86,7 +88,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
     if (phone == null || phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Employer phone number is not available for this job.'),
+          content: AppText(
+            'Employer phone number is not available for this job.',
+          ),
         ),
       );
       return;
@@ -99,7 +103,13 @@ class _JobDetailPageState extends State<JobDetailPage> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unable to call $phone on this device.')),
+          SnackBar(
+            content: AppText(
+              context.trArgs('Unable to call {phone} on this device.', {
+                'phone': phone,
+              }),
+            ),
+          ),
         );
       }
     }
@@ -111,7 +121,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         : job.city.trim();
     if (query.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Job location is not available.')),
+        const SnackBar(content: AppText('Job location is not available.')),
       );
       return;
     }
@@ -122,7 +132,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
         mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open Google Maps.')),
+        const SnackBar(content: AppText('Unable to open Google Maps.')),
       );
     }
   }
@@ -141,7 +151,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
       setState(() => applied = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
+          content: AppText(
             response['message']?.toString() ?? 'Application submitted!',
           ),
         ),
@@ -150,7 +160,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -165,11 +175,11 @@ class _JobDetailPageState extends State<JobDetailPage> {
           onPressed: () => Navigator.maybePop(context),
           icon: const Icon(LucideIcons.arrowLeft),
         ),
-        title: const Text('Job Details', style: TextStyle(fontSize: 16)),
+        title: const AppText('Job Details', style: TextStyle(fontSize: 16)),
         actions: [
           if (!detailLoading)
             IconButton(
-              tooltip: saved ? 'Remove saved job' : 'Save job',
+              tooltip: context.tr(saved ? 'Remove saved job' : 'Save job'),
               onPressed: loading ? null : _toggleSaved,
               icon: loading
                   ? const SizedBox(
@@ -199,10 +209,24 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${j.employer} · ★ ${employerRating.average.toStringAsFixed(1)} (${employerRating.count} reviews)',
+                AppText(
+                  '${j.employer} · ★ ${employerRating.average.toStringAsFixed(1)} (${context.trArgs('{count} reviews', {'count': '${employerRating.count}'})})',
                   style: const TextStyle(color: muted, fontSize: 12),
                 ),
+                if (j.employerVerified)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: VerifiedEmployerBadge(),
+                  ),
+                if (j.distanceKm != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: AppText(
+                      context.trArgs('{distance} km away', {
+                        'distance': j.distanceKm!.toStringAsFixed(1),
+                      }),
+                    ),
+                  ),
                 const SizedBox(height: 16),
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -217,7 +241,12 @@ class _JobDetailPageState extends State<JobDetailPage> {
                         ),
                         SizedBox(
                           width: cardWidth,
-                          child: MiniStat('Openings', '${j.openings} needed'),
+                          child: MiniStat(
+                            'Openings',
+                            context.trArgs('{count} needed', {
+                              'count': '${j.openings}',
+                            }),
+                          ),
                         ),
                         SizedBox(
                           width: cardWidth,
@@ -225,12 +254,33 @@ class _JobDetailPageState extends State<JobDetailPage> {
                         ),
                         SizedBox(
                           width: cardWidth,
-                          child: const MiniStat('Shift', 'Day'),
+                          child: MiniStat(
+                            'Shift',
+                            j.shiftHoursLabel.isEmpty
+                                ? 'Not disclosed'
+                                : j.shiftHoursLabel,
+                          ),
                         ),
                       ],
                     );
                   },
                 ),
+                if (j.experienceLabel.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: MiniStat('Experience', j.experienceLabel),
+                  ),
+                if (contactPhone?.isNotEmpty == true &&
+                    contactName?.isNotEmpty == true)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      [contactName, contactDesignation]
+                          .whereType<String>()
+                          .where((value) => value.trim().isNotEmpty)
+                          .join(' · '),
+                    ),
+                  ),
                 const SectionTitle('Job description'),
                 Text(
                   j.description,
@@ -278,7 +328,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                         const Icon(LucideIcons.mapPin, size: 16, color: brand),
                         const SizedBox(width: 5),
                         Expanded(
-                          child: Text(
+                          child: AppText(
                             j.city,
                             style: const TextStyle(
                               color: brand,
@@ -314,7 +364,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       ),
                       SizedBox(width: 9),
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           'Never pay an advance fee for work. Report anything that seems suspicious.',
                           style: TextStyle(
                             color: Color(0xFFB45309),

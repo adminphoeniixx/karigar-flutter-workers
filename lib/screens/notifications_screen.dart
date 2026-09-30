@@ -53,7 +53,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notification marked as read.')),
+          const SnackBar(content: AppText('Notification marked as read.')),
         );
       }
     } on ApiException catch (error) {
@@ -74,7 +74,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
         });
         widget.onUnreadChanged?.call(0);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All notifications marked as read.')),
+          const SnackBar(content: AppText('All notifications marked as read.')),
         );
       }
     } on ApiException catch (error) {
@@ -86,17 +86,17 @@ class _NotificationsTabState extends State<NotificationsTab> {
 
   void _error(String message) => ScaffoldMessenger.of(
     context,
-  ).showSnackBar(SnackBar(content: Text(message)));
+  ).showSnackBar(SnackBar(content: AppText(message)));
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Notifications'),
+      title: const AppText('Notifications'),
       actions: [
         if (!loading && hasUnread)
           if (MediaQuery.sizeOf(context).width < 380)
             IconButton(
-              tooltip: 'Mark all as read',
+              tooltip: context.tr('Mark all as read'),
               onPressed: markingAll ? null : _readAll,
               icon: markingAll
                   ? const SizedBox.square(
@@ -114,7 +114,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(LucideIcons.checkCheck, size: 16),
-              label: const Text('Mark all read'),
+              label: const AppText('Mark all read'),
             ),
       ],
     ),
@@ -144,7 +144,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                         ),
                       ),
                       const SizedBox(height: 18),
-                      const Text(
+                      const AppText(
                         'No notifications yet',
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -153,7 +153,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      const AppText(
                         'Job updates and application alerts will appear here.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: muted, height: 1.4),
@@ -215,7 +215,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text(
+                                            AppText(
                                               note['message']?.toString() ?? '',
                                               softWrap: true,
                                               style: TextStyle(
@@ -226,7 +226,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                               ),
                                             ),
                                             const SizedBox(height: 6),
-                                            Text(
+                                            AppText(
                                               note['created_ago']?.toString() ??
                                                   '',
                                               softWrap: true,

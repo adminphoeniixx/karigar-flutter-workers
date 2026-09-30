@@ -9,6 +9,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int tab = 0;
+  int feedRefresh = 0;
   int unreadAlerts = 0;
   late final List<Widget?> _pages;
 
@@ -28,12 +29,13 @@ class _MainShellState extends State<MainShell> {
   Widget _buildPage(int index) {
     return switch (index) {
       0 => HomeTab(
+        refreshToken: feedRefresh,
         onBrowse: () => _selectTab(1),
         onAlerts: () => _selectTab(3),
         onProfile: () => _selectTab(4),
         onUnreadChanged: _setUnread,
       ),
-      1 => const JobsTab(),
+      1 => JobsTab(refreshToken: feedRefresh),
       2 => const ApplicationsTab(),
       3 => NotificationsTab(onUnreadChanged: _setUnread),
       4 => const ProfileTab(),
@@ -43,7 +45,12 @@ class _MainShellState extends State<MainShell> {
 
   void _selectTab(int value) {
     if (value == tab) return;
-    _pages[value] ??= _buildPage(value);
+    feedRefresh++;
+    if (value == 0 || value == 1) {
+      _pages[value] = _buildPage(value);
+    } else {
+      _pages[value] ??= _buildPage(value);
+    }
     setState(() => tab = value);
   }
 
@@ -157,7 +164,7 @@ class _NavItem extends StatelessWidget {
                           color: brand,
                           borderRadius: BorderRadius.circular(9),
                         ),
-                        child: Text(
+                        child: AppText(
                           badge!,
                           style: const TextStyle(
                             color: Colors.white,
@@ -170,7 +177,7 @@ class _NavItem extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 3),
-              Text(
+              AppText(
                 label,
                 style: TextStyle(
                   color: active ? brand : muted,

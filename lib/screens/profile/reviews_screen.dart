@@ -47,7 +47,7 @@ class _ReviewsPageState extends State<ReviewsPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
       }
     } finally {
       if (mounted) setState(() => loading = false);
@@ -61,7 +61,7 @@ class _ReviewsPageState extends State<ReviewsPage> {
         onPressed: () => Navigator.maybePop(context),
         icon: const Icon(LucideIcons.arrowLeft),
       ),
-      title: const Text('Reviews & Ratings', style: TextStyle(fontSize: 16)),
+      title: const AppText('Reviews & Ratings', style: TextStyle(fontSize: 16)),
     ),
     body: loading
         ? const Center(child: CircularProgressIndicator())
@@ -73,7 +73,7 @@ class _ReviewsPageState extends State<ReviewsPage> {
                 AppCard(
                   child: Column(
                     children: [
-                      Text(
+                      AppText(
                         ((summary['average'] as num?)?.toDouble() ?? 0)
                             .toStringAsFixed(1),
                         style: const TextStyle(
@@ -97,8 +97,10 @@ class _ReviewsPageState extends State<ReviewsPage> {
                         }),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'Based on ${summary['count'] ?? 0} reviews',
+                      AppText(
+                        context.trArgs('Based on {count} reviews', {
+                          'count': '${summary['count'] ?? 0}',
+                        }),
                         style: const TextStyle(color: muted, fontSize: 12),
                       ),
                     ],
@@ -109,7 +111,7 @@ class _ReviewsPageState extends State<ReviewsPage> {
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 48),
                     child: Center(
-                      child: Text(
+                      child: AppText(
                         'No ratings yet',
                         style: TextStyle(color: muted),
                       ),

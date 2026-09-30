@@ -24,8 +24,14 @@ import 'services/meta_events_service.dart';
 import 'services/auth_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/worker_api_service.dart';
+import 'services/feed_location_service.dart';
 
 part 'models/job.dart';
+part 'widgets/app_language_button.dart';
+part 'widgets/localized_text.dart';
+part 'widgets/image_source_picker.dart';
+part 'widgets/profile_options_picker.dart';
+part 'l10n/translations.dart';
 part 'screens/splash_screen.dart';
 part 'screens/auth/onboarding_screen.dart';
 part 'screens/auth/login_screen.dart';
@@ -81,6 +87,21 @@ final profileAvatarUrl = ValueNotifier<String?>(null);
 
 const _translations = <String, Map<String, String>>{
   'hi': {
+    "Welcome back 👋": "वापसी पर स्वागत है 👋",
+    "Available for work": "काम के लिए उपलब्ध",
+    "Employers can discover you": "नियोक्ता आपको खोज सकते हैं",
+    "You're hidden from employers": "आप नियोक्ताओं से छिपे हैं",
+    "Available Jobs": "उपलब्ध नौकरियां",
+    "KYC Status": "KYC स्थिति",
+    "Applications": "आवेदन",
+    "Profile complete": "प्रोफ़ाइल पूर्ण",
+    "Add skills & KYC to get more jobs":
+        "अधिक नौकरियों के लिए कौशल और KYC जोड़ें",
+    "Complete": "पूरा करें",
+    "LATEST JOBS NEAR YOU": "आपके पास नई नौकरियां",
+    "See all →": "सभी देखें →",
+    "No jobs available near you yet": "अभी आपके पास कोई नौकरी उपलब्ध नहीं है",
+    "New matching jobs will appear here.": "नई उपयुक्त नौकरियां यहां दिखेंगी।",
     'Home': 'होम',
     'Jobs': 'नौकरियां',
     'Applied': 'आवेदन',
@@ -101,6 +122,22 @@ const _translations = <String, Map<String, String>>{
     'Pick your preferred app language.': 'ऐप की भाषा चुनें।',
   },
   'ta': {
+    "Welcome back 👋": "மீண்டும் வரவேற்கிறோம் 👋",
+    "Available for work": "வேலைக்குத் தயார்",
+    "Employers can discover you": "முதலாளிகள் உங்களைக் கண்டறியலாம்",
+    "You're hidden from employers": "முதலாளிகளுக்கு உங்கள் விவரம் தெரியாது",
+    "Available Jobs": "கிடைக்கும் வேலைகள்",
+    "KYC Status": "KYC நிலை",
+    "Applications": "விண்ணப்பங்கள்",
+    "Profile complete": "சுயவிவரம் நிறைவு",
+    "Add skills & KYC to get more jobs":
+        "மேலும் வேலைகளுக்குத் திறன்கள் மற்றும் KYC சேர்க்கவும்",
+    "Complete": "நிறைவு செய்",
+    "LATEST JOBS NEAR YOU": "அருகிலுள்ள புதிய வேலைகள்",
+    "See all →": "அனைத்தையும் காண்க →",
+    "No jobs available near you yet": "அருகில் இன்னும் வேலைகள் இல்லை",
+    "New matching jobs will appear here.":
+        "பொருத்தமான புதிய வேலைகள் இங்கே தோன்றும்.",
     'Home': 'முகப்பு',
     'Jobs': 'வேலைகள்',
     'Applied': 'விண்ணப்பங்கள்',
@@ -122,6 +159,22 @@ const _translations = <String, Map<String, String>>{
         'உங்களுக்கு விருப்பமான மொழியைத் தேர்ந்தெடுக்கவும்.',
   },
   'te': {
+    "Welcome back 👋": "మళ్లీ స్వాగతం 👋",
+    "Available for work": "పని చేయడానికి సిద్ధం",
+    "Employers can discover you": "యజమానులు మిమ్మల్ని కనుగొనగలరు",
+    "You're hidden from employers": "మీ వివరాలు యజమానులకు కనిపించవు",
+    "Available Jobs": "అందుబాటులో ఉన్న ఉద్యోగాలు",
+    "KYC Status": "KYC స్థితి",
+    "Applications": "దరఖాస్తులు",
+    "Profile complete": "ప్రొఫైల్ పూర్తి",
+    "Add skills & KYC to get more jobs":
+        "మరిన్ని ఉద్యోగాల కోసం నైపుణ్యాలు మరియు KYC జోడించండి",
+    "Complete": "పూర్తి చేయండి",
+    "LATEST JOBS NEAR YOU": "మీ సమీపంలోని కొత్త ఉద్యోగాలు",
+    "See all →": "అన్నీ చూడండి →",
+    "No jobs available near you yet": "మీ సమీపంలో ఇంకా ఉద్యోగాలు లేవు",
+    "New matching jobs will appear here.":
+        "కొత్త అనుకూల ఉద్యోగాలు ఇక్కడ కనిపిస్తాయి.",
     'Home': 'హోమ్',
     'Jobs': 'ఉద్యోగాలు',
     'Applied': 'దరఖాస్తులు',
@@ -142,6 +195,21 @@ const _translations = <String, Map<String, String>>{
     'Pick your preferred app language.': 'మీకు నచ్చిన యాప్ భాషను ఎంచుకోండి.',
   },
   'bn': {
+    "Welcome back 👋": "আবার স্বাগতম 👋",
+    "Available for work": "কাজের জন্য উপলব্ধ",
+    "Employers can discover you": "নিয়োগকর্তারা আপনাকে খুঁজে পাবেন",
+    "You're hidden from employers": "নিয়োগকর্তারা আপনাকে দেখতে পাবেন না",
+    "Available Jobs": "উপলব্ধ চাকরি",
+    "KYC Status": "KYC অবস্থা",
+    "Applications": "আবেদন",
+    "Profile complete": "প্রোফাইল সম্পূর্ণ",
+    "Add skills & KYC to get more jobs":
+        "আরও চাকরির জন্য দক্ষতা ও KYC যোগ করুন",
+    "Complete": "সম্পূর্ণ করুন",
+    "LATEST JOBS NEAR YOU": "আপনার কাছের নতুন চাকরি",
+    "See all →": "সব দেখুন →",
+    "No jobs available near you yet": "এখনও আপনার কাছে চাকরি নেই",
+    "New matching jobs will appear here.": "নতুন উপযুক্ত চাকরি এখানে দেখাবে।",
     'Home': 'হোম',
     'Jobs': 'চাকরি',
     'Applied': 'আবেদন',
@@ -162,6 +230,21 @@ const _translations = <String, Map<String, String>>{
     'Pick your preferred app language.': 'আপনার পছন্দের অ্যাপ ভাষা বেছে নিন।',
   },
   'mr': {
+    "Welcome back 👋": "पुन्हा स्वागत आहे 👋",
+    "Available for work": "कामासाठी उपलब्ध",
+    "Employers can discover you": "नियोक्ते तुम्हाला शोधू शकतात",
+    "You're hidden from employers": "तुम्ही नियोक्त्यांना दिसत नाही",
+    "Available Jobs": "उपलब्ध नोकऱ्या",
+    "KYC Status": "KYC स्थिती",
+    "Applications": "अर्ज",
+    "Profile complete": "प्रोफाइल पूर्ण",
+    "Add skills & KYC to get more jobs":
+        "अधिक नोकऱ्यांसाठी कौशल्ये आणि KYC जोडा",
+    "Complete": "पूर्ण करा",
+    "LATEST JOBS NEAR YOU": "तुमच्या जवळील नवीन नोकऱ्या",
+    "See all →": "सर्व पहा →",
+    "No jobs available near you yet": "सध्या जवळ नोकऱ्या उपलब्ध नाहीत",
+    "New matching jobs will appear here.": "नवीन योग्य नोकऱ्या येथे दिसतील.",
     'Home': 'मुख्यपृष्ठ',
     'Jobs': 'नोकऱ्या',
     'Applied': 'अर्ज',
@@ -184,8 +267,16 @@ const _translations = <String, Map<String, String>>{
 };
 
 extension AppTranslations on BuildContext {
+  String trArgs(String key, Map<String, String> arguments) {
+    var translated = tr(key);
+    for (final entry in arguments.entries) {
+      translated = translated.replaceAll('{${entry.key}}', entry.value);
+    }
+    return translated;
+  }
+
   String tr(String english) =>
-      _translations[appLocale.value.languageCode]?[english] ?? english;
+      translateAppText(english, Localizations.localeOf(this).languageCode);
 }
 
 extension AppThemeColors on BuildContext {
@@ -358,7 +449,11 @@ class _AuthGateState extends State<AuthGate> {
     await widget.onInitialize?.call();
     if (!ApiClient.instance.isAuthenticated) return false;
     try {
-      await AuthService().me();
+      final user = await AuthService().me();
+      if (!user.isWorker) {
+        await ApiClient.instance.setToken(null);
+        return false;
+      }
       return true;
     } on ApiException catch (error) {
       if (error.statusCode == 401 || error.statusCode == 403) {

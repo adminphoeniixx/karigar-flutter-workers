@@ -1,7 +1,8 @@
 part of '../../main.dart';
 
 class RegistrationPage extends StatefulWidget {
-  const RegistrationPage({super.key});
+  const RegistrationPage({super.key, this.api});
+  final WorkerApiService? api;
   @override
   State<RegistrationPage> createState() => _RegistrationPageState();
 }
@@ -18,7 +19,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   bool locating = false;
   double? latitude;
   double? longitude;
-  final workerApi = WorkerApiService();
+  late final workerApi = widget.api ?? WorkerApiService();
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final experienceController = TextEditingController();
@@ -31,30 +32,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
   String education = '10th Pass';
   final selectedLanguages = <String>{'Tamil', 'Hindi'};
   final selectedSkills = <String>{};
-  static const skills = [
-    'Plumbing',
-    'Pipe Fitting',
-    'Waterproofing',
-    'Tiling',
-    'Electrical Wiring',
-    'Carpentry',
-    'Painting',
-    'Masonry',
-    'AC Repair',
-    'Welding',
-    'Driving',
-    'Helper',
-  ];
-  static const languages = [
-    'Hindi',
-    'English',
-    'Tamil',
-    'Telugu',
-    'Kannada',
-    'Malayalam',
-    'Marathi',
-    'Bengali',
-  ];
+  List<String> skills = [];
+  List<String> categories = [];
+  List<String> languages = [];
+  String? selectedCategory;
+  String? referenceError;
+  String? citiesError;
+  int cityRequest = 0;
 
   @override
   void initState() {
@@ -74,8 +58,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   Future<void> _pickKycDocument(bool isPan) async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 90);
-    if (picked == null) return;
+    final picked = await pickAppImage(context, imageQuality: 90);
+    if (picked == null || !mounted) return;
     final file = File(picked.path);
     if (await file.length() > 4 * 1024 * 1024) {
       _showError('Document must be 4 MB or smaller.');
@@ -85,36 +69,93 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   Future<void> _loadStates() async {
-    setState(() => loadingStates = true);
+    setState(() {
+      loadingStates = true;
+      referenceError = null;
+    });
     try {
       final reference = await workerApi.reference();
-      if (mounted) setState(() => states = reference.states);
+      if (mounted) {
+        setState(() {
+          states = reference.states.toSet().toList();
+          skills = reference.skills.toSet().toList();
+          categories = reference.jobCategories.toSet().toList();
+          languages = reference.spokenLanguages.toSet().toList();
+        });
+      }
     } on ApiException catch (error) {
-      if (mounted) _showError(error.message);
+      if (mounted) setState(() => referenceError = error.message);
     } finally {
       if (mounted) setState(() => loadingStates = false);
     }
   }
 
   Future<void> _loadCities(String state) async {
+    final request = ++cityRequest;
     setState(() {
       selectedState = state;
       selectedCity = null;
       cities = [];
       loadingCities = true;
+      citiesError = null;
+      latitude = null;
+      longitude = null;
     });
     try {
       final result = await workerApi.cities(state);
-      if (mounted && selectedState == state) {
-        setState(() => cities = result);
+      if (mounted && request == cityRequest) {
+        setState(() => cities = result.toSet().toList());
       }
     } on ApiException catch (error) {
-      if (mounted) _showError(error.message);
+      if (mounted && request == cityRequest) {
+        setState(() => citiesError = error.message);
+      }
     } finally {
-      if (mounted && selectedState == state) {
+      if (mounted && request == cityRequest) {
         setState(() => loadingCities = false);
       }
     }
+  }
+
+  Future<void> _enterCity() async {
+    final state = selectedState;
+    var enteredCity = '';
+    final city = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: AppText(
+          context.trArgs('City in {state}', {'state': state ?? ''}),
+        ),
+        content: TextField(
+          onChanged: (value) => enteredCity = value,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(labelText: context.tr('City / District')),
+          onSubmitted: (value) {
+            if (value.trim().isNotEmpty) Navigator.pop(context, value.trim());
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const AppText('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (enteredCity.trim().isNotEmpty) {
+                Navigator.pop(context, enteredCity.trim());
+              }
+            },
+            child: const AppText('Save'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || city == null || selectedState != state) return;
+    setState(() {
+      if (!cities.contains(city)) cities = [...cities, city];
+      selectedCity = city;
+    });
   }
 
   Future<void> _useCurrentLocation() async {
@@ -150,16 +191,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
       if (places.isEmpty) throw Exception('Address not found');
       final place = places.first;
       final detectedState = place.administrativeArea?.trim();
-      final detectedCity = (place.locality?.trim().isNotEmpty == true
-              ? place.locality
-              : place.subAdministrativeArea)
-          ?.trim();
+      final detectedCity =
+          (place.locality?.trim().isNotEmpty == true
+                  ? place.locality
+                  : place.subAdministrativeArea)
+              ?.trim();
       final matchingState = states.cast<String?>().firstWhere(
         (item) => item!.toLowerCase() == detectedState?.toLowerCase(),
         orElse: () => null,
       );
       if (matchingState == null) {
-        _showError('Could not match your detected state. Please select it manually.');
+        _showError(
+          'Could not match your detected state. Please select it manually.',
+        );
         return;
       }
       final allCities = await workerApi.cities(matchingState);
@@ -171,6 +215,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
       setState(() {
         latitude = position.latitude;
         longitude = position.longitude;
+        cityRequest++;
+        loadingCities = false;
+        citiesError = null;
         selectedState = matchingState;
         cities = allCities;
         selectedCity = matchingCity;
@@ -188,7 +235,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   void _showError(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(SnackBar(content: AppText(message)));
   }
 
   @override
@@ -204,12 +251,15 @@ class _RegistrationPageState extends State<RegistrationPage> {
         },
         icon: const Icon(LucideIcons.arrowLeft),
       ),
-      title: const Text('Set up your profile', style: TextStyle(fontSize: 16)),
+      title: const AppText(
+        'Set up your profile',
+        style: TextStyle(fontSize: 16),
+      ),
       actions: [
         Center(
           child: Padding(
             padding: const EdgeInsets.only(right: 18),
-            child: Text(
+            child: AppText(
               '${step + 1}/6',
               style: const TextStyle(
                 color: muted,
@@ -252,14 +302,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: submitting ? null : _finish,
+                  onPressed: submitting ? null : () => _finish(skipKyc: true),
                   child: submitting
                       ? const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Skip for now'),
+                      : const AppText('Skip for now'),
                 ),
               ),
               const SizedBox(width: 10),
@@ -284,7 +334,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     ),
   );
 
-  Future<void> _finish() async {
+  Future<void> _finish({bool skipKyc = false}) async {
     if (submitting) return;
     final missing = <String>[
       if (nameController.text.trim().isEmpty) 'name',
@@ -292,10 +342,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
       if (selectedState == null) 'state',
       if (selectedCity == null) 'city',
       if (selectedLanguages.isEmpty) 'language',
-      if (selectedSkills.isEmpty) 'skill/category',
+      if (selectedSkills.isEmpty && selectedCategory == null) 'skill/category',
     ];
     if (missing.isNotEmpty) {
-      _showError('Please select: ${missing.join(', ')}.');
+      _showError(
+        context.trArgs('Please select: {fields}.', {
+          'fields': missing.map(context.tr).join(', '),
+        }),
+      );
       return;
     }
     setState(() => submitting = true);
@@ -312,27 +366,45 @@ class _RegistrationPageState extends State<RegistrationPage> {
         'travel_radius_km': travelRadiusKm,
         'spoken_languages': selectedLanguages.toList(),
         'education': education,
-        'skills': selectedSkills.toList(),
+        'skills': {...selectedSkills, ?selectedCategory}.toList(),
         'experience_years': int.tryParse(experienceController.text) ?? 0,
         if (num.tryParse(wageController.text) != null)
           'expected_wage': num.parse(wageController.text),
-        'wage_type': 'daily',
+        'wage_type': 'monthly',
         'available': true,
       });
       final pan = panController.text.trim().toUpperCase();
       final aadhaar = aadhaarController.text.replaceAll(RegExp(r'\D'), '');
-      final hasAnyKyc = pan.isNotEmpty || aadhaar.isNotEmpty || panDoc != null || aadhaarDoc != null;
-      if (hasAnyKyc) {
+      final hasAnyKyc =
+          pan.isNotEmpty ||
+          aadhaar.isNotEmpty ||
+          panDoc != null ||
+          aadhaarDoc != null;
+      if (hasAnyKyc && !skipKyc) {
         if (!RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$').hasMatch(pan) ||
-            aadhaar.length != 12 || panDoc == null || aadhaarDoc == null) {
-          throw ApiException('Complete all KYC fields or use Skip for now.', statusCode: 422);
+            aadhaar.length != 12 ||
+            panDoc == null ||
+            aadhaarDoc == null) {
+          throw ApiException(
+            'Complete all KYC fields or use Skip for now.',
+            statusCode: 422,
+          );
         }
-        await workerApi.submitKyc(pan: pan, aadhaar: aadhaar, panDoc: panDoc!, aadhaarDoc: aadhaarDoc!);
+        await workerApi.submitKyc(
+          pan: pan,
+          aadhaar: aadhaar,
+          panDoc: panDoc!,
+          aadhaarDoc: aadhaarDoc!,
+        );
       }
       unawaited(MetaEventsService.instance.registrationCompleted());
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile created successfully. You can submit KYC from your profile.')),
+        const SnackBar(
+          content: AppText(
+            'Profile created successfully. You can submit KYC from your profile.',
+          ),
+        ),
       );
       Navigator.pushAndRemoveUntil(
         context,
@@ -367,7 +439,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       Row(
         children: [
           Expanded(
-            child: Text(
+            child: AppText(
               heads[step],
               style: const TextStyle(
                 fontSize: 22,
@@ -380,7 +452,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         ],
       ),
       const SizedBox(height: 6),
-      Text(subs[step], style: const TextStyle(color: muted, height: 1.5)),
+      AppText(subs[step], style: const TextStyle(color: muted, height: 1.5)),
       const SizedBox(height: 22),
     ];
     if (step == 0) {
@@ -388,14 +460,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
         const FieldLabel('Full name'),
         TextField(
           controller: nameController,
-          decoration: InputDecoration(hintText: 'e.g. Rakesh Kumar'),
+          decoration: InputDecoration(
+            hintText: context.tr('e.g. Rakesh Kumar'),
+          ),
         ),
         const SizedBox(height: 16),
         const FieldLabel('Email (optional)'),
         TextField(
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(hintText: 'you@example.com', helperText: 'Get job & application updates by email.'),
+          decoration: InputDecoration(
+            hintText: context.tr('you@example.com'),
+            helperText: context.tr('Get job & application updates by email.'),
+          ),
         ),
         const SizedBox(height: 16),
         const FieldLabel('Gender'),
@@ -404,7 +481,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           children: ['Male', 'Female', 'Other']
               .map(
                 (e) => ChoiceChip(
-                  label: Text(e),
+                  label: AppText(e),
                   selected: gender == e,
                   onSelected: (_) => setState(() => gender = e),
                 ),
@@ -424,19 +501,27 @@ class _RegistrationPageState extends State<RegistrationPage> {
           ),
           onPressed: locating ? null : _useCurrentLocation,
           icon: const Icon(LucideIcons.locateFixed),
-          label: Text(locating ? 'Detecting location...' : 'Use my current location'),
+          label: AppText(
+            locating ? 'Detecting location...' : 'Use my current location',
+          ),
         ),
         const SizedBox(height: 16),
+        if (referenceError != null)
+          TextButton(
+            onPressed: _loadStates,
+            child: const AppText('Could not load options. Tap to retry'),
+          ),
         const FieldLabel('State'),
         DropdownButtonFormField<String>(
           isExpanded: true,
           menuMaxHeight: 420,
+          key: ValueKey(selectedState),
           initialValue: selectedState,
-          hint: Text(loadingStates ? 'Loading states...' : 'Select state'),
+          hint: AppText(loadingStates ? 'Loading states...' : 'Select state'),
           items: states
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
               .toList(),
-          onChanged: loadingStates
+          onChanged: loadingStates || locating
               ? null
               : (value) {
                   if (value != null) _loadCities(value);
@@ -447,23 +532,34 @@ class _RegistrationPageState extends State<RegistrationPage> {
         DropdownButtonFormField<String>(
           isExpanded: true,
           menuMaxHeight: 420,
-          key: ValueKey(selectedState),
-          initialValue: selectedCity,
-          hint: Text(
+          key: ValueKey((selectedState, selectedCity)),
+          initialValue: cities.contains(selectedCity) ? selectedCity : null,
+          hint: AppText(
             selectedState == null
                 ? 'Select state first'
                 : loadingCities
                 ? 'Loading cities...'
-                : 'Select city',
+                : selectedCity ?? 'Select city',
           ),
           items: cities
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
               .toList(),
-          onChanged: selectedState == null || loadingCities
+          onChanged: selectedState == null || loadingCities || locating
               ? null
               : (value) => setState(() => selectedCity = value),
         ),
         const SizedBox(height: 14),
+        if (citiesError != null)
+          TextButton(
+            onPressed: () => _loadCities(selectedState!),
+            child: const AppText('Could not load cities. Tap to retry'),
+          ),
+        TextButton(
+          onPressed: selectedState == null || loadingCities || locating
+              ? null
+              : _enterCity,
+          child: const AppText('City not listed? Enter your city'),
+        ),
         const FieldLabel('Pin your exact location'),
         MapBox(
           onTap: locating ? null : _useCurrentLocation,
@@ -483,13 +579,17 @@ class _RegistrationPageState extends State<RegistrationPage> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: [(5, 'Within 5 km'), (15, 'Within 15 km'), (100, 'Anywhere')]
-              .map((item) => ChoiceChip(
-                    label: Text(item.$2),
-                    selected: travelRadiusKm == item.$1,
-                    onSelected: (_) => setState(() => travelRadiusKm = item.$1),
-                  ))
-              .toList(),
+          children:
+              [(5, 'Within 5 km'), (15, 'Within 15 km'), (100, 'Anywhere')]
+                  .map(
+                    (item) => ChoiceChip(
+                      label: AppText(item.$2),
+                      selected: travelRadiusKm == item.$1,
+                      onSelected: (_) =>
+                          setState(() => travelRadiusKm = item.$1),
+                    ),
+                  )
+                  .toList(),
         ),
       ]);
     }
@@ -501,10 +601,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
           children: languages
               .map(
                 (e) => FilterChip(
-                  label: Text(e),
+                  label: AppText(e),
                   selected: selectedLanguages.contains(e),
-                  onSelected: (v) =>
-                      setState(() => v ? selectedLanguages.add(e) : selectedLanguages.remove(e)),
+                  onSelected: (v) => setState(
+                    () => v
+                        ? selectedLanguages.add(e)
+                        : selectedLanguages.remove(e),
+                  ),
                 ),
               )
               .toList(),
@@ -563,7 +666,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                           : null,
                     ),
                     const SizedBox(width: 12),
-                    Text(
+                    AppText(
                       e,
                       style: TextStyle(
                         color: active
@@ -585,25 +688,24 @@ class _RegistrationPageState extends State<RegistrationPage> {
     }
     if (step == 4) {
       out.addAll([
+        if (loadingStates) const LinearProgressIndicator(),
+        if (referenceError != null || (!loadingStates && skills.isEmpty))
+          TextButton(
+            onPressed: _loadStates,
+            child: const AppText('Reload skills and categories'),
+          ),
         const FieldLabel('Main job category'),
         DropdownButtonFormField<String>(
-          initialValue: null,
-          hint: const Text('Select category'),
-          items: [
-            'Plumbing',
-            'Electrical',
-            'Carpentry',
-            'Painting',
-            'Masonry',
-            'AC Repair',
-            'Driving',
-            'Housekeeping',
-          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() => selectedSkills.add(value));
-            }
-          },
+          isExpanded: true,
+          menuMaxHeight: 420,
+          initialValue: selectedCategory,
+          hint: const AppText('Select category'),
+          items: categories
+              .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
+              .toList(),
+          onChanged: loadingStates
+              ? null
+              : (value) => setState(() => selectedCategory = value),
         ),
         const SizedBox(height: 14),
         const FieldLabel('Your skills'),
@@ -613,16 +715,17 @@ class _RegistrationPageState extends State<RegistrationPage> {
           children: skills
               .map(
                 (e) => FilterChip(
-                  label: Text(e),
+                  label: AppText(e),
                   selected: selectedSkills.contains(e),
-                  onSelected: (v) =>
-                      setState(() => v ? selectedSkills.add(e) : selectedSkills.remove(e)),
+                  onSelected: (v) => setState(
+                    () => v ? selectedSkills.add(e) : selectedSkills.remove(e),
+                  ),
                 ),
               )
               .toList(),
         ),
         const SizedBox(height: 6),
-        const Text(
+        const AppText(
           'Tap to select. You can add more later in your profile.',
           style: TextStyle(color: muted, fontSize: 12),
         ),
@@ -639,8 +742,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     controller: experienceController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      hintText: '0',
-                      suffixText: 'years',
+                      hintText: context.tr('0'),
+                      suffixText: context.tr('years'),
                     ),
                   ),
                 ],
@@ -651,14 +754,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FieldLabel('Expected wage'),
+                  FieldLabel('Expected salary per month'),
                   TextField(
                     controller: wageController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       prefixText: '₹ ',
-                      hintText: '800',
-                      suffixText: '/day',
+                      hintText: '18000',
+                      suffixText: context.tr('/month'),
                     ),
                   ),
                 ],
@@ -674,8 +777,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
         TextField(
           controller: aadhaarController,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(12)],
-          decoration: InputDecoration(hintText: '1234 5678 9012'),
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(12),
+          ],
+          decoration: InputDecoration(hintText: context.tr('1234 5678 9012')),
         ),
         const SizedBox(height: 14),
         const FieldLabel('PAN number'),
@@ -683,11 +789,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
           controller: panController,
           textCapitalization: TextCapitalization.characters,
           inputFormatters: [LengthLimitingTextInputFormatter(10)],
-          decoration: const InputDecoration(hintText: 'ABCDE1234F'),
+          decoration: InputDecoration(hintText: context.tr('ABCDE1234F')),
         ),
         const SizedBox(height: 14),
         UploadTile(
-          'Upload Aadhaar & PAN photo\nJPG / PNG / PDF · max 5MB each',
+          aadhaarDoc == null
+              ? 'Upload Aadhaar photo\nJPG / PNG · max 4MB'
+              : aadhaarDoc!.path.split(Platform.pathSeparator).last,
           LucideIcons.upload,
           dashed: true,
           onTap: () => _pickKycDocument(false),
@@ -708,7 +816,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             Icon(LucideIcons.shield, color: Color(0xFF047857), size: 17),
             SizedBox(width: 6),
             Expanded(
-              child: Text(
+              child: AppText(
                 'Documents are encrypted and used only for verification.',
                 style: TextStyle(color: muted, fontSize: 12),
               ),

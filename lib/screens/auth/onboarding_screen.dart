@@ -21,21 +21,15 @@ class OnboardingPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: .16),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(
-              LucideIcons.wrench,
-              color: Colors.white,
-              size: 34,
-            ),
+          Image.asset(
+            'assets/images/onboarding_logo_white.png',
+            width: 80,
+            height: 84,
+            fit: BoxFit.contain,
+            semanticLabel: 'Super Karigar',
           ),
           const SizedBox(height: 16),
-          const Text(
+          const AppText(
             'Find work,\nnear your home.',
             style: TextStyle(
               color: Colors.white,
@@ -46,14 +40,14 @@ class OnboardingPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          const AppText(
             "Built for India's skilled workers. Verified jobs, direct hiring, on-time payments.",
             style: TextStyle(color: Colors.white, fontSize: 15.5, height: 1.5),
           ),
           const Spacer(),
-          const Feature(LucideIcons.mapPin, 'See jobs near you'),
-          const Feature(LucideIcons.badgeCheck, 'KYC-verified employers'),
-          const Feature(LucideIcons.indianRupee, 'Direct payout to UPI'),
+          // const Feature(LucideIcons.mapPin, 'See jobs near you'),
+          // const Feature(LucideIcons.badgeCheck, 'KYC-verified employers'),
+          // const Feature(LucideIcons.indianRupee, 'Direct payout to UPI'),
           const SizedBox(height: 18),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -71,15 +65,15 @@ class OnboardingPage extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const LoginPage()),
               );
             },
-            child: const Text(
+            child: const AppText(
               'Get Started',
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 14),
           const Center(
-            child: Text(
-              'For workers · Employer? karigar.in',
+            child: AppText(
+              'For workers · Employer? Superkarigar.in',
               style: TextStyle(color: Colors.white, fontSize: 12.5),
             ),
           ),
@@ -108,7 +102,10 @@ class Feature extends StatelessWidget {
           child: Icon(icon, color: Colors.white, size: 20),
         ),
         const SizedBox(width: 12),
-        Text(text, style: const TextStyle(color: Colors.white, fontSize: 14.5)),
+        AppText(
+          text,
+          style: const TextStyle(color: Colors.white, fontSize: 14.5),
+        ),
       ],
     ),
   );

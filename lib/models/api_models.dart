@@ -10,6 +10,7 @@ class UserModel {
   final int id;
   final String name, phone, role, locale;
   final String? avatarUrl;
+  bool get isWorker => role.trim().toLowerCase() == 'worker';
   factory UserModel.fromJson(Map<String, dynamic> j) => UserModel(
     id: (j['id'] as num).toInt(),
     name: j['name']?.toString() ?? '',
@@ -82,6 +83,12 @@ class WorkerProfileModel {
   String get name => data['name']?.toString() ?? '';
   int get completion => (data['completion'] as num?)?.toInt() ?? 0;
   bool get available => data['available'] == true;
+  String get fullAddress => [data['address'], data['city'], data['state']]
+      .whereType<String>()
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toSet()
+      .join(', ');
 }
 
 class JobModel {
@@ -150,12 +157,18 @@ class RatingModel {
 }
 
 class EmployerModel {
-  const EmployerModel({required this.id, required this.name});
+  const EmployerModel({
+    required this.id,
+    required this.name,
+    this.verified = false,
+  });
+  final bool verified;
   final int id;
   final String name;
   factory EmployerModel.fromJson(Json json) => EmployerModel(
     id: jsonInt(json['id']),
     name: json['name']?.toString() ?? '',
+    verified: jsonBool(json['verified']),
   );
 }
 
@@ -175,7 +188,12 @@ class ApiJobModel {
     required this.employer,
     this.latitude,
     this.longitude,
+    this.distanceKm,
+    this.experienceLabel = '',
+    this.shiftHoursLabel = '',
   });
+  final double? distanceKm;
+  final String experienceLabel, shiftHoursLabel;
   final int id, vacancies;
   final String title, category, city, state, locationLabel, wageLabel;
   final String description, createdAgo;
@@ -197,6 +215,9 @@ class ApiJobModel {
     latitude: (json['latitude'] as num?)?.toDouble(),
     longitude: (json['longitude'] as num?)?.toDouble(),
     employer: EmployerModel.fromJson(jsonMap(json['employer'])),
+    distanceKm: num.tryParse('${json['distance_km']}')?.toDouble(),
+    experienceLabel: json['experience_label']?.toString() ?? '',
+    shiftHoursLabel: json['shift_hours_label']?.toString() ?? '',
   );
 }
 
@@ -215,7 +236,8 @@ class PaginationModel {
 }
 
 class JobPageModel {
-  const JobPageModel({required this.jobs, required this.pagination});
+  const JobPageModel({required this.jobs, required this.pagination, this.feed});
+  final JobFeedModel? feed;
   final List<ApiJobModel> jobs;
   final PaginationModel pagination;
   factory JobPageModel.fromJson(Json json) => JobPageModel(
@@ -223,6 +245,9 @@ class JobPageModel {
       json['data'],
     ).map((e) => ApiJobModel.fromJson(jsonMap(e))).toList(),
     pagination: PaginationModel.fromJson(jsonMap(json['meta'])),
+    feed: json['feed'] is Map
+        ? JobFeedModel.fromJson(jsonMap(json['feed']))
+        : null,
   );
 }
 
@@ -234,12 +259,14 @@ class JobDetailModel {
     required this.employerRating,
     this.application,
     this.contactPhone,
+    this.contactName,
+    this.contactDesignation,
   });
   final ApiJobModel job;
   final bool isSaved, canApply;
   final ApplicationModel? application;
   final RatingModel employerRating;
-  final String? contactPhone;
+  final String? contactPhone, contactName, contactDesignation;
   factory JobDetailModel.fromJson(Json json) {
     final meta = jsonMap(json['meta']);
     final responseData = jsonMap(json['data']);
@@ -269,6 +296,8 @@ class JobDetailModel {
       canApply: jsonBool(meta['can_apply']),
       employerRating: RatingModel.fromJson(jsonMap(meta['employer_rating'])),
       contactPhone: phone,
+      contactName: data['contact_name']?.toString(),
+      contactDesignation: data['contact_designation']?.toString(),
       application: meta['application'] is Map
           ? ApplicationModel.fromJson(jsonMap(meta['application']))
           : null,
@@ -709,4 +738,57 @@ class LocaleModel {
     locale: json['locale']?.toString() ?? 'en',
     supported: jsonList(json['supported']),
   );
+}
+
+/// Canonical display options for API values with inconsistent case/spacing.
+/// Preserve a saved legacy value if the reference list no longer contains it.
+class ProfileDropdownOptions {
+  ProfileDropdownOptions(Iterable<String> options, String? saved) {
+    final canonical = <String, String>{};
+    for (final option in options) {
+      final value = option.trim();
+      if (value.isNotEmpty) canonical.putIfAbsent(_key(value), () => value);
+    }
+    final value = saved?.trim();
+    if (value != null && value.isNotEmpty) {
+      selected = canonical.putIfAbsent(_key(value), () => value);
+    }
+    items = canonical.values.toList();
+  }
+  static String _key(String value) =>
+      value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+  late final List<String> items;
+  String? selected;
+}
+
+class JobFeedModel {
+  const JobFeedModel({
+    required this.type,
+    required this.categories,
+    required this.location,
+  });
+  final String type, location;
+  final List<String> categories;
+  factory JobFeedModel.fromJson(Json json) => JobFeedModel(
+    type: json['type']?.toString() ?? 'for_you',
+    location: json['location']?.toString() ?? 'none',
+    categories: jsonList(
+      json['categories'],
+    ).map((value) => value.toString()).toList(),
+  );
+}
+
+String monthlyProfileWage(dynamic value, dynamic type) {
+  final amount = num.tryParse(value?.toString() ?? '');
+  if (amount == null) return '';
+  final monthly =
+      amount *
+      switch (type?.toString().trim().toLowerCase()) {
+        'daily' => 26,
+        'hourly' => 208,
+        _ => 1,
+      };
+  return monthly == monthly.roundToDouble()
+      ? monthly.toInt().toString()
+      : monthly.toString();
 }

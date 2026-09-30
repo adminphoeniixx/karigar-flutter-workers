@@ -1,0 +1,477 @@
+# Super Karigar — Worker App API (v1)
+
+Token-based JSON API for the worker mobile app. Auth is via **Laravel Sanctum**
+personal access tokens (issued after mobile-OTP verification). The web app keeps
+using Inertia/Fortify sessions — this API is additive and independent.
+
+- **Base URL:** `https://<host>/api/v1`
+- **Auth header:** `Authorization: Bearer <token>`
+- **Content type:** `application/json` (file uploads use `multipart/form-data`)
+- **Always send:** `Accept: application/json`
+
+Validation errors return `422` with `{ "message": ..., "errors": { field: [msg] } }`.
+Auth failures return `401`; role/permission failures `403`.
+
+---
+
+## 1. Auth (public)
+
+### `POST /auth/otp/send`
+Send/resend a 4-digit OTP (MSG91). In dev (no MSG91 keys) the OTP is written to
+`storage/logs`.
+```json
+// body
+{ "phone": "9876543210" }
+// 200
+{ "message": "OTP sent successfully", "cooldown": 30 }
+```
+Rate limited: 3/min per phone+IP (plus route throttle 6/min).
+
+### `POST /auth/otp/verify`
+Verify OTP → issue a token. Registers the account on first login.
+```json
+// body
+{ "phone": "9876543210", "otp": "4821", "role": "worker", "device_name": "Pixel 8" }
+// 200
+{
+  "token": "12|xxxxxxxx...",
+  "is_new": true,
+  "needs_registration": true,     // route new workers into the signup wizard
+  "user": { "id": 5, "name": "Worker 3210", "phone": "9876543210", "role": "worker", "locale": "en", "avatar_url": null, "rating": { "average": 0, "count": 0 } }
+}
+```
+
+### `POST /auth/logout` 🔒
+Revoke the current token. → `{ "message": "Logged out." }`
+
+### `GET /auth/me` 🔒
+```json
+{ "user": { ...UserResource }, "unread_notifications": 2 }
+```
+
+### `DELETE /account` 🔒
+Permanently delete the account (workers have no password, so a confirmation flag
+is required). Revokes all tokens.
+```json
+// body
+{ "confirm": true }
+// 200
+{ "message": "Your account has been deleted." }
+```
+
+---
+
+## 2. Reference data (public)
+For registration dropdowns/chips and job filters. Cache on first launch.
+
+### `GET /reference`
+```json
+{
+  "states": ["Andhra Pradesh", ...],
+  "skills": ["Bunai / Knitting", "Weaving", "Kadhai / Embroidery", ...],   // the 14 craft categories
+  "spoken_languages": ["Hindi", "English", "Tamil", ...],
+  "education_levels": ["Below 10th", "10th Pass", "12th Pass", "ITI / Diploma", "Graduate", "Post Graduate"],
+  "wage_types": ["monthly"],                 // wages are monthly only
+  "app_languages": [{ "code": "en", "native": "English", "english": "English" }, ...],
+  "job_categories": ["Bunai / Knitting", "Weaving", ...]
+}
+```
+`skills` and `job_categories` are the same list: every active craft category, in
+display order. The sign-up skills step shows all of them, so a karigar's skills
+match the categories jobs are posted under (the job feed matches on them).
+
+### `GET /reference/cities?state=Tamil%20Nadu`
+`{ "cities": ["Chennai", "Coimbatore", ...] }`
+
+### `GET /reference/job-categories`
+`{ "job_categories": [...] }`
+
+---
+
+## 3. Registration & Profile 🔒 (worker)
+
+The signup wizard (location → spoken languages → education → skills → optional KYC)
+is just repeated calls to **`PATCH /worker/profile`** with whatever fields the step
+collected, then optionally `POST /kyc`.
+
+### `GET /worker/profile`
+→ `{ "data": WorkerProfileResource }` (see below), including `completion` (0–100).
+Like `GET /jobs/{job}`, this endpoint wraps its resource in `data`; endpoints that
+return a named key inside a plain object (`dashboard.profile`, …) do not.
+
+### `PUT|PATCH /worker/profile`
+Any subset of these fields (JSON):
+```json
+{
+  "name": "Rakesh Kumar",
+  "email": "rakesh@example.com",          // real email for job/application updates; must be unique
+  "gender": "male",                       // male | female | other
+  "skills": ["Plumbing", "Tiling"],
+  "experience_years": 6,
+  "education": "12th Pass",               // must be one of education_levels
+  "spoken_languages": ["Hindi", "Tamil"],
+  "bio": "6 years experience...",
+  "expected_wage": 18000,                 // per month
+  "wage_type": "monthly",                 // monthly only; a daily/hourly figure is converted
+  "city": "Chennai",
+  "state": "Tamil Nadu",
+  "latitude": 13.0827,
+  "longitude": 80.2707,
+  "travel_radius_km": 15,
+  "available": true,
+  "payout_upi": "rakesh@okhdfcbank"
+}
+```
+→ `{ "data": WorkerProfileResource }` with the updated profile.
+
+### `POST /worker/profile/avatar` (multipart)
+Field `avatar` (image, ≤2 MB). → `{ "avatar_url": "https://.../storage/avatars/x.jpg" }`
+
+### `PATCH /worker/availability`
+`{ "available": false }` → `{ "available": false }`
+
+### Resume
+
+The AI matcher reads the worker's resume when scoring a new application, so an
+uploaded resume directly changes the match score the employer sees.
+
+#### `GET /worker/resume`
+→ `{ "resume": null }` when none is uploaded, otherwise:
+```json
+{ "resume": { "name": "suresh-plumber.pdf", "uploaded_at": "2026-07-30T05:20:11+00:00",
+              "uploaded_ago": "2 minutes ago", "characters": 1660, "max_characters": 8000 } }
+```
+`characters` is how much text was extracted — useful for reassuring the worker
+their file was actually read.
+
+#### `POST /worker/resume` (multipart)
+Field `resume` — **PDF only**, ≤4 MB. Replaces any existing resume.
+→ `201 { "message": "Resume uploaded — …", "resume": { … } }`
+
+→ `422` when the file is not a PDF, is over 4 MB, or has no text layer (a scan or
+photo saved as PDF): `{ "message": "We could not read any text in that PDF…" }`.
+Tell the worker to upload a text PDF rather than a photo.
+
+#### `DELETE /worker/resume`
+→ `{ "message": "Resume removed.", "resume": null }` — drops the file and the
+extracted text, so later applications are scored on the profile alone.
+
+The PDF is stored on the private disk (same as KYC documents) and is never
+publicly reachable. Only an employer the worker has applied to can fetch it.
+
+**WorkerProfileResource**
+```json
+{
+  "id": 3, "name": "Rakesh Kumar", "email": "rakesh@example.com", "phone": "9876543210", "gender": "male",
+  "skills": ["Plumbing"], "experience_years": 6, "education": "12th Pass",
+  "spoken_languages": ["Hindi","Tamil"], "bio": "...", "expected_wage": "18000.00",
+  "wage_type": "monthly", "city": "Chennai", "state": "Tamil Nadu",
+  "latitude": 13.0827, "longitude": 80.2707, "travel_radius_km": 15,
+  "available": true, "payout_upi": "rakesh@okhdfcbank",
+  "avatar_url": null, "completion": 70
+}
+```
+
+---
+
+## 4. Jobs 🔒 (worker)
+
+### `GET /jobs`
+Paginated (15/page). Two modes:
+
+**The karigar's feed** (no `q`, `state`, `city`, `category` or `skill`): jobs in
+the karigar's own categories — a job whose category, or one of whose skills, is
+one of the profile's `skills` — **nearest first**. Send the phone's current
+position as `lat` + `lng` every time the list opens. Without it the saved
+profile position is used, then the profile's city (same city, then same state).
+Jobs with no map pin come after the pinned ones. Optional: `radius` (km) keeps
+to that distance; `all=1` drops the category filter. A karigar with no skills
+sees every job. Paused jobs (employer's plan ran out) never appear.
+```json
+{ "data": [ { ...JobResource, "distance_km": 3.4 } ],
+  "feed": { "type": "for_you", "categories": ["Weaving"], "location": "current" },
+  "links": {...}, "meta": {...} }
+```
+`feed.location`: `current` (from `lat`/`lng`) | `profile` | `city` | `none`.
+`feed.categories` empty: not filtered by category.
+
+**Search** (any of `q`, `state`, `city`, `category`, `skill`): the full
+Typesense search across every job, as before; `lat`/`lng`/`radius` filter by
+distance there. No `feed` block, and `distance_km` is `null`.
+
+**JobResource:** `id, title, category, skills, city, state, location_label,
+wage_min, wage_max, wage_type, wage_label ("₹20,800 – ₹26,000 / monthly"),
+vacancies, experience_label, created_at, created_ago, expires_at, distance_km,
+employer{id, name, verified}`. Wages are **monthly**. `employer.verified` is
+true for a business the admin verified (false while verification is switched
+off): show a ✔ Verified tag next to the name.
+
+### `GET /jobs/{job}`
+Full detail + the worker's context.
+```json
+{
+  "data": { ...JobDetailResource, "contact_phone": "98..." /* only if callable */ },
+  // data.employer: { "id", "name", "verified" }
+  // data also: "experience_min", "experience_max", "experience_label" ("2–5 yrs"),
+  // "shift_start", "shift_end", "shift_hours_label" ("9:00 AM – 6:00 PM"), and on
+  // a call job "contact_name" / "contact_designation" (who picks up) with "contact_phone"
+  "meta": {
+    "employer_rating": { "average": 4.7, "count": 12 },
+    "application": { "status": "pending", "status_label": "Pending", "created_ago": "2 hours ago" },
+    "is_saved": false,
+    "can_apply": true
+  }
+}
+```
+
+---
+
+## 5. Applications 🔒 (worker)
+
+`ApplicationResource` also carries `interview` (`{ at, at_label, mode, note }`,
+set when the employer schedules one) and `offer`
+(`{ wage, start_date, message }`, set when they hire you) — both `null` until
+they happen.
+
+### `GET /worker/applications?status=pending`
+`status` optional (`pending|accepted|rejected|withdrawn`). Paginated
+`ApplicationResource` list.
+
+**`ApplicationResource`** now also returns `status_changed_at` and a
+`tracking_steps` array for the parcel-style status tracker:
+```json
+"tracking_steps": [
+  { "key": "applied",     "state": "done",     "at": "2026-07-17T14:30:00+05:30", "result": null },
+  { "key": "review",      "state": "done",     "at": null, "result": null },
+  { "key": "shortlisted", "state": "done",     "at": "2026-07-18T09:00:00+05:30", "result": null },
+  { "key": "decision",    "state": "done",     "at": "2026-07-19T11:00:00+05:30", "result": "accepted" }
+]
+```
+`state`: `done | current | upcoming | rejected | skipped`. On the `decision`
+step, `result` is `accepted | rejected | withdrawn | null`. The app maps each
+`key` to a localized label and renders the icon from `state`.
+
+It also carries two booleans that drive the "Rate employer" button, so the app
+never has to work the rule out itself:
+```json
+{ "id": 10, "status": "accepted", "can_review": false, "has_reviewed": true }
+```
+- `has_reviewed` — the worker has already rated this job's employer.
+- `can_review` — show the button. True only when the application is
+  **accepted** and not yet reviewed; `false` on every other status.
+
+Drive the button off `can_review` alone. Posting a review when it is `false`
+is what `POST /applications/{application}/review` rejects — `403` if the
+application is not accepted, `422` "You have already reviewed this person for
+this job." if it is a repeat. Both flags are on the single-application payload
+from `POST /jobs/{job}/apply` too (there they are `false`/`false`, since a new
+application is always pending).
+
+### `POST /jobs/{job}/apply`
+```json
+{ "cover_note": "Available from tomorrow", "expected_wage": 18000 }   // per month
+// 201
+{ "message": "Application submitted.", "application": { ...ApplicationResource } }
+```
+Notifies the employer + sends both transactional emails (same as web).
+409-style guard: re-applying returns `422` "You have already applied...".
+A job whose employer's plan ran out is paused: it drops out of search, and
+applying returns `422` with `code: "job_not_hiring"` ("This job is not taking
+applications right now."). Show the message; the job comes back when the
+employer renews.
+
+### `DELETE /applications/{application}`
+Withdraw your own application. → `{ "message": "Application withdrawn." }`
+
+---
+
+## 6. Saved jobs 🔒 (worker)
+
+- `GET /worker/saved` → paginated `SavedJobResource` (each embeds a `JobResource`).
+- `POST /jobs/{job}/save` → toggle. `{ "saved": true, "message": "Saved." }`
+
+---
+
+## 7. KYC 🔒 (worker, **optional**)
+
+### `GET /kyc`
+`{ "kyc": null }` or `{ "kyc": { "status": "pending", "masked_pan": "ABXXXXX1", "masked_aadhaar": "XXXX XXXX 9012", "remarks": null, ... } }`
+
+### `POST /kyc` (multipart)
+Fields: `pan_number` (ABCDE1234F), `aadhaar_number` (12 digits),
+`pan_doc`, `aadhaar_doc` (jpg/png/pdf ≤4 MB; required on first submit).
+→ `201 { "message": "KYC submitted for review.", "kyc": {...} }`. Raw numbers are
+encrypted at rest and never returned.
+
+---
+
+## 8. Notifications 🔒 (any auth)
+
+Notification `type`s include `job.new`, `application.shortlisted`,
+`application.status`, `application.interview`, `job.invite` (an employer invited
+you to apply) and `chat.message`.
+
+- `GET /notifications` → `{ "notifications": { paginated [{id,type,message,url,read,created_at,created_ago}] }, "unread": 2 }`
+- `POST /notifications/{id}/read` → `{ "unread": 1 }`
+- `POST /notifications/read-all` → `{ "unread": 0 }`
+
+### Push notification device tokens
+
+Register the device's FCM token so it receives push notifications (application status, new jobs, shortlist, admin broadcasts). Call after login and whenever FCM rotates the token; remove on logout.
+
+#### `POST /device-tokens` 🔒
+
+```json
+{ "token": "<FCM_DEVICE_TOKEN>", "platform": "android" }
+```
+
+- `token` — **required**, the FCM registration token from the device.
+- `platform` — optional, one of `android` | `ios` | `web`.
+
+Idempotent (`updateOrCreate` on the token). → `{ "registered": true }`
+
+#### `DELETE /device-tokens` 🔒
+
+```json
+{ "token": "<FCM_DEVICE_TOKEN>" }
+```
+
+Removes the token so the device stops receiving pushes. → `{ "removed": true }`
+
+---
+
+## 9. Reviews 🔒 (worker)
+
+- `GET /worker/reviews` → paginated `ReviewResource` (reviews received) + `"summary": { "average": 4.8, "count": 23 }`.
+- `POST /applications/{application}/review` — rate the employer of an **accepted** application.
+  ```json
+  { "rating": 5, "comment": "Great to work with" }
+  // 201 { "message": "Review submitted.", "review": {...} }
+  ```
+
+---
+
+## 10. Dashboard & Locale 🔒 (worker)
+
+### `GET /worker/dashboard?lat=&lng=`
+Everything the home screen needs. `latest_jobs` is the top 5 of the karigar's
+feed (see `GET /jobs`): send the phone's `lat`/`lng` for nearest first.
+```json
+{
+  "greeting": "Rakesh Kumar",
+  "profile": { ...WorkerProfileResource },
+  "stats": {
+    "available_jobs": 128, "applications": 3, "saved_jobs": 4,
+    "kyc_status": "not_submitted", "kyc_status_label": "Not submitted",
+    "profile_completion": 70, "unread_notifications": 2
+  },
+  "latest_jobs": { "data": [ { ...JobResource } ] }
+}
+```
+
+### `POST /locale`
+`{ "locale": "hi" }` → `{ "locale": "hi", "supported": [...] }`
+
+---
+
+## 11. Messages 🔒 (chat with employers)
+Same endpoints the employer app uses — a worker may chat with any employer whose
+job they applied to.
+
+- `GET /conversations` → threads + `unread_total`
+- `POST /conversations` — `{ "employer_id": 8, "job_id": 3, "body": "..." }`
+  (`422 { "code": "chat_not_allowed" }` without an application between you)
+- `GET /conversations/{id}` → latest 30 messages, marks the thread read
+- `POST /conversations/{id}/messages` — `{ "body": "Yes, I can." }`
+- `POST /conversations/{id}/read`
+
+See `docs/employer-app-api.md` §12 for the exact payload shapes.
+
+---
+
+## 12. Settings 🔒 (shared)
+
+- `GET /preferences`, `PUT|PATCH /preferences` — `theme` (`system|light|dark`),
+  `job_alerts`, `message_alerts`, `applicant_alerts`
+- `GET /auth/sessions`, `DELETE /auth/sessions/{token}` — signed-in devices
+
+---
+
+## 13. Terms & Privacy and Help & Support (public)
+
+Both settings rows, and neither needs a token — the OTP screen links to the
+legal documents before an account exists, and someone who cannot sign in still
+needs help.
+
+### `GET /legal`
+The two documents without their bodies, for the settings row.
+```json
+{ "documents": [
+  { "key": "terms", "title": "Terms of use", "summary": "The rules for using…",
+    "updated_at": "2026-09-03", "updated_label": "3 September 2026", "web_url": null },
+  { "key": "privacy", "title": "Privacy policy", "summary": "What we hold about you…",
+    "updated_at": "2026-08-12", "updated_label": "12 August 2026",
+    "web_url": "https://superkarigar.com/privacy" }
+] }
+```
+`web_url` is the same text as a web page, for an "open in browser" link — it is
+**`null` for the terms** (no web page yet), so handle null rather than assuming
+a URL. `updated_label` is pre-formatted; `updated_at` is there for comparing.
+
+### `GET /legal/{document}` — `document` is `terms` or `privacy`
+The full document, as sections of blocks the app renders in its own type.
+```json
+{ "document": {
+  "key": "privacy", "title": "Privacy policy",
+  "updated_at": "2026-08-12", "updated_label": "12 August 2026",
+  "summary": "…", "intro": "Super Karigar connects skilled karigars with…",
+  "web_url": "https://superkarigar.com/privacy",
+  "sections": [
+    { "id": "what-we-collect", "title": "What we collect", "blocks": [
+      { "type": "heading", "text": "Everyone" },
+      { "type": "list", "items": ["Your mobile number…", "Your name…"] },
+      { "type": "paragraph", "text": "We use your information to…" }
+    ] }
+  ]
+} }
+```
+**There are exactly three block types** — `paragraph` and `heading` carry
+`text`, `list` carries `items`. Nothing else will ever appear, so a client only
+needs three renderers. `heading` is a sub-heading *inside* a section: render it
+smaller than the section title and keep it out of any contents rail (build that
+from `sections[].title` / `sections[].id`).
+
+`404` for any other document key. The privacy policy's identity-document
+section **disappears** when an admin switches verification off, so build the
+screen from what you get rather than from a fixed list of sections.
+
+Content is English only for now.
+
+### `GET /support?audience=worker|employer`
+```json
+{ "channels": { "email": "support@superkarigar.com", "whatsapp": "919000000000",
+                "phone": "…", "hours": "Monday to Saturday, 10 AM to 7 PM IST" },
+  "faqs": [ { "id": "otp-not-received", "audience": "all",
+              "question": "I did not get my OTP.", "answer": "The code takes a few seconds…" } ] }
+```
+- **A channel that is not configured is left out entirely** — don't render a row
+  for a missing key. `whatsapp` is digits with the country code and no `+`, so
+  the app builds its own `wa.me` link.
+- Pass `audience` to get the entries for your app plus the shared ones; omit it
+  and you get all of them. `audience` on each row is `worker | employer | all`.
+  Anything else → `422`.
+- `id` is stable — safe to deep-link to one answer.
+
+---
+
+## Notes / setup
+
+1. **Run migrations** (adds `personal_access_tokens` + worker-profile fields
+   `gender, education, spoken_languages, travel_radius_km`):
+   ```
+   php artisan migrate
+   ```
+2. OTP length is **4 digits** (MSG91 flow), matching the web login.
+3. Job search needs the Typesense server (same as the web browse page).
+4. Suspended accounts are blocked at OTP verify (`403`).
+5. Auth guard `sanctum` is registered in `config/auth.php`.

@@ -35,7 +35,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -43,7 +43,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Messages')),
+    appBar: AppBar(title: const AppText('Messages')),
     body: loading
         ? const Center(child: CircularProgressIndicator())
         : RefreshIndicator(
@@ -54,7 +54,10 @@ class _ConversationsPageState extends State<ConversationsPage> {
                     children: const [
                       Icon(LucideIcons.messageCircle, color: muted, size: 42),
                       SizedBox(height: 12),
-                      Text('No conversations yet', textAlign: TextAlign.center),
+                      AppText(
+                        'No conversations yet',
+                        textAlign: TextAlign.center,
+                      ),
                     ],
                   )
                 : ListView(
@@ -65,7 +68,9 @@ class _ConversationsPageState extends State<ConversationsPage> {
                               child: Icon(LucideIcons.building2),
                             ),
                             title: Text(c.otherParty),
-                            subtitle: Text(c.job?.title ?? 'Job conversation'),
+                            subtitle: AppText(
+                              c.job?.title ?? 'Job conversation',
+                            ),
                             trailing: c.unread > 0
                                 ? StatusPill('${c.unread}', brand, Colors.white)
                                 : null,
@@ -133,7 +138,7 @@ class _ConversationPageState extends State<ConversationPage> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -154,7 +159,7 @@ class _ConversationPageState extends State<ConversationPage> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
     } finally {
       if (mounted) setState(() => sending = false);
     }
@@ -167,13 +172,13 @@ class _ConversationPageState extends State<ConversationPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          AppText(
             conversation?.otherParty ?? 'Conversation',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           if (conversation?.job != null)
-            Text(
+            AppText(
               conversation!.job!.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -240,8 +245,8 @@ class _ConversationPageState extends State<ConversationPage> {
                           maxLines: 4,
                           textInputAction: TextInputAction.newline,
                           onSubmitted: (_) => _send(),
-                          decoration: const InputDecoration(
-                            hintText: 'Type a message',
+                          decoration: InputDecoration(
+                            hintText: context.tr('Type a message'),
                           ),
                         ),
                       ),

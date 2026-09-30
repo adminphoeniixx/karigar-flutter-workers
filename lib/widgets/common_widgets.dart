@@ -11,7 +11,7 @@ class SimpleFormPage extends StatelessWidget {
   final List<Widget> children;
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(title, style: const TextStyle(fontSize: 16))),
+    appBar: AppBar(title: AppText(title, style: const TextStyle(fontSize: 16))),
     body: ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -32,7 +32,7 @@ class FilterSheet extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        const AppText(
           'Filter jobs',
           style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
         ),
@@ -47,13 +47,15 @@ class FilterSheet extends StatelessWidget {
             'Carpentry',
             'Painting',
             'Masonry',
-          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          ].map((e) => DropdownMenuItem(value: e, child: AppText(e))).toList(),
           onChanged: (_) {},
         ),
         const SizedBox(height: 14),
         const FieldLabel('Skill'),
-        const TextField(
-          decoration: InputDecoration(hintText: 'e.g. Waterproofing'),
+        TextField(
+          decoration: InputDecoration(
+            hintText: context.tr('e.g. Waterproofing'),
+          ),
         ),
         const SizedBox(height: 14),
         Row(
@@ -66,7 +68,9 @@ class FilterSheet extends StatelessWidget {
                   DropdownButtonFormField<String>(
                     initialValue: 'Tamil Nadu',
                     items: ['Tamil Nadu', 'Kerala', 'Karnataka']
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                        .map(
+                          (e) => DropdownMenuItem(value: e, child: AppText(e)),
+                        )
                         .toList(),
                     onChanged: (_) {},
                   ),
@@ -82,7 +86,9 @@ class FilterSheet extends StatelessWidget {
                   DropdownButtonFormField<String>(
                     initialValue: 'Chennai',
                     items: ['Chennai', 'Coimbatore']
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                        .map(
+                          (e) => DropdownMenuItem(value: e, child: AppText(e)),
+                        )
                         .toList(),
                     onChanged: (_) {},
                   ),
@@ -97,14 +103,14 @@ class FilterSheet extends StatelessWidget {
             Expanded(
               child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Reset'),
+                child: const AppText('Reset'),
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: FilledButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Apply'),
+                child: const AppText('Apply'),
               ),
             ),
           ],
@@ -144,7 +150,7 @@ class _ApplySheetState extends State<ApplySheet> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) => SingleChildScrollView(
     padding: EdgeInsets.fromLTRB(
       20,
       0,
@@ -155,24 +161,24 @@ class _ApplySheetState extends State<ApplySheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        const AppText(
           'Apply for this job',
           style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 4),
-        const Text(
+        const AppText(
           'The employer will see your profile, skills and rating.',
           style: TextStyle(color: muted, fontSize: 13),
         ),
         const SizedBox(height: 18),
-        const FieldLabel('Your expected wage (optional)'),
+        const FieldLabel('Expected salary per month (optional)'),
         TextField(
           controller: wage,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
             prefixText: '₹ ',
-            hintText: '900',
-            suffixText: '/ day',
+            hintText: '18000',
+            suffixText: context.tr('/month'),
           ),
         ),
         const SizedBox(height: 14),
@@ -180,7 +186,9 @@ class _ApplySheetState extends State<ApplySheet> {
         TextField(
           controller: note,
           maxLines: 3,
-          decoration: InputDecoration(hintText: "I'm available from tomorrow…"),
+          decoration: InputDecoration(
+            hintText: context.tr("I'm available from tomorrow…"),
+          ),
         ),
         const SizedBox(height: 8),
         TextButton.icon(
@@ -193,7 +201,7 @@ class _ApplySheetState extends State<ApplySheet> {
                   );
                 },
           icon: const Icon(LucideIcons.fileUp, size: 18),
-          label: const Text('Add a resume to improve your match'),
+          label: const AppText('Add a resume to improve your match'),
         ),
         const SizedBox(height: 16),
         Container(
@@ -213,7 +221,7 @@ class _ApplySheetState extends State<ApplySheet> {
               ),
               SizedBox(width: 9),
               Expanded(
-                child: Text(
+                child: AppText(
                   'Karigar never charges you to work. Report any employer who asks for an advance fee.',
                   style: TextStyle(color: Color(0xFFB45309), fontSize: 12),
                 ),
@@ -281,8 +289,8 @@ class PrimaryButton extends StatelessWidget {
     child: AnimatedSwitcher(
       duration: const Duration(milliseconds: 180),
       child: isLoading
-          ? const Text('Please wait…', key: ValueKey('loader'))
-          : Text(
+          ? const AppText('Please wait…', key: ValueKey('loader'))
+          : AppText(
               text,
               key: const ValueKey('label'),
               maxLines: 2,
@@ -298,7 +306,7 @@ class FieldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 7),
-    child: Text(
+    child: AppText(
       text,
       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
     ),
@@ -320,7 +328,7 @@ class Tag extends StatelessWidget {
       ),
       borderRadius: BorderRadius.circular(20),
     ),
-    child: Text(
+    child: AppText(
       text,
       style: TextStyle(
         color: context.isDark
@@ -349,7 +357,7 @@ class StatusPill extends StatelessWidget {
           : background,
       borderRadius: BorderRadius.circular(20),
     ),
-    child: Text(
+    child: AppText(
       text,
       style: TextStyle(
         color: context.isDark
@@ -374,7 +382,7 @@ class Meta extends StatelessWidget {
       Icon(icon, size: 15, color: muted),
       const SizedBox(width: 4),
       Flexible(
-        child: Text(
+        child: AppText(
           text,
           softWrap: true,
           style: TextStyle(
@@ -422,14 +430,14 @@ class StatCard extends StatelessWidget {
           child: Icon(icon, color: color, size: 18),
         ),
         const SizedBox(height: 6),
-        Text(
+        AppText(
           value,
           style: TextStyle(
             fontSize: compact ? 19 : 24,
             fontWeight: FontWeight.w700,
           ),
         ),
-        Text(
+        AppText(
           label,
           style: const TextStyle(
             color: muted,
@@ -451,7 +459,7 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: [
       Expanded(
-        child: Text(
+        child: AppText(
           text,
           style: const TextStyle(
             color: muted,
@@ -461,7 +469,7 @@ class SectionHeader extends StatelessWidget {
           ),
         ),
       ),
-      if (action != null) TextButton(onPressed: onTap, child: Text(action!)),
+      if (action != null) TextButton(onPressed: onTap, child: AppText(action!)),
     ],
   );
 }
@@ -472,7 +480,7 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(top: 20, bottom: 10),
-    child: Text(
+    child: AppText(
       text.toUpperCase(),
       style: const TextStyle(
         color: muted,
@@ -492,7 +500,7 @@ class MiniStat extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: const TextStyle(
             color: muted,
@@ -501,7 +509,7 @@ class MiniStat extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 5),
-        Text(
+        AppText(
           value,
           maxLines: 3,
           softWrap: true,
@@ -673,7 +681,7 @@ class _MapBoxState extends State<MapBox> {
                   color: context.surfaceColor.withValues(alpha: .92),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
+                child: AppText(
                   widget.label!,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
@@ -717,7 +725,7 @@ class UploadTile extends StatelessWidget {
               children: [
                 Icon(icon, color: brand),
                 const SizedBox(height: 6),
-                Text(
+                AppText(
                   text,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
@@ -733,7 +741,7 @@ class UploadTile extends StatelessWidget {
                 Icon(icon, color: brand),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
+                  child: AppText(
                     text,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
@@ -766,7 +774,7 @@ class ApplicationCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   title,
                   style: const TextStyle(
                     fontSize: 15.5,
@@ -778,13 +786,13 @@ class ApplicationCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 3),
-          Text(employer, style: const TextStyle(color: muted, fontSize: 12)),
+          AppText(employer, style: const TextStyle(color: muted, fontSize: 12)),
           const SizedBox(height: 10),
           const Wrap(
             spacing: 12,
             children: [
               Meta(LucideIcons.mapPin, 'Chennai'),
-              Meta(LucideIcons.indianRupee, '₹900/day', bold: true),
+              Meta(LucideIcons.indianRupee, '₹23,400/month', bold: true),
               Meta(LucideIcons.calendarDays, '10 Jul 2026'),
             ],
           ),
@@ -834,12 +842,12 @@ class MenuRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   title,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 if (subtitle.isNotEmpty)
-                  Text(
+                  AppText(
                     subtitle,
                     style: const TextStyle(color: muted, fontSize: 12),
                   ),
@@ -910,6 +918,37 @@ class Review extends StatelessWidget {
           Text(date, style: const TextStyle(color: muted, fontSize: 12)),
         ],
       ),
+    ),
+  );
+}
+
+class VerifiedEmployerBadge extends StatelessWidget {
+  const VerifiedEmployerBadge({super.key});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: context.isDark ? const Color(0xFF153A2C) : const Color(0xFFECFDF5),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(LucideIcons.badgeCheck, size: 14, color: Color(0xFF059669)),
+        const SizedBox(width: 4),
+        Flexible(
+          child: AppText(
+            'Verified',
+            style: TextStyle(
+              fontSize: 11,
+              color: context.isDark
+                  ? const Color(0xFF6EE7B7)
+                  : const Color(0xFF047857),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }

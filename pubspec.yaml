@@ -56,6 +56,10 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/data/india_cities.json
+    - assets/data/LOCATION_DATA_LICENSE.txt
+    - assets/icons/karigar_launcher.png
+    - assets/images/onboarding_logo_white.png
     - assets/images/superkarigar.png
     - assets/images/worker_splash.png
 

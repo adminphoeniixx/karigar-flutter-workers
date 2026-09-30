@@ -1,12 +1,27 @@
 part of '../../main.dart';
 
 class JobsTab extends StatefulWidget {
-  const JobsTab({super.key});
+  const JobsTab({
+    super.key,
+    this.refreshToken = 0,
+    this.api,
+    this.locationService,
+  });
+  final int refreshToken;
+  final WorkerApiService? api;
+  final FeedLocationService? locationService;
   @override
   State<JobsTab> createState() => _JobsTabState();
 }
 
 class _JobsTabState extends State<JobsTab> {
+  late final service = widget.api ?? WorkerApiService();
+  late final locationService = widget.locationService ?? FeedLocationService();
+  FeedPosition? position;
+  JobFeedModel? feed;
+  bool showAll = false;
+  bool loadingMore = false;
+  PaginationModel? pagination;
   String query = '';
   String cat = 'All';
   String? filterState, filterCity, filterSkill;
@@ -15,6 +30,7 @@ class _JobsTabState extends State<JobsTab> {
   List<String> states = [], skills = [];
   bool loading = true;
   String? error;
+  String? referenceError;
   Timer? searchTimer;
   int _loadSequence = 0;
   String? _lastLoggedSearch;
@@ -23,12 +39,62 @@ class _JobsTabState extends State<JobsTab> {
   void initState() {
     super.initState();
     _loadReference();
-    _load();
+    _load(refreshLocation: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant JobsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshToken != widget.refreshToken)
+      _load(refreshLocation: true);
+  }
+
+  Map<String, dynamic> get requestFilters => {
+    if (query.trim().isNotEmpty) 'q': query.trim(),
+    if (cat != 'All') 'category': cat,
+    if (filterState != null) 'state': filterState,
+    if (filterCity != null) 'city': filterCity,
+    if (filterSkill != null) 'skill': filterSkill,
+    if (showAll) 'all': 1,
+    ...?position?.query,
+  };
+
+  Future<void> _loadMore() async {
+    if (loading ||
+        loadingMore ||
+        pagination == null ||
+        pagination!.currentPage >= pagination!.lastPage)
+      return;
+    final sequence = _loadSequence;
+    setState(() => loadingMore = true);
+    try {
+      final response = await service.fetchJobs(
+        filters: requestFilters,
+        page: pagination!.currentPage + 1,
+      );
+      if (!mounted || sequence != _loadSequence) return;
+      setState(() {
+        final ids = apiJobs.map((job) => job.id).toSet();
+        apiJobs.addAll(
+          response.jobs.where((job) => ids.add(job.id)).map(Job.fromApi),
+        );
+        pagination = response.pagination;
+      });
+    } on ApiException catch (e) {
+      if (mounted && sequence == _loadSequence)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
+    } finally {
+      if (mounted && sequence == _loadSequence)
+        setState(() => loadingMore = false);
+    }
   }
 
   Future<void> _loadReference() async {
+    if (mounted) setState(() => referenceError = null);
     try {
-      final reference = await WorkerApiService().reference();
+      final reference = await service.reference();
       if (mounted) {
         setState(() {
           states = reference.states;
@@ -37,14 +103,14 @@ class _JobsTabState extends State<JobsTab> {
         });
       }
     } on ApiException catch (e) {
-      if (mounted) setState(() => error = e.message);
+      if (mounted) setState(() => referenceError = e.message);
     }
   }
 
   void _search(String value) {
     query = value;
     searchTimer?.cancel();
-    searchTimer = Timer(const Duration(milliseconds: 450), _load);
+    searchTimer = Timer(const Duration(milliseconds: 450), () => _load());
   }
 
   Future<void> _openFilter() async {
@@ -72,20 +138,24 @@ class _JobsTabState extends State<JobsTab> {
     await _load();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Job filters applied successfully.')),
+        const SnackBar(content: AppText('Job filters applied successfully.')),
       );
     }
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool refreshLocation = false}) async {
     final sequence = ++_loadSequence;
-    final filters = <String, dynamic>{
-      if (query.trim().isNotEmpty) 'q': query.trim(),
-      if (cat != 'All') 'category': cat,
-      if (filterState != null) 'state': filterState,
-      if (filterCity != null) 'city': filterCity,
-      if (filterSkill != null) 'skill': filterSkill,
-    };
+    setState(() {
+      loading = true;
+      loadingMore = false;
+      error = null;
+    });
+    if (refreshLocation) {
+      final current = await locationService.current(requestPermission: true);
+      if (!mounted || sequence != _loadSequence) return;
+      position = current;
+    }
+    final filters = requestFilters;
     // This key stays in memory only; free text and locations never go to Meta.
     final searchKey = filters.toString();
     setState(() {
@@ -93,15 +163,26 @@ class _JobsTabState extends State<JobsTab> {
       error = null;
     });
     try {
-      final service = WorkerApiService();
       final response = await service.fetchJobs(filters: filters);
       if (!mounted || sequence != _loadSequence) return;
-      if (filters.isNotEmpty && _lastLoggedSearch != searchKey) {
+      if ([
+            'q',
+            'category',
+            'state',
+            'city',
+            'skill',
+          ].any(filters.containsKey) &&
+          _lastLoggedSearch != searchKey) {
         _lastLoggedSearch = searchKey;
         unawaited(
           MetaEventsService.instance.jobsSearched(
             hasQuery: filters.containsKey('q'),
-            hasFilters: filters.keys.any((key) => key != 'q'),
+            hasFilters: [
+              'category',
+              'state',
+              'city',
+              'skill',
+            ].any(filters.containsKey),
             resultCount: response.jobs.length,
           ),
         );
@@ -110,6 +191,8 @@ class _JobsTabState extends State<JobsTab> {
       }
       setState(() {
         apiJobs = response.jobs.map(Job.fromApi).toList();
+        feed = response.feed;
+        pagination = response.pagination;
       });
     } on ApiException catch (error) {
       if (mounted && sequence == _loadSequence) {
@@ -133,7 +216,7 @@ class _JobsTabState extends State<JobsTab> {
     final filtered = apiJobs;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Browse Jobs'),
+        title: const AppText('Browse Jobs'),
         actions: [
           IconButton(
             onPressed: _openFilter,
@@ -155,10 +238,15 @@ class _JobsTabState extends State<JobsTab> {
                   onChanged: _search,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(LucideIcons.search, size: 20),
-                    hintText: 'Search job title, skill…',
+                    hintText: context.tr('Search job title, skill…'),
                     fillColor: Theme.of(context).scaffoldBackgroundColor,
                   ),
                 ),
+                if (referenceError != null)
+                  TextButton(
+                    onPressed: _loadReference,
+                    child: const AppText('Reload skills and categories'),
+                  ),
                 const SizedBox(height: 10),
                 SizedBox(
                   height: 34,
@@ -188,7 +276,7 @@ class _JobsTabState extends State<JobsTab> {
                               ),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text(
+                            child: AppText(
                               e,
                               style: TextStyle(
                                 color: active ? const Color(0xFFC93A06) : muted,
@@ -206,51 +294,105 @@ class _JobsTabState extends State<JobsTab> {
             ),
           ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Text(
-                  '${filtered.length} jobs${filterCity != null ? ' · $filterCity' : ''} · matched to your filters',
-                  style: const TextStyle(color: muted, fontSize: 12.5),
-                ),
-                const SizedBox(height: 12),
-                if (loading)
-                  const Center(child: CircularProgressIndicator())
-                else if (error != null)
-                  AppCard(
-                    child: Column(
-                      children: [
-                        const Icon(LucideIcons.triangleAlert, color: brand),
-                        const SizedBox(height: 8),
-                        Text(error!, textAlign: TextAlign.center),
-                        TextButton(
-                          onPressed: _load,
-                          child: const Text('Try again'),
-                        ),
-                      ],
+            child: RefreshIndicator(
+              onRefresh: () => _load(refreshLocation: true),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const AppText('Show all jobs'),
+                    value: showAll,
+                    onChanged: (value) {
+                      setState(() => showAll = value);
+                      _load();
+                    },
+                  ),
+                  if (feed != null && !loading)
+                    AppText(
+                      feed!.categories.isEmpty
+                          ? context.tr('Jobs near you')
+                          : context.trArgs('Jobs for {categories} near you', {
+                              'categories': feed!.categories
+                                  .map(context.tr)
+                                  .join(', '),
+                            }),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  )
-                else if (filtered.isEmpty)
-                  const AppCard(
-                    child: Column(
-                      children: [
-                        Icon(LucideIcons.searchX, color: muted, size: 30),
-                        SizedBox(height: 8),
-                        Text(
-                          'No matching jobs found',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        SizedBox(height: 3),
-                        Text(
-                          'Try changing your search or filters.',
-                          style: TextStyle(color: muted),
-                        ),
-                      ],
+                  if (!loading &&
+                      (feed?.location == 'city' || feed?.location == 'none'))
+                    TextButton.icon(
+                      icon: const Icon(LucideIcons.mapPin, size: 18),
+                      label: const AppText(
+                        'Turn on location to see jobs near you',
+                      ),
+                      onPressed: () async {
+                        if (!await Geolocator.isLocationServiceEnabled()) {
+                          await Geolocator.openLocationSettings();
+                        } else if (await Geolocator.checkPermission() ==
+                            LocationPermission.deniedForever) {
+                          await Geolocator.openAppSettings();
+                        }
+                        if (mounted) await _load(refreshLocation: true);
+                      },
                     ),
-                  )
-                else
-                  ...filtered.map(JobCard.new),
-              ],
+                  if (feed == null)
+                    AppText(
+                      context.trArgs('{count} jobs matched to your filters', {
+                            'count': '${filtered.length}',
+                          }) +
+                          (filterCity != null ? ' · $filterCity' : ''),
+                      style: const TextStyle(color: muted, fontSize: 12.5),
+                    ),
+                  const SizedBox(height: 12),
+                  if (loading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (error != null)
+                    AppCard(
+                      child: Column(
+                        children: [
+                          const Icon(LucideIcons.triangleAlert, color: brand),
+                          const SizedBox(height: 8),
+                          AppText(error!, textAlign: TextAlign.center),
+                          TextButton(
+                            onPressed: _load,
+                            child: const AppText('Try again'),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (filtered.isEmpty)
+                    const AppCard(
+                      child: Column(
+                        children: [
+                          Icon(LucideIcons.searchX, color: muted, size: 30),
+                          SizedBox(height: 8),
+                          AppText(
+                            'No matching jobs found',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          SizedBox(height: 3),
+                          AppText(
+                            'Try changing your search or filters.',
+                            style: TextStyle(color: muted),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ...filtered.map(JobCard.new),
+                  if (!loading &&
+                      pagination != null &&
+                      pagination!.currentPage < pagination!.lastPage)
+                    TextButton(
+                      onPressed: loadingMore ? null : _loadMore,
+                      child: AppText(
+                        loadingMore ? 'Please wait…' : 'Load more',
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ],
@@ -304,7 +446,7 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
     } finally {
       if (mounted) {
         setState(() => loading = false);
@@ -320,7 +462,7 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          const AppText(
             'Filter jobs',
             style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
           ),
@@ -329,9 +471,9 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
           DropdownButtonFormField<String>(
             initialValue: category,
             isExpanded: true,
-            hint: const Text('All categories'),
+            hint: const AppText('All categories'),
             items: widget.categories
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
                 .toList(),
             onChanged: (v) => setState(() => category = v),
           ),
@@ -341,9 +483,9 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
             initialValue: skill,
             isExpanded: true,
             menuMaxHeight: 400,
-            hint: const Text('All skills'),
+            hint: const AppText('All skills'),
             items: widget.skills
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
                 .toList(),
             onChanged: (v) => setState(() => skill = v),
           ),
@@ -353,9 +495,9 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
             initialValue: state,
             isExpanded: true,
             menuMaxHeight: 400,
-            hint: const Text('All states'),
+            hint: const AppText('All states'),
             items: widget.states
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
                 .toList(),
             onChanged: (v) {
               if (v != null) _loadCities(v);
@@ -368,9 +510,9 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
             initialValue: city,
             isExpanded: true,
             menuMaxHeight: 400,
-            hint: Text(loading ? 'Loading cities...' : 'All cities'),
+            hint: AppText(loading ? 'Loading cities...' : 'All cities'),
             items: cities
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
                 .toList(),
             onChanged: loading ? null : (v) => setState(() => city = v),
           ),
@@ -380,7 +522,7 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(context, <String, String?>{}),
-                  child: const Text('Reset'),
+                  child: const AppText('Reset'),
                 ),
               ),
               const SizedBox(width: 10),
@@ -392,7 +534,7 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
                     'category': category,
                     'skill': skill,
                   }),
-                  child: const Text('Apply'),
+                  child: const AppText('Apply'),
                 ),
               ),
             ],
@@ -442,7 +584,7 @@ class JobCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 9),
-                Text(
+                AppText(
                   job.title,
                   style: const TextStyle(
                     fontSize: 16,
@@ -451,18 +593,35 @@ class JobCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  '${job.employer} · ★ ${job.rating}',
+                AppText(
+                  job.employer,
                   style: const TextStyle(color: muted, fontSize: 12),
                 ),
+                if (job.employerVerified)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: VerifiedEmployerBadge(),
+                  ),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 12,
                   runSpacing: 7,
                   children: [
                     Meta(LucideIcons.mapPin, job.city),
+                    if (job.distanceKm != null)
+                      Meta(
+                        LucideIcons.navigation,
+                        context.trArgs('{distance} km away', {
+                          'distance': job.distanceKm!.toStringAsFixed(1),
+                        }),
+                      ),
                     Meta(LucideIcons.indianRupee, job.wage, bold: true),
-                    Meta(LucideIcons.calendarDays, '${job.openings} openings'),
+                    Meta(
+                      LucideIcons.calendarDays,
+                      context.trArgs('{count} openings', {
+                        'count': '${job.openings}',
+                      }),
+                    ),
                   ],
                 ),
               ],
