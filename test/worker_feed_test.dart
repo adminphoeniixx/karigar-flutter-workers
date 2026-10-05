@@ -133,7 +133,9 @@ void main() {
         addTearDown(tester.view.resetDevicePixelRatio);
         Widget localized(Widget child) => MaterialApp(
           locale: Locale(language),
-          supportedLocales: appLanguages.map((item) => Locale(item.$1)),
+          supportedLocales: appLanguages.map(
+            (item) => Locale(item.$1 == 'hinglish' ? 'en' : item.$1),
+          ),
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
           home: child,
         );

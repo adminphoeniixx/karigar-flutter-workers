@@ -468,26 +468,21 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
           ),
           const SizedBox(height: 14),
           const FieldLabel('Category'),
-          DropdownButtonFormField<String>(
-            initialValue: category,
-            isExpanded: true,
-            hint: const AppText('All categories'),
-            items: widget.categories
-                .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
-                .toList(),
-            onChanged: (v) => setState(() => category = v),
+          SearchableOptionField(
+            title: 'Category',
+            options: widget.categories,
+            value: category,
+            hint: 'All categories',
+            onChanged: (value) => setState(() => category = value),
           ),
           const SizedBox(height: 14),
           const FieldLabel('Skill'),
-          DropdownButtonFormField<String>(
-            initialValue: skill,
-            isExpanded: true,
-            menuMaxHeight: 400,
-            hint: const AppText('All skills'),
-            items: widget.skills
-                .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
-                .toList(),
-            onChanged: (v) => setState(() => skill = v),
+          SearchableOptionField(
+            title: 'Skill',
+            options: widget.skills,
+            value: skill,
+            hint: 'All skills',
+            onChanged: (value) => setState(() => skill = value),
           ),
           const SizedBox(height: 14),
           const FieldLabel('State'),

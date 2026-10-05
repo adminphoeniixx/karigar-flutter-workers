@@ -12,7 +12,9 @@ class NoTestLocation extends FeedLocationService {
 
 Widget localized(Widget child, String language) => MaterialApp(
   locale: Locale(language),
-  supportedLocales: appLanguages.map((e) => Locale(e.$1)),
+  supportedLocales: appLanguages.map(
+    (e) => Locale(e.$1 == 'hinglish' ? 'en' : e.$1),
+  ),
   localizationsDelegates: GlobalMaterialLocalizations.delegates,
   home: child,
 );

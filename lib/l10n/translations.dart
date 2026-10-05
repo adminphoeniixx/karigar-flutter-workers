@@ -207,6 +207,10 @@ const appTextTranslations = <String, Map<String, String>>{
         "भारत के कुशल कामगारों के लिए। सत्यापित नौकरियां, सीधी भर्ती, समय पर भुगतान।",
     "For workers · Employer? karigar.in":
         "कामगारों के लिए · नियोक्ता? karigar.in",
+    "For workers · Employer? Superkarigar.com":
+        "कामगारों के लिए · नियोक्ता? Superkarigar.com",
+    "See jobs near you": "अपने पास की नौकरियां देखें",
+    "KYC-verified employers": "KYC-सत्यापित नियोक्ता",
     "By continuing you agree to our Terms & Privacy Policy.":
         "आगे बढ़कर आप हमारे नियम और गोपनीयता नीति स्वीकार करते हैं।",
     "Employers will see this on your profile.":
@@ -673,6 +677,10 @@ const appTextTranslations = <String, Map<String, String>>{
         "இந்தியத் திறமையான தொழிலாளர்களுக்காக. சரிபார்க்கப்பட்ட வேலைகள், நேரடி நியமனம், உரிய நேரத்தில் ஊதியம்.",
     "For workers · Employer? karigar.in":
         "தொழிலாளர்களுக்காக · முதலாளியா? karigar.in",
+    "For workers · Employer? Superkarigar.com":
+        "தொழிலாளர்களுக்காக · முதலாளியா? Superkarigar.com",
+    "See jobs near you": "உங்கள் அருகிலுள்ள வேலைகளைப் பாருங்கள்",
+    "KYC-verified employers": "KYC-சரிபார்க்கப்பட்ட முதலாளிகள்",
     "By continuing you agree to our Terms & Privacy Policy.":
         "தொடர்வதன் மூலம் விதிமுறைகள் மற்றும் தனியுரிமைக் கொள்கையை ஏற்கிறீர்கள்.",
     "Employers will see this on your profile.":
@@ -1141,6 +1149,10 @@ const appTextTranslations = <String, Map<String, String>>{
     "Built for India's skilled workers. Verified jobs, direct hiring, on-time payments.":
         "భారత నైపుణ్య కార్మికుల కోసం. ధృవీకరించిన ఉద్యోగాలు, నేరుగా నియామకం, సకాలంలో చెల్లింపు.",
     "For workers · Employer? karigar.in": "కార్మికుల కోసం · యజమానా? karigar.in",
+    "For workers · Employer? Superkarigar.com":
+        "కార్మికుల కోసం · యజమానా? Superkarigar.com",
+    "See jobs near you": "మీ దగ్గర ఉద్యోగాలను చూడండి",
+    "KYC-verified employers": "KYC-ధృవీకరించిన యజమానులు",
     "By continuing you agree to our Terms & Privacy Policy.":
         "కొనసాగించడం ద్వారా మా నిబంధనలు మరియు గోప్యతా విధానాన్ని అంగీకరిస్తారు.",
     "Employers will see this on your profile.":
@@ -1607,6 +1619,10 @@ const appTextTranslations = <String, Map<String, String>>{
         "ভারতের দক্ষ কর্মীদের জন্য। যাচাইকৃত চাকরি, সরাসরি নিয়োগ, সময়মতো বেতন।",
     "For workers · Employer? karigar.in":
         "কর্মীদের জন্য · নিয়োগকর্তা? karigar.in",
+    "For workers · Employer? Superkarigar.com":
+        "কর্মীদের জন্য · নিয়োগকর্তা? Superkarigar.com",
+    "See jobs near you": "আপনার কাছে চাকরি দেখুন",
+    "KYC-verified employers": "KYC-যাচাইকৃত নিয়োগকর্তা",
     "By continuing you agree to our Terms & Privacy Policy.":
         "এগিয়ে গেলে আপনি আমাদের শর্ত ও গোপনীয়তা নীতি মেনে নিচ্ছেন।",
     "Employers will see this on your profile.":
@@ -2065,6 +2081,10 @@ const appTextTranslations = <String, Map<String, String>>{
     "Built for India's skilled workers. Verified jobs, direct hiring, on-time payments.":
         "भारतातील कुशल कामगारांसाठी. पडताळलेल्या नोकऱ्या, थेट भरती, वेळेवर वेतन.",
     "For workers · Employer? karigar.in": "कामगारांसाठी · नियोक्ता? karigar.in",
+    "For workers · Employer? Superkarigar.com":
+        "कामगारांसाठी · नियोक्ता? Superkarigar.com",
+    "See jobs near you": "तुमच्या जवळील नोकऱ्या पहा",
+    "KYC-verified employers": "KYC-सत्यापित नियोक्ते",
     "By continuing you agree to our Terms & Privacy Policy.":
         "पुढे गेल्यावर तुम्ही आमच्या अटी व गोपनीयता धोरण स्वीकारता.",
     "Employers will see this on your profile.":

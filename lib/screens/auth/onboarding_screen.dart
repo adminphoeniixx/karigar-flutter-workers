@@ -29,9 +29,9 @@ class OnboardingPage extends StatelessWidget {
             semanticLabel: 'Super Karigar',
           ),
           const SizedBox(height: 16),
-          const AppText(
-            'Find work,\nnear your home.',
-            style: TextStyle(
+          AppText(
+            context.tr('Find work,\nnear your home.'),
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
               height: 1.12,
@@ -40,13 +40,19 @@ class OnboardingPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const AppText(
-            "Built for India's skilled workers. Verified jobs, direct hiring, on-time payments.",
-            style: TextStyle(color: Colors.white, fontSize: 15.5, height: 1.5),
+          AppText(
+            context.tr(
+              "Built for India's skilled workers. Verified jobs, direct hiring, on-time payments.",
+            ),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15.5,
+              height: 1.5,
+            ),
           ),
           const Spacer(),
-          // const Feature(LucideIcons.mapPin, 'See jobs near you'),
-          // const Feature(LucideIcons.badgeCheck, 'KYC-verified employers'),
+          const Feature(LucideIcons.mapPin, 'See jobs near you'),
+          const Feature(LucideIcons.badgeCheck, 'KYC-verified employers'),
           // const Feature(LucideIcons.indianRupee, 'Direct payout to UPI'),
           const SizedBox(height: 18),
           FilledButton(
@@ -65,16 +71,16 @@ class OnboardingPage extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const LoginPage()),
               );
             },
-            child: const AppText(
-              'Get Started',
-              style: TextStyle(fontWeight: FontWeight.w700),
+            child: AppText(
+              context.tr('Get Started'),
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 14),
-          const Center(
+          Center(
             child: AppText(
-              'For workers · Employer? Superkarigar.in',
-              style: TextStyle(color: Colors.white, fontSize: 12.5),
+              context.tr('For workers · Employer? Superkarigar.com'),
+              style: const TextStyle(color: Colors.white, fontSize: 12.5),
             ),
           ),
         ],
@@ -102,9 +108,11 @@ class Feature extends StatelessWidget {
           child: Icon(icon, color: Colors.white, size: 20),
         ),
         const SizedBox(width: 12),
-        AppText(
-          text,
-          style: const TextStyle(color: Colors.white, fontSize: 14.5),
+        Expanded(
+          child: AppText(
+            context.tr(text),
+            style: const TextStyle(color: Colors.white, fontSize: 14.5),
+          ),
         ),
       ],
     ),

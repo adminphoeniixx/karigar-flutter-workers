@@ -1,12 +1,14 @@
 part of '../main.dart';
 
 const appLanguages = [
-  ('en', 'English'),
-  ('hi', 'हिन्दी'),
-  ('ta', 'தமிழ்'),
-  ('te', 'తెలుగు'),
-  ('bn', 'বাংলা'),
-  ('mr', 'मराठी'),
+  ('hinglish', 'Hindi + English', 'Hinglish'),
+  ('en', 'English', 'English'),
+  ('hi', 'हिन्दी', 'Hindi'),
+  ('mr', 'मराठी', 'Marathi'),
+  ('kn', 'ಕನ್ನಡ', 'Kannada'),
+  ('te', 'తెలుగు', 'Telugu'),
+  ('ta', 'தமிழ்', 'Tamil'),
+  ('bn', 'বাংলা', 'Bangla'),
 ];
 
 class AppLanguageButton extends StatelessWidget {
@@ -25,8 +27,9 @@ class AppLanguageButton extends StatelessWidget {
 }
 
 class _LanguageDialog extends StatefulWidget {
-  const _LanguageDialog({this.saveLocale});
+  const _LanguageDialog({this.saveLocale, this.persistLocally = false});
   final Future<String> Function(String)? saveLocale;
+  final bool persistLocally;
   @override
   State<_LanguageDialog> createState() => _LanguageDialogState();
 }
@@ -34,10 +37,11 @@ class _LanguageDialog extends StatefulWidget {
 class _LanguageDialogState extends State<_LanguageDialog> {
   bool saving = false;
   String? error;
+  late String selectedCode = selectedLanguageCode.value;
 
-  Future<void> _select(String code) async {
+  Future<void> _submit() async {
     if (saving) return;
-    if (code == appLocale.value.languageCode) {
+    if (selectedCode == selectedLanguageCode.value) {
       Navigator.pop(context);
       return;
     }
@@ -46,9 +50,12 @@ class _LanguageDialogState extends State<_LanguageDialog> {
       error = null;
     });
     try {
-      final saved =
-          await (widget.saveLocale?.call(code) ??
-              WorkerApiService().setLocale(code));
+      // Hinglish is an app-only display preference; the worker API accepts
+      // only its standard locale codes.
+      final saved = widget.persistLocally || selectedCode == 'hinglish'
+          ? selectedCode
+          : await (widget.saveLocale?.call(selectedCode) ??
+                WorkerApiService().setLocale(selectedCode));
       if (!appLanguages.any((language) => language.$1 == saved)) {
         throw StateError('Unsupported language');
       }
@@ -56,7 +63,8 @@ class _LanguageDialogState extends State<_LanguageDialog> {
       if (!await preferences.setString('app_locale', saved)) {
         throw StateError('Could not save language');
       }
-      appLocale.value = Locale(saved);
+      selectedLanguageCode.value = saved;
+      appLocale.value = _localeForLanguage(saved);
       if (mounted) Navigator.pop(context);
     } catch (exception) {
       if (mounted) {
@@ -86,12 +94,19 @@ class _LanguageDialogState extends State<_LanguageDialog> {
               for (final language in appLanguages)
                 ListTile(
                   title: AppText(language.$2),
-                  selected: language.$1 == appLocale.value.languageCode,
-                  trailing: language.$1 == appLocale.value.languageCode
+                  subtitle: AppText(
+                    language.$3,
+                    style: const TextStyle(color: muted),
+                  ),
+                  selected: language.$1 == selectedCode,
+                  trailing: language.$1 == selectedCode
                       ? const Icon(Icons.check, color: brand)
                       : null,
                   enabled: !saving,
-                  onTap: () => _select(language.$1),
+                  onTap: () {
+                    setState(() => selectedCode = language.$1);
+                    _submit();
+                  },
                 ),
               if (error != null)
                 AppText(

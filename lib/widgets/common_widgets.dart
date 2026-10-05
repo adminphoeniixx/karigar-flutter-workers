@@ -23,6 +23,155 @@ class SimpleFormPage extends StatelessWidget {
   );
 }
 
+/// A compact selector whose search box lives inside the opened options list.
+class SearchableOptionField extends StatefulWidget {
+  const SearchableOptionField({
+    super.key,
+    required this.title,
+    required this.options,
+    required this.value,
+    required this.hint,
+    required this.onChanged,
+  });
+
+  final String title;
+  final List<String> options;
+  final String? value;
+  final String hint;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  State<SearchableOptionField> createState() => _SearchableOptionFieldState();
+}
+
+class _SearchableOptionFieldState extends State<SearchableOptionField> {
+  String query = '';
+  OverlayEntry? _overlay;
+
+  void _closeMenu() {
+    _overlay?.remove();
+    _overlay = null;
+  }
+
+  void _openMenu(BuildContext context) {
+    if (_overlay != null) {
+      _closeMenu();
+      return;
+    }
+    final box = context.findRenderObject()! as RenderBox;
+    final top = box.localToGlobal(Offset.zero).dy;
+    _overlay = OverlayEntry(
+      builder: (overlayContext) {
+        final keyboardInset = MediaQuery.viewInsetsOf(overlayContext).bottom;
+        final listTop = keyboardInset > 0
+            ? MediaQuery.paddingOf(overlayContext).top + 8
+            : top;
+        final results = widget.options
+            .where((value) => value.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+        return Stack(
+          children: [
+            ModalBarrier(
+              color: Colors.black54,
+              dismissible: true,
+              onDismiss: _closeMenu,
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: listTop,
+              bottom: keyboardInset,
+              child: Material(
+                color: overlayContext.surfaceColor,
+                elevation: 8,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          hintText: 'Search',
+                          prefixIcon: Icon(LucideIcons.search, size: 19),
+                        ),
+                        onChanged: (value) {
+                          query = value.trim();
+                          _overlay?.markNeedsBuild();
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: results.isEmpty
+                          ? const Center(child: AppText('No matching options'))
+                          : ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              itemCount: results.length,
+                              itemBuilder: (_, index) {
+                                final value = results[index];
+                                return InkWell(
+                                  onTap: () {
+                                    widget.onChanged(value);
+                                    _closeMenu();
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 34,
+                                      vertical: 17,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: AppText(
+                                            value,
+                                            style: const TextStyle(
+                                              fontSize: 19,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        if (value == widget.value)
+                                          const Icon(Icons.check, color: brand),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    Overlay.of(context, rootOverlay: true).insert(_overlay!);
+  }
+
+  @override
+  void dispose() {
+    _closeMenu();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => _openMenu(context),
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          suffixIcon: Icon(Icons.keyboard_arrow_down_rounded),
+        ),
+        child: AppText(
+          widget.value ?? widget.hint,
+          style: TextStyle(color: widget.value == null ? muted : null),
+        ),
+      ),
+    );
+  }
+}
+
 class FilterSheet extends StatelessWidget {
   const FilterSheet({super.key});
   @override

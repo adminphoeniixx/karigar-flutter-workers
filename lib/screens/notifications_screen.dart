@@ -88,6 +88,29 @@ class _NotificationsTabState extends State<NotificationsTab> {
     context,
   ).showSnackBar(SnackBar(content: AppText(message)));
 
+  String _localizedMessage(BuildContext context, String message) {
+    if (Localizations.localeOf(context).languageCode != 'hi') return message;
+    final match = RegExp(
+      r'^Your application for "(.+)" was (.+)\.$',
+    ).firstMatch(message);
+    if (match == null) return message;
+    final job = match.group(1)!;
+    final status = match.group(2)!;
+    return 'आपका "$job" के लिए आवेदन ${context.tr(status)} हो गया है।';
+  }
+
+  String _localizedCreatedAgo(BuildContext context, String value) {
+    if (Localizations.localeOf(context).languageCode != 'hi') return value;
+    final match = RegExp(r'^(\d+) months? ago$').firstMatch(value);
+    if (match != null) return '${match.group(1)} महीने पहले';
+    final days = RegExp(r'^(\d+) days? ago$').firstMatch(value);
+    if (days != null) return '${days.group(1)} दिन पहले';
+    final hours = RegExp(r'^(\d+) hours? ago$').firstMatch(value);
+    if (hours != null) return '${hours.group(1)} घंटे पहले';
+    if (value == 'Just now') return 'अभी';
+    return value;
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -216,7 +239,11 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             AppText(
-                                              note['message']?.toString() ?? '',
+                                              _localizedMessage(
+                                                context,
+                                                note['message']?.toString() ??
+                                                    '',
+                                              ),
                                               softWrap: true,
                                               style: TextStyle(
                                                 height: 1.4,
@@ -227,8 +254,12 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                             ),
                                             const SizedBox(height: 6),
                                             AppText(
-                                              note['created_ago']?.toString() ??
-                                                  '',
+                                              _localizedCreatedAgo(
+                                                context,
+                                                note['created_ago']
+                                                        ?.toString() ??
+                                                    '',
+                                              ),
                                               softWrap: true,
                                               style: const TextStyle(
                                                 color: muted,

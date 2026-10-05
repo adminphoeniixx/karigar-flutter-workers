@@ -50,6 +50,7 @@ class ReferenceData {
     required this.educationLevels,
     required this.wageTypes,
     required this.jobCategories,
+    required this.verification,
   });
   final List<String> states,
       skills,
@@ -57,6 +58,7 @@ class ReferenceData {
       educationLevels,
       wageTypes,
       jobCategories;
+  final VerificationReference verification;
   factory ReferenceData.fromJson(Map<String, dynamic> j) {
     List<String> list(String key) =>
         (j[key] as List? ?? []).map((e) => e.toString()).toList();
@@ -67,8 +69,59 @@ class ReferenceData {
       educationLevels: list('education_levels'),
       wageTypes: list('wage_types'),
       jobCategories: list('job_categories'),
+      verification: VerificationReference.fromJson(jsonMap(j['verification'])),
     );
   }
+}
+
+class VerificationAlternate {
+  const VerificationAlternate({required this.key, required this.label});
+  final String key, label;
+  factory VerificationAlternate.fromJson(Json json) => VerificationAlternate(
+    key: json['key']?.toString() ?? '',
+    label: json['label']?.toString() ?? json['key']?.toString() ?? '',
+  );
+}
+
+class VerificationDocumentDefinition {
+  const VerificationDocumentDefinition({
+    required this.key,
+    required this.label,
+    required this.numberField,
+    required this.pattern,
+    required this.hint,
+    required this.alternates,
+  });
+  final String key, label, numberField, pattern, hint;
+  final List<VerificationAlternate> alternates;
+  factory VerificationDocumentDefinition.fromJson(Json json) =>
+      VerificationDocumentDefinition(
+        key: json['key']?.toString() ?? '',
+        label: json['label']?.toString() ?? json['key']?.toString() ?? '',
+        numberField: json['number_field']?.toString() ?? '',
+        pattern: json['pattern']?.toString() ?? '',
+        hint: json['hint']?.toString() ?? '',
+        alternates: jsonList(
+          json['alternates'],
+        ).map((item) => VerificationAlternate.fromJson(jsonMap(item))).toList(),
+      );
+}
+
+class VerificationReference {
+  const VerificationReference({
+    required this.workerDocuments,
+    required this.documents,
+  });
+  final List<String> workerDocuments;
+  final List<VerificationDocumentDefinition> documents;
+  factory VerificationReference.fromJson(Json json) => VerificationReference(
+    workerDocuments: jsonList(
+      json['worker_documents'],
+    ).map((item) => item.toString()).toList(),
+    documents: jsonList(json['documents'])
+        .map((item) => VerificationDocumentDefinition.fromJson(jsonMap(item)))
+        .toList(),
+  );
 }
 
 class WorkerProfileModel {
@@ -559,14 +612,79 @@ class KycModel {
     required this.maskedPan,
     required this.maskedAadhaar,
     this.remarks,
+    this.statusLabel = '',
+    this.documents = const [],
   });
   final String status, maskedPan, maskedAadhaar;
   final String? remarks;
+  final String statusLabel;
+  final List<KycDocumentRecord> documents;
   factory KycModel.fromJson(Json json) => KycModel(
     status: json['status']?.toString() ?? 'not_submitted',
     maskedPan: json['masked_pan']?.toString() ?? '',
     maskedAadhaar: json['masked_aadhaar']?.toString() ?? '',
     remarks: json['remarks']?.toString(),
+    statusLabel: json['status_label']?.toString() ?? '',
+    documents: jsonList(
+      json['documents'],
+    ).map((item) => KycDocumentRecord.fromJson(jsonMap(item))).toList(),
+  );
+}
+
+class KycDocumentRecord {
+  const KycDocumentRecord({
+    required this.type,
+    required this.label,
+    required this.missing,
+    this.number,
+    this.hasFile = false,
+    this.alternate,
+  });
+  final String type, label;
+  final bool missing, hasFile;
+  final String? number;
+  final KycAlternateRecord? alternate;
+  factory KycDocumentRecord.fromJson(Json json) => KycDocumentRecord(
+    type: json['type']?.toString() ?? '',
+    label: json['label']?.toString() ?? json['type']?.toString() ?? '',
+    missing: jsonBool(json['missing']),
+    number: json['number']?.toString(),
+    hasFile: jsonBool(json['has_file']),
+    alternate: json['alternate'] is Map
+        ? KycAlternateRecord.fromJson(jsonMap(json['alternate']))
+        : null,
+  );
+}
+
+class KycAlternateRecord {
+  const KycAlternateRecord({
+    required this.type,
+    required this.label,
+    this.number,
+    required this.hasFile,
+    this.reason,
+  });
+  final String type, label;
+  final String? number, reason;
+  final bool hasFile;
+  factory KycAlternateRecord.fromJson(Json json) => KycAlternateRecord(
+    type: json['type']?.toString() ?? '',
+    label: json['label']?.toString() ?? json['type']?.toString() ?? '',
+    number: json['number']?.toString(),
+    hasFile: jsonBool(json['has_file']),
+    reason: json['reason']?.toString(),
+  );
+}
+
+class KycResponse {
+  const KycResponse({this.kyc, this.requiredDocuments = const []});
+  final KycModel? kyc;
+  final List<String> requiredDocuments;
+  factory KycResponse.fromJson(Json json) => KycResponse(
+    kyc: json['kyc'] is Map ? KycModel.fromJson(jsonMap(json['kyc'])) : null,
+    requiredDocuments: jsonList(
+      json['required_documents'],
+    ).map((item) => item.toString()).toList(),
   );
 }
 

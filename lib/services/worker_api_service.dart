@@ -65,10 +65,12 @@ class WorkerApiService {
         'available': value,
       }))['available'] ==
       true;
-  Future<Map<String, dynamic>> dashboard({Map<String, dynamic>? location}) async =>
-      _payload(await _api.get(ApiConstants.dashboard, query: location));
-  Future<DashboardModel> fetchDashboard({Map<String, dynamic>? location}) async =>
-      DashboardModel.fromJson(await dashboard(location: location));
+  Future<Map<String, dynamic>> dashboard({
+    Map<String, dynamic>? location,
+  }) async => _payload(await _api.get(ApiConstants.dashboard, query: location));
+  Future<DashboardModel> fetchDashboard({
+    Map<String, dynamic>? location,
+  }) async => DashboardModel.fromJson(await dashboard(location: location));
   Future<Map<String, dynamic>> jobs({
     Map<String, dynamic>? filters,
     int? page,
@@ -132,11 +134,9 @@ class WorkerApiService {
   }
 
   Future<Map<String, dynamic>> kyc() => _api.get(ApiConstants.kyc);
-  Future<KycModel?> fetchKyc() async {
-    final response = await kyc();
-    final value = response['kyc'];
-    return value is Map ? KycModel.fromJson(jsonMap(value)) : null;
-  }
+  Future<KycResponse> fetchKycResponse() async =>
+      KycResponse.fromJson(await kyc());
+  Future<KycModel?> fetchKyc() async => (await fetchKycResponse()).kyc;
 
   Future<Map<String, dynamic>> submitKyc({
     required String pan,
@@ -148,6 +148,10 @@ class WorkerApiService {
     {'pan_number': pan, 'aadhaar_number': aadhaar},
     {'pan_doc': panDoc, 'aadhaar_doc': aadhaarDoc},
   );
+  Future<Map<String, dynamic>> submitKycDocuments(
+    Map<String, String> fields,
+    Map<String, File> files,
+  ) => _api.multipart(ApiConstants.kyc, fields, files);
   Future<Map<String, dynamic>> notifications({int? page}) => _api.get(
     ApiConstants.notifications,
     query: {if (page != null) 'page': page},

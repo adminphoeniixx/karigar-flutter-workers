@@ -65,7 +65,7 @@ class _HomeTabState extends State<HomeTab> {
     try {
       final service = widget.api ?? WorkerApiService();
       final position = await (widget.locationService ?? FeedLocationService())
-          .current();
+          .current(requestPermission: true);
       if (!mounted || sequence != _loadSequence) return;
       final response = await service.fetchDashboard(location: position?.query);
       final homeJobs = response.latestJobs;
@@ -151,28 +151,35 @@ class _HomeTabState extends State<HomeTab> {
             leadingWidth: 58,
             leading: Padding(
               padding: EdgeInsets.only(left: 16, top: 10, bottom: 10),
-              child: ValueListenableBuilder<String?>(
-                valueListenable: profileAvatarUrl,
-                builder: (context, avatarUrl, _) => CircleAvatar(
-                  backgroundColor: const Color(0xFFFFE3D8),
-                  backgroundImage: avatarUrl?.isNotEmpty == true
-                      ? NetworkImage(avatarUrl!)
-                      : null,
-                  child: avatarUrl?.isNotEmpty == true
-                      ? null
-                      : AppText(
-                          workerName
-                              .trim()
-                              .split(RegExp(r'\s+'))
-                              .take(2)
-                              .map((e) => e.isEmpty ? '' : e[0])
-                              .join()
-                              .toUpperCase(),
-                          style: const TextStyle(
-                            color: Color(0xFFC93A06),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+              child: Tooltip(
+                message: context.tr('Profile'),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: widget.onProfile,
+                  child: ValueListenableBuilder<String?>(
+                    valueListenable: profileAvatarUrl,
+                    builder: (context, avatarUrl, _) => CircleAvatar(
+                      backgroundColor: const Color(0xFFFFE3D8),
+                      backgroundImage: avatarUrl?.isNotEmpty == true
+                          ? NetworkImage(avatarUrl!)
+                          : null,
+                      child: avatarUrl?.isNotEmpty == true
+                          ? null
+                          : AppText(
+                              workerName
+                                  .trim()
+                                  .split(RegExp(r'\s+'))
+                                  .take(2)
+                                  .map((e) => e.isEmpty ? '' : e[0])
+                                  .join()
+                                  .toUpperCase(),
+                              style: const TextStyle(
+                                color: Color(0xFFC93A06),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                    ),
+                  ),
                 ),
               ),
             ),

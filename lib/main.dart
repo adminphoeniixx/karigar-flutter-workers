@@ -61,7 +61,10 @@ void main() {
 
 Future<void> _initializeApp() async {
   final preferences = await SharedPreferences.getInstance();
-  appLocale.value = Locale(preferences.getString('app_locale') ?? 'en');
+  // Hindi is the default until a worker chooses a different app language.
+  final savedLanguage = preferences.getString('app_locale') ?? 'hi';
+  selectedLanguageCode.value = savedLanguage;
+  appLocale.value = _localeForLanguage(savedLanguage);
   await ApiClient.instance.initialize();
   unawaited(MetaEventsService.instance.initialize());
   try {
@@ -82,8 +85,16 @@ const line = Color(0xFFE3DBD0);
 const ink = Color(0xFF1E1712);
 const muted = Color(0xFF6B5F55);
 final appThemeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
-final appLocale = ValueNotifier<Locale>(const Locale('en'));
+final appLocale = ValueNotifier<Locale>(const Locale('hi'));
+final selectedLanguageCode = ValueNotifier<String>('hi');
 final profileAvatarUrl = ValueNotifier<String?>(null);
+// MaterialApp can rebuild while a new locale is applied. Keep this launch-only
+// flag outside that subtree so choosing a language never opens a second dialog.
+bool _hasShownStartupLanguagePrompt = false;
+const _languagePromptSeenKey = 'language_prompt_seen';
+
+Locale _localeForLanguage(String code) =>
+    code == 'hinglish' ? const Locale('en') : Locale(code);
 
 const _translations = <String, Map<String, String>>{
   'hi': {
@@ -319,6 +330,7 @@ class KarigarApp extends StatelessWidget {
           Locale('te'),
           Locale('bn'),
           Locale('mr'),
+          Locale('kn'),
         ],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         home: AuthGate(
@@ -432,6 +444,35 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   late final Future<bool> _session = _initialize();
+  bool _languagePromptShown = false;
+  bool _checkingLanguagePrompt = false;
+
+  Future<void> _showLanguagePrompt() async {
+    if (_languagePromptShown ||
+        _checkingLanguagePrompt ||
+        _hasShownStartupLanguagePrompt) {
+      return;
+    }
+    _checkingLanguagePrompt = true;
+    final preferences = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    if (preferences.getBool(_languagePromptSeenKey) == true) {
+      _hasShownStartupLanguagePrompt = true;
+      _checkingLanguagePrompt = false;
+      return;
+    }
+    _languagePromptShown = true;
+    _hasShownStartupLanguagePrompt = true;
+    _checkingLanguagePrompt = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (_) => const _LanguageDialog(persistLocally: true),
+      ).whenComplete(() => preferences.setBool(_languagePromptSeenKey, true));
+    });
+  }
 
   Future<bool> _initialize() async {
     final results = await Future.wait<dynamic>([
@@ -472,6 +513,7 @@ class _AuthGateState extends State<AuthGate> {
       if (snapshot.connectionState != ConnectionState.done) {
         return const AppSplash();
       }
+      unawaited(_showLanguagePrompt());
       return snapshot.data == true ? const MainShell() : const OnboardingPage();
     },
   );

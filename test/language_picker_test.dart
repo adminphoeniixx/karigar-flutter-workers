@@ -9,8 +9,12 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     appLocale.value = const Locale('en');
+    selectedLanguageCode.value = 'en';
   });
-  tearDown(() => appLocale.value = const Locale('en'));
+  tearDown(() {
+    appLocale.value = const Locale('en');
+    selectedLanguageCode.value = 'en';
+  });
 
   Widget app(Future<String> Function(String) save) =>
       ValueListenableBuilder<Locale>(
@@ -44,7 +48,7 @@ void main() {
     );
     await tester.tap(find.byType(AppLanguageButton));
     await tester.pumpAndSettle();
-    expect(find.text('தமிழ்'), findsOneWidget);
+    expect(find.text('Hindi + English'), findsOneWidget);
     await tester.tap(find.text('हिन्दी'));
     await tester.pumpAndSettle();
     expect(saved, 'hi');
