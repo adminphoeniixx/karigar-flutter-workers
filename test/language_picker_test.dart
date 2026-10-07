@@ -60,7 +60,7 @@ void main() {
     );
   });
 
-  testWidgets('failure keeps selected language and allows retry', (
+  testWidgets('failure restores the earlier language and shows an error', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -72,6 +72,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(appLocale.value.languageCode, 'en');
     expect(find.text('Try later'), findsOneWidget);
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
   });
 }

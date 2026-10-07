@@ -373,12 +373,16 @@ const appTextTranslations = <String, Map<String, String>>{
     "KYC submitted for review.": "KYC समीक्षा के लिए जमा हुआ।",
     "Apply Now": "अभी आवेदन करें",
     "Applied ✓": "आवेदन किया ✓",
+    "Applied": "आवेदन किया",
+    "Applied {time}": "आवेदन किया {time}",
     "Applications closed": "आवेदन बंद हैं",
     "Save job": "नौकरी सेव करें",
     "Job saved successfully.": "नौकरी सेव हो गई।",
     "Application submitted!": "आवेदन जमा हुआ!",
     "Under review": "समीक्षा चल रही है",
     "Decision": "निर्णय",
+    "Selected 🎉": "चयनित 🎉",
+    "Not selected": "चयनित नहीं",
     "Job offer": "नौकरी का प्रस्ताव",
     "Interview": "इंटरव्यू",
     "Job": "नौकरी",
@@ -851,12 +855,16 @@ const appTextTranslations = <String, Map<String, String>>{
     "KYC submitted for review.": "KYC ஆய்வுக்குச் சமர்ப்பிக்கப்பட்டது.",
     "Apply Now": "இப்போதே விண்ணப்பிக்கவும்",
     "Applied ✓": "விண்ணப்பிக்கப்பட்டது ✓",
+    "Applied": "விண்ணப்பிக்கப்பட்டது",
+    "Applied {time}": "{time} முன் விண்ணப்பிக்கப்பட்டது",
     "Applications closed": "விண்ணப்பங்கள் முடிந்தன",
     "Save job": "வேலையைச் சேமி",
     "Job saved successfully.": "வேலை சேமிக்கப்பட்டது.",
     "Application submitted!": "விண்ணப்பம் சமர்ப்பிக்கப்பட்டது!",
     "Under review": "ஆய்வில் உள்ளது",
     "Decision": "முடிவு",
+    "Selected 🎉": "தேர்ந்தெடுக்கப்பட்டீர்கள் 🎉",
+    "Not selected": "தேர்ந்தெடுக்கப்படவில்லை",
     "Job offer": "வேலை வாய்ப்பு",
     "Interview": "நேர்காணல்",
     "Job": "வேலை",
@@ -1320,12 +1328,16 @@ const appTextTranslations = <String, Map<String, String>>{
     "KYC submitted for review.": "KYC సమీక్షకు సమర్పించబడింది.",
     "Apply Now": "ఇప్పుడే దరఖాస్తు చేయండి",
     "Applied ✓": "దరఖాస్తు చేశారు ✓",
+    "Applied": "దరఖాస్తు చేశారు",
+    "Applied {time}": "{time} క్రితం దరఖాస్తు చేశారు",
     "Applications closed": "దరఖాస్తులు ముగిశాయి",
     "Save job": "ఉద్యోగం సేవ్ చేయండి",
     "Job saved successfully.": "ఉద్యోగం సేవ్ చేయబడింది.",
     "Application submitted!": "దరఖాస్తు సమర్పించబడింది!",
     "Under review": "సమీక్షలో ఉంది",
     "Decision": "నిర్ణయం",
+    "Selected 🎉": "ఎంపికయ్యారు 🎉",
+    "Not selected": "ఎంపిక కాలేదు",
     "Job offer": "ఉద్యోగ ఆఫర్",
     "Interview": "ఇంటర్వ్యూ",
     "Job": "ఉద్యోగం",
@@ -1785,12 +1797,16 @@ const appTextTranslations = <String, Map<String, String>>{
     "KYC submitted for review.": "KYC পর্যালোচনার জন্য জমা হয়েছে।",
     "Apply Now": "এখনই আবেদন করুন",
     "Applied ✓": "আবেদন করা হয়েছে ✓",
+    "Applied": "আবেদন করা হয়েছে",
+    "Applied {time}": "{time} আগে আবেদন করা হয়েছে",
     "Applications closed": "আবেদন বন্ধ",
     "Save job": "চাকরি সংরক্ষণ",
     "Job saved successfully.": "চাকরি সংরক্ষিত হয়েছে।",
     "Application submitted!": "আবেদন জমা হয়েছে!",
     "Under review": "পর্যালোচনাধীন",
     "Decision": "সিদ্ধান্ত",
+    "Selected 🎉": "নির্বাচিত হয়েছেন 🎉",
+    "Not selected": "নির্বাচিত হননি",
     "Job offer": "চাকরির প্রস্তাব",
     "Interview": "সাক্ষাৎকার",
     "Job": "চাকরি",
@@ -2248,12 +2264,16 @@ const appTextTranslations = <String, Map<String, String>>{
     "KYC submitted for review.": "KYC तपासणीसाठी सादर झाले.",
     "Apply Now": "आत्ताच अर्ज करा",
     "Applied ✓": "अर्ज केला ✓",
+    "Applied": "अर्ज केला",
+    "Applied {time}": "{time} पूर्वी अर्ज केला",
     "Applications closed": "अर्ज बंद आहेत",
     "Save job": "नोकरी जतन करा",
     "Job saved successfully.": "नोकरी जतन झाली.",
     "Application submitted!": "अर्ज सादर झाला!",
     "Under review": "तपासणी सुरू आहे",
     "Decision": "निर्णय",
+    "Selected 🎉": "निवड झाली 🎉",
+    "Not selected": "निवड झाली नाही",
     "Job offer": "नोकरीचा प्रस्ताव",
     "Interview": "मुलाखत",
     "Job": "नोकरी",
@@ -2347,7 +2367,33 @@ String translateAppText(String text, String language) {
   if (exact != null) return exact;
   // API enum labels sometimes arrive in lower case; preserve their raw values.
   final normalized = text.toLowerCase();
-  return _normalizedAppTranslations[language]?[normalized] ?? text;
+  final normalizedMatch = _normalizedAppTranslations[language]?[normalized];
+  if (normalizedMatch != null) return normalizedMatch;
+  return _translateDynamicAppText(text, language);
+}
+
+/// The API supplies relative times as display strings (for example,
+/// "2 months ago"). Translate these common labels too, so status cards don't
+/// switch back to English when the rest of the app is in Hindi.
+String _translateDynamicAppText(String text, String language) {
+  if (language != 'hi') return text;
+
+  if (text == 'Just now') return 'अभी';
+  final match = RegExp(
+    r'^(\d+)\s+(minute|hour|day|week|month|year)s?\s+ago$',
+    caseSensitive: false,
+  ).firstMatch(text);
+  if (match == null) return text;
+
+  const units = {
+    'minute': 'मिनट',
+    'hour': 'घंटे',
+    'day': 'दिन',
+    'week': 'हफ्ते',
+    'month': 'महीने',
+    'year': 'साल',
+  };
+  return '${match.group(1)} ${units[match.group(2)!.toLowerCase()]} पहले';
 }
 
 final _normalizedAppTranslations = {

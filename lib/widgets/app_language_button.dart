@@ -45,10 +45,21 @@ class _LanguageDialogState extends State<_LanguageDialog> {
       Navigator.pop(context);
       return;
     }
+    final previousCode = selectedLanguageCode.value;
+    final previousLocale = appLocale.value;
+    final messenger = ScaffoldMessenger.of(context);
     setState(() {
       saving = true;
       error = null;
     });
+
+    // Switch the in-memory locale before any disk or network work. Every
+    // AppText listens to MaterialApp's locale, so open and cached tabs update
+    // in the same frame instead of waiting for the API response.
+    selectedLanguageCode.value = selectedCode;
+    appLocale.value = _localeForLanguage(selectedCode);
+    Navigator.pop(context);
+
     try {
       // Hinglish is an app-only display preference; the worker API accepts
       // only its standard locale codes.
@@ -63,19 +74,25 @@ class _LanguageDialogState extends State<_LanguageDialog> {
       if (!await preferences.setString('app_locale', saved)) {
         throw StateError('Could not save language');
       }
-      selectedLanguageCode.value = saved;
-      appLocale.value = _localeForLanguage(saved);
-      if (mounted) Navigator.pop(context);
-    } catch (exception) {
-      if (mounted) {
-        setState(() {
-          error = exception is ApiException
-              ? exception.message
-              : 'Could not change language. Please try again.';
-        });
+      // The API can normalize a code; keep the visible locale aligned with it.
+      if (saved != selectedLanguageCode.value) {
+        selectedLanguageCode.value = saved;
+        appLocale.value = _localeForLanguage(saved);
       }
-    } finally {
-      if (mounted) setState(() => saving = false);
+    } catch (exception) {
+      // Do not leave the UI in a language that could not be saved or synced.
+      selectedLanguageCode.value = previousCode;
+      appLocale.value = previousLocale;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: AppText(
+            exception is ApiException
+                ? exception.message
+                : 'Could not change language. Please try again.',
+          ),
+        ),
+      );
     }
   }
 

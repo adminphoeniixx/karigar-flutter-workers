@@ -136,12 +136,20 @@ class WorkerProfileModel {
   String get name => data['name']?.toString() ?? '';
   int get completion => (data['completion'] as num?)?.toInt() ?? 0;
   bool get available => data['available'] == true;
-  String get fullAddress => [data['address'], data['city'], data['state']]
-      .whereType<String>()
-      .map((value) => value.trim())
-      .where((value) => value.isNotEmpty)
-      .toSet()
-      .join(', ');
+  String get fullAddress {
+    final suppliedFullAddress =
+        data['full_address']?.toString().trim() ??
+        data['fullAddress']?.toString().trim();
+    if (suppliedFullAddress != null && suppliedFullAddress.isNotEmpty) {
+      return suppliedFullAddress;
+    }
+    return [data['address'], data['city'], data['state']]
+        .whereType<String>()
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .join(', ');
+  }
 }
 
 class JobModel {

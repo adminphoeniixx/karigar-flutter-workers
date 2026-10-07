@@ -403,7 +403,9 @@ class _ApiApplicationCard extends StatelessWidget {
                       ),
                       Meta(
                         LucideIcons.calendarDays,
-                        'Applied ${application.createdAgo}',
+                        context.trArgs('Applied {time}', {
+                          'time': context.tr(application.createdAgo),
+                        }),
                       ),
                     ],
                   ),

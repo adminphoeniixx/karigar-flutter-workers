@@ -82,10 +82,11 @@ class _ProfileTabState extends State<ProfileTab> {
         const SnackBar(content: AppText('Profile photo updated.')),
       );
     } on ApiException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(error.message)));
+      }
     } on MissingPluginException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

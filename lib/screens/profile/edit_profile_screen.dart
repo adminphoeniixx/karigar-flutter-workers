@@ -39,6 +39,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
   double? latitude, longitude;
   int travelRadiusKm = 15;
 
+  String _loadedAddress(Map<String, dynamic> data) {
+    // Different profile endpoints use either `address` or `full_address`.
+    // Prefer the latter because it already contains every address line.
+    for (final key in ['full_address', 'fullAddress', 'address']) {
+      final value = data[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return [
+          data['house_number'],
+          data['address_line_1'],
+          data['address_line_2'],
+          data['street'],
+          data['area'],
+          data['landmark'],
+          data['postal_code'] ?? data['pincode'],
+        ]
+        .whereType<Object>()
+        .map((value) => value.toString().trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .join(', ');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -64,7 +87,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           : await service.cities(selectedState);
       if (!mounted) return;
       setState(() {
-        address.text = data['address']?.toString() ?? '';
+        address.text = _loadedAddress(data);
         name.text = data['name']?.toString() ?? '';
         email.text = data['email']?.toString() ?? '';
         phone.text = data['phone']?.toString() ?? '';
@@ -608,21 +631,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         },
                 ),
               ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () => launchUrl(
-                    Uri.parse(
-                      'https://github.com/dr5hn/countries-states-cities-database',
-                    ),
-                  ),
-                  child: const Text(
-                    'City data: CSC · ODbL',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
+
               const FieldLabel('Pin your location'),
               MapBox(
                 onTap: locating ? null : _pinCurrentLocation,

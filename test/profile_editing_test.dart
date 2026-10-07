@@ -14,6 +14,7 @@ class EditableProfileApi extends WorkerApiService {
     'skills': ['Plumbing'],
     'spoken_languages': ['Hindi'],
     'address': '12, Main Road, 302001',
+    'full_address': '12, Main Road, Near Metro, Jaipur, Rajasthan, 302001',
     'state': 'Rajasthan',
     'city': 'Jaipur',
   });
@@ -68,7 +69,7 @@ void main() {
           .widget<TextField>(find.byKey(const ValueKey('profile-address')))
           .controller!
           .text,
-      '12, Main Road, 302001',
+      '12, Main Road, Near Metro, Jaipur, Rajasthan, 302001',
     );
     await tester.enterText(
       find.byKey(const ValueKey('profile-address')),
@@ -112,6 +113,16 @@ void main() {
         'state': 'Rajasthan',
       }).fullAddress,
       '12 Main Road, Jaipur, Rajasthan',
+    );
+  });
+
+  test('uses the complete address returned by the profile API', () {
+    expect(
+      WorkerProfileModel({
+        'full_address': '12 Main Road, Jaipur, Rajasthan, 302001',
+        'address': '12 Main Road',
+      }).fullAddress,
+      '12 Main Road, Jaipur, Rajasthan, 302001',
     );
   });
 }

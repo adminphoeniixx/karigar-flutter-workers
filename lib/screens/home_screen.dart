@@ -28,6 +28,7 @@ class _HomeTabState extends State<HomeTab> {
   bool accessDenied = false;
   Map<String, dynamic> dashboard = {};
   List<Job> latestJobs = [];
+  String? currentLocationAddress;
 
   Map<String, dynamic> get stats =>
       Map<String, dynamic>.from(dashboard['stats'] as Map? ?? {});
@@ -60,6 +61,7 @@ class _HomeTabState extends State<HomeTab> {
         loading = true;
         loadError = null;
         accessDenied = false;
+        currentLocationAddress = null;
       });
     }
     try {
@@ -67,6 +69,9 @@ class _HomeTabState extends State<HomeTab> {
       final position = await (widget.locationService ?? FeedLocationService())
           .current(requestPermission: true);
       if (!mounted || sequence != _loadSequence) return;
+      if (position != null) {
+        unawaited(_resolveCurrentLocation(position, sequence));
+      }
       final response = await service.fetchDashboard(location: position?.query);
       final homeJobs = response.latestJobs;
       if (!mounted || sequence != _loadSequence) return;
@@ -102,6 +107,40 @@ class _HomeTabState extends State<HomeTab> {
       }
     } finally {
       if (mounted && sequence == _loadSequence) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _resolveCurrentLocation(
+    FeedPosition position,
+    int sequence,
+  ) async {
+    try {
+      final places = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      if (!mounted || sequence != _loadSequence || places.isEmpty) return;
+      final place = places.first;
+      final address =
+          [
+                place.name,
+                place.street,
+                place.subLocality,
+                place.locality,
+                place.subAdministrativeArea,
+                place.administrativeArea,
+                place.postalCode,
+              ]
+              .whereType<String>()
+              .map((value) => value.trim())
+              .where((value) => value.isNotEmpty)
+              .toSet()
+              .join(', ');
+      if (address.isNotEmpty && mounted && sequence == _loadSequence) {
+        setState(() => currentLocationAddress = address);
+      }
+    } catch (_) {
+      // The nearby-jobs feed still works when reverse geocoding is unavailable.
     }
   }
 
@@ -147,7 +186,7 @@ class _HomeTabState extends State<HomeTab> {
     appBar: loading || loadError != null
         ? AppBar(actions: const [AppLanguageButton(), SizedBox(width: 12)])
         : AppBar(
-            toolbarHeight: 59,
+            toolbarHeight: 88,
             leadingWidth: 58,
             leading: Padding(
               padding: EdgeInsets.only(left: 16, top: 10, bottom: 10),
@@ -184,22 +223,58 @@ class _HomeTabState extends State<HomeTab> {
               ),
             ),
             titleSpacing: 8,
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(
-                  context.tr('Welcome back 👋'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: muted,
-                    fontWeight: FontWeight.w400,
-                  ),
+            title: Tooltip(
+              message: context.tr('Profile'),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: widget.onProfile,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      context.tr('Welcome back 👋'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: muted,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    AppText(
+                      workerName,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (currentLocationAddress?.isNotEmpty == true)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              LucideIcons.mapPin,
+                              size: 12,
+                              color: muted,
+                            ),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                currentLocationAddress!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: muted,
+                                  fontSize: 11,
+                                  height: 1.15,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
-                AppText(
-                  workerName,
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                ),
-              ],
+              ),
             ),
             actions: [
               Padding(

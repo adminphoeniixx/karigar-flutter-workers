@@ -55,6 +55,11 @@ part 'widgets/common_widgets.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // This worker app is designed for a phone portrait layout. Lock it before
+  // rendering so rotating the device never switches the UI to landscape.
+  unawaited(
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]),
+  );
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const KarigarApp(onInitialize: _initializeApp));
 }
