@@ -1,5 +1,45 @@
 part of '../main.dart';
 
+const hinglishAppTextTranslations = <String, String>{
+  'Home': 'Home',
+  'Jobs': 'Jobs',
+  'Applied': 'Applied',
+  'Alerts': 'Alerts',
+  'Profile': 'Profile',
+  'Settings': 'Settings',
+  'Preferences': 'Pasand',
+  'Language': 'Bhasha',
+  'Choose language': 'Bhasha chunein',
+  'Available for work': 'Kaam ke liye available',
+  'Employers can discover you': 'Employers aapko dekh sakte hain',
+  "You're hidden from employers": 'Employers ko aapka profile nahi dikhega',
+  'Available Jobs': 'Available jobs',
+  'Applications': 'Applications',
+  'Profile complete': 'Profile complete',
+  'Complete': 'Complete karein',
+  'LATEST JOBS NEAR YOU': 'Aapke paas ki latest jobs',
+  'See all →': 'Sab dekhein →',
+  'Browse Jobs': 'Jobs dekhein',
+  'Search job title, skill…': 'Job ya skill search karein…',
+  'Show all jobs': 'Sabhi jobs dikhayein',
+  'Jobs near you': 'Aapke paas ki jobs',
+  'Use my current location': 'Meri current location use karein',
+  'Change': 'Badlein',
+  'Current location': 'Current location',
+  'Save': 'Save karein',
+  'Cancel': 'Cancel',
+  'Continue': 'Aage badhein',
+  'Try again': 'Dobara try karein',
+  'Help & Support': 'Madad aur support',
+  'Terms & Privacy': 'Terms aur privacy',
+  'Log out': 'Log out',
+  'Login & security': 'Login aur security',
+  'Dark theme': 'Dark theme',
+  'Job alerts': 'Job alerts',
+  'Get Started': 'Shuru karein',
+  'Send OTP': 'OTP bhejein',
+};
+
 const appTextTranslations = <String, Map<String, String>>{
   'hi': {
     "Expected salary per month": "अपेक्षित मासिक वेतन",
@@ -2361,8 +2401,14 @@ const appTextTranslations = <String, Map<String, String>>{
 };
 
 String translateAppText(String text, String language) {
-  final catalog = appTextTranslations[language];
-  final existing = _translations[language];
+  final catalog = language == 'hinglish'
+      ? hinglishAppTextTranslations
+      : appTextTranslations[language];
+  // Keep uncurated Hinglish labels readable by falling back to the complete
+  // Hindi catalogue instead of silently showing English.
+  final existing = language == 'hinglish'
+      ? {...?_translations['hi'], ...?appTextTranslations['hi']}
+      : _translations[language];
   final exact = catalog?[text] ?? existing?[text];
   if (exact != null) return exact;
   // API enum labels sometimes arrive in lower case; preserve their raw values.

@@ -14,6 +14,10 @@ class ApiConstants {
   static const workerProfile = '/worker/profile';
   static const avatar = '/worker/profile/avatar';
   static const availability = '/worker/availability';
+  static const feedLocation = '/worker/feed-location';
+  static const places = '/places';
+  static const appMaintenance = '/app/maintenance';
+  static const appUpdate = '/app/update';
   static const jobs = '/jobs';
   static const applications = '/worker/applications';
   static const saved = '/worker/saved';

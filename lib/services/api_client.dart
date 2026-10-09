@@ -10,10 +10,12 @@ class ApiException implements Exception {
     this.message, {
     required this.statusCode,
     this.errors = const {},
+    this.code,
   });
   final String message;
   final int statusCode;
   final Map<String, dynamic> errors;
+  final String? code;
   @override
   String toString() => message;
 }
@@ -37,6 +39,7 @@ class ApiClient {
   Map<String, String> get _headers => {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
+    'X-App': 'worker',
     if (_token != null) 'Authorization': 'Bearer $_token',
   };
   Map<String, String> _headersFor(Uri uri) {
@@ -86,6 +89,16 @@ class ApiClient {
       'PATCH',
       uri,
       () => http.patch(uri, headers: _headersFor(uri), body: jsonEncode(body)),
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> put(String path, Map<String, dynamic> body) {
+    final uri = _uri(path);
+    return _send(
+      'PUT',
+      uri,
+      () => http.put(uri, headers: _headersFor(uri), body: jsonEncode(body)),
       body: body,
     );
   }
@@ -205,12 +218,24 @@ class ApiClient {
           );
       }
     }
-    if (response.statusCode < 200 || response.statusCode >= 300)
-      throw ApiException(
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final exception = ApiException(
         body['message']?.toString() ?? 'Request failed.',
         statusCode: response.statusCode,
         errors: Map<String, dynamic>.from(body['errors'] as Map? ?? {}),
+        code: body['code']?.toString(),
       );
+      if (response.statusCode == 503 && exception.code == 'maintenance') {
+        AppAvailability.maintenance.value = body;
+      }
+      throw exception;
+    }
     return body;
   }
+}
+
+/// Shared by the request layer and the app shell so a maintenance response
+/// from any endpoint immediately takes the worker to the safe screen.
+class AppAvailability {
+  static final maintenance = ValueNotifier<Map<String, dynamic>?>(null);
 }

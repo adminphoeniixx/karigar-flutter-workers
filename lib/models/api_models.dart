@@ -297,10 +297,18 @@ class PaginationModel {
 }
 
 class JobPageModel {
-  const JobPageModel({required this.jobs, required this.pagination, this.feed});
+  const JobPageModel({
+    required this.jobs,
+    required this.pagination,
+    this.feed,
+    this.unavailable = false,
+    this.message,
+  });
   final JobFeedModel? feed;
   final List<ApiJobModel> jobs;
   final PaginationModel pagination;
+  final bool unavailable;
+  final String? message;
   factory JobPageModel.fromJson(Json json) => JobPageModel(
     jobs: jsonList(
       json['data'],
@@ -309,6 +317,8 @@ class JobPageModel {
     feed: json['feed'] is Map
         ? JobFeedModel.fromJson(jsonMap(json['feed']))
         : null,
+    unavailable: jsonBool(json['unavailable']),
+    message: json['message']?.toString(),
   );
 }
 
@@ -776,11 +786,13 @@ class DashboardModel {
     required this.profile,
     required this.stats,
     required this.latestJobs,
+    this.feedLocation,
   });
   final String greeting;
   final WorkerProfileModel profile;
   final DashboardStatsModel stats;
   final List<ApiJobModel> latestJobs;
+  final Map<String, dynamic>? feedLocation;
   factory DashboardModel.fromJson(Json json) {
     final latest = jsonMap(json['latest_jobs']);
     return DashboardModel(
@@ -790,6 +802,9 @@ class DashboardModel {
       latestJobs: jsonList(
         latest['data'],
       ).map((e) => ApiJobModel.fromJson(jsonMap(e))).toList(),
+      feedLocation: json['feed_location'] is Map
+          ? jsonMap(json['feed_location'])
+          : null,
     );
   }
 }
@@ -892,12 +907,15 @@ class JobFeedModel {
     required this.type,
     required this.categories,
     required this.location,
+    this.locationLabel,
   });
   final String type, location;
+  final String? locationLabel;
   final List<String> categories;
   factory JobFeedModel.fromJson(Json json) => JobFeedModel(
     type: json['type']?.toString() ?? 'for_you',
     location: json['location']?.toString() ?? 'none',
+    locationLabel: json['location_label']?.toString(),
     categories: jsonList(
       json['categories'],
     ).map((value) => value.toString()).toList(),

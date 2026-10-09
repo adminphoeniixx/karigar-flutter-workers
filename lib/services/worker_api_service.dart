@@ -65,6 +65,21 @@ class WorkerApiService {
         'available': value,
       }))['available'] ==
       true;
+  Future<Map<String, dynamic>> feedLocation() =>
+      _api.get(ApiConstants.feedLocation);
+  Future<Map<String, dynamic>> searchPlaces(String query) =>
+      _api.get(ApiConstants.places, query: {'q': query});
+  Future<Map<String, dynamic>> setFeedLocation({
+    required double latitude,
+    required double longitude,
+    String? label,
+  }) => _api.put(ApiConstants.feedLocation, {
+    'latitude': latitude,
+    'longitude': longitude,
+    if (label?.trim().isNotEmpty == true) 'label': label!.trim(),
+  });
+  Future<Map<String, dynamic>> clearFeedLocation() =>
+      _api.delete(ApiConstants.feedLocation);
   Future<Map<String, dynamic>> dashboard({
     Map<String, dynamic>? location,
   }) async => _payload(await _api.get(ApiConstants.dashboard, query: location));

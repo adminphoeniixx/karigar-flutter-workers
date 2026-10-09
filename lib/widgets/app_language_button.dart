@@ -63,10 +63,20 @@ class _LanguageDialogState extends State<_LanguageDialog> {
     try {
       // Hinglish is an app-only display preference; the worker API accepts
       // only its standard locale codes.
-      final saved = widget.persistLocally || selectedCode == 'hinglish'
-          ? selectedCode
-          : await (widget.saveLocale?.call(selectedCode) ??
+      // The server stores Hinglish as Hindi; retain the Hinglish code locally
+      // so this device keeps the Roman-Hindi UI choice.
+      late final String saved;
+      if (widget.persistLocally) {
+        saved = selectedCode;
+      } else if (selectedCode == 'hinglish') {
+        await (widget.saveLocale?.call('hi') ??
+            WorkerApiService().setLocale('hi'));
+        saved = selectedCode;
+      } else {
+        saved =
+            await (widget.saveLocale?.call(selectedCode) ??
                 WorkerApiService().setLocale(selectedCode));
+      }
       if (!appLanguages.any((language) => language.$1 == saved)) {
         throw StateError('Unsupported language');
       }

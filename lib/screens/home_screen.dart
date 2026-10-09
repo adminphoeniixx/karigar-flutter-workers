@@ -29,6 +29,7 @@ class _HomeTabState extends State<HomeTab> {
   Map<String, dynamic> dashboard = {};
   List<Job> latestJobs = [];
   String? currentLocationAddress;
+  Map<String, dynamic>? feedLocation;
 
   Map<String, dynamic> get stats =>
       Map<String, dynamic>.from(dashboard['stats'] as Map? ?? {});
@@ -41,6 +42,13 @@ class _HomeTabState extends State<HomeTab> {
   int get completion => (stats['profile_completion'] as num?)?.toInt() ?? 0;
   int get unreadNotifications =>
       (stats['unread_notifications'] as num?)?.toInt() ?? 0;
+  bool get hasChosenFeedLocation =>
+      feedLocation?['mode']?.toString() == 'chosen';
+  String? get homeLocationLabel {
+    final chosen = feedLocation?['label']?.toString().trim();
+    if (hasChosenFeedLocation && chosen?.isNotEmpty == true) return chosen;
+    return currentLocationAddress;
+  }
 
   @override
   void initState() {
@@ -69,9 +77,6 @@ class _HomeTabState extends State<HomeTab> {
       final position = await (widget.locationService ?? FeedLocationService())
           .current(requestPermission: true);
       if (!mounted || sequence != _loadSequence) return;
-      if (position != null) {
-        unawaited(_resolveCurrentLocation(position, sequence));
-      }
       final response = await service.fetchDashboard(location: position?.query);
       final homeJobs = response.latestJobs;
       if (!mounted || sequence != _loadSequence) return;
@@ -92,7 +97,13 @@ class _HomeTabState extends State<HomeTab> {
         profileAvatarUrl.value = response.profile.data['avatar_url']
             ?.toString();
         latestJobs = homeJobs.map(Job.fromApi).toList();
+        feedLocation = response.feedLocation;
       });
+      // A selected feed location is the location the jobs are actually using.
+      // Never overwrite it with the phone's reverse-geocoded address.
+      if (position != null && !hasChosenFeedLocation) {
+        unawaited(_resolveCurrentLocation(position, sequence));
+      }
       widget.onUnreadChanged(response.stats.unreadNotifications);
     } on ApiException catch (error) {
       if (mounted && sequence == _loadSequence) {
@@ -246,7 +257,7 @@ class _HomeTabState extends State<HomeTab> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    if (currentLocationAddress?.isNotEmpty == true)
+                    if (homeLocationLabel?.isNotEmpty == true)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Row(
@@ -259,7 +270,7 @@ class _HomeTabState extends State<HomeTab> {
                             const SizedBox(width: 3),
                             Expanded(
                               child: Text(
-                                currentLocationAddress!,
+                                homeLocationLabel!,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -332,6 +343,14 @@ class _HomeTabState extends State<HomeTab> {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
+                            if (!available)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 3),
+                                child: Text(
+                                  'No job alerts or jobs while off',
+                                  style: TextStyle(color: muted, fontSize: 12),
+                                ),
+                              ),
                             AppText(
                               available
                                   ? context.tr('Employers can discover you')
@@ -476,7 +495,17 @@ class _HomeTabState extends State<HomeTab> {
                   onTap: widget.onBrowse,
                 ),
                 const SizedBox(height: 4),
-                if (latestJobs.isEmpty)
+                FeedLocationBar(
+                  location: feedLocation,
+                  onChanged: _loadDashboard,
+                ),
+                const SizedBox(height: 8),
+                if (!available)
+                  UnavailableJobsCard(
+                    onEnable: () =>
+                        _setAvailability(true).then((_) => _loadDashboard()),
+                  )
+                else if (latestJobs.isEmpty)
                   AppCard(
                     child: Column(
                       children: [
@@ -503,5 +532,36 @@ class _HomeTabState extends State<HomeTab> {
               ],
             ),
           ),
+  );
+}
+
+class UnavailableJobsCard extends StatelessWidget {
+  const UnavailableJobsCard({super.key, required this.onEnable, this.message});
+  final VoidCallback onEnable;
+  final String? message;
+  @override
+  Widget build(BuildContext context) => AppCard(
+    child: Column(
+      children: [
+        const Icon(LucideIcons.circleOff, color: muted, size: 30),
+        const SizedBox(height: 8),
+        const Text(
+          "You're not available for work",
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          message ??
+              'While "Available for work" is off you get no job alerts and see no jobs. Switch it on whenever you’re ready.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: muted),
+        ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: onEnable,
+          child: const Text("I'm available for work"),
+        ),
+      ],
+    ),
   );
 }

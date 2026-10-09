@@ -25,6 +25,7 @@ import 'services/auth_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/worker_api_service.dart';
 import 'services/feed_location_service.dart';
+import 'services/app_launch_service.dart';
 
 part 'models/job.dart';
 part 'widgets/app_language_button.dart';
@@ -71,6 +72,17 @@ Future<void> _initializeApp() async {
   selectedLanguageCode.value = savedLanguage;
   appLocale.value = _localeForLanguage(savedLanguage);
   await ApiClient.instance.initialize();
+  try {
+    final launch = AppLaunchService();
+    final maintenance = await launch.maintenance();
+    if (maintenance['maintenance'] == true)
+      AppAvailability.maintenance.value = maintenance;
+    final update = await launch.update();
+    if (update['update_available'] == true)
+      AppLaunchState.update.value = update;
+  } on ApiException catch (error) {
+    debugPrint('[APP LAUNCH] ${error.message}');
+  }
   unawaited(MetaEventsService.instance.initialize());
   try {
     await Firebase.initializeApp(
@@ -99,7 +111,9 @@ bool _hasShownStartupLanguagePrompt = false;
 const _languagePromptSeenKey = 'language_prompt_seen';
 
 Locale _localeForLanguage(String code) =>
-    code == 'hinglish' ? const Locale('en') : Locale(code);
+    // Material's framework strings do not have a Hinglish locale. Hindi keeps
+    // date/number controls familiar while app copy uses the Roman-Hindi map.
+    code == 'hinglish' ? const Locale('hi') : Locale(code);
 
 const _translations = <String, Map<String, String>>{
   'hi': {
@@ -291,8 +305,13 @@ extension AppTranslations on BuildContext {
     return translated;
   }
 
-  String tr(String english) =>
-      translateAppText(english, Localizations.localeOf(this).languageCode);
+  String tr(String english) {
+    final materialLanguage = Localizations.localeOf(this).languageCode;
+    return translateAppText(
+      english,
+      selectedLanguageCode.value == 'hinglish' ? 'hinglish' : materialLanguage,
+    );
+  }
 }
 
 extension AppThemeColors on BuildContext {
@@ -317,30 +336,40 @@ class KarigarApp extends StatelessWidget {
   final Future<void>? initialization;
   final Future<void> Function()? onInitialize;
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder<Locale>(
-    valueListenable: appLocale,
-    builder: (context, locale, _) => ValueListenableBuilder<ThemeMode>(
-      valueListenable: appThemeMode,
-      builder: (context, mode, _) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Super Karigar Worker',
-        theme: _theme(Brightness.light),
-        darkTheme: _theme(Brightness.dark),
-        themeMode: mode,
-        locale: locale,
-        supportedLocales: const [
-          Locale('en'),
-          Locale('hi'),
-          Locale('ta'),
-          Locale('te'),
-          Locale('bn'),
-          Locale('mr'),
-          Locale('kn'),
-        ],
-        localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        home: AuthGate(
-          initialization: initialization,
-          onInitialize: onInitialize,
+  Widget build(BuildContext context) => ValueListenableBuilder<String>(
+    valueListenable: selectedLanguageCode,
+    builder: (context, _, _) => ValueListenableBuilder<Locale>(
+      valueListenable: appLocale,
+      builder: (context, locale, _) => ValueListenableBuilder<ThemeMode>(
+        valueListenable: appThemeMode,
+        builder: (context, mode, _) => MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Super Karigar Worker',
+          theme: _theme(Brightness.light),
+          darkTheme: _theme(Brightness.dark),
+          themeMode: mode,
+          locale: locale,
+          supportedLocales: const [
+            Locale('en'),
+            Locale('hi'),
+            Locale('ta'),
+            Locale('te'),
+            Locale('bn'),
+            Locale('mr'),
+            Locale('kn'),
+          ],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          builder: (context, child) => MediaQuery.withClampedTextScaling(
+            minScaleFactor: 1,
+            maxScaleFactor: 1,
+            child: child!,
+          ),
+          home: initialization != null || onInitialize == null
+              ? AuthGate(
+                  initialization: initialization,
+                  onInitialize: onInitialize,
+                )
+              : AppLaunchGate(child: AuthGate(onInitialize: onInitialize)),
         ),
       ),
     ),
@@ -374,7 +403,34 @@ class KarigarApp extends StatelessWidget {
       cardColor: surface,
       canvasColor: surface,
       textTheme: TextTheme(
-        bodyMedium: TextStyle(color: foreground, fontSize: 14.5),
+        displaySmall: TextStyle(
+          color: foreground,
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+        ),
+        headlineSmall: TextStyle(
+          color: foreground,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+        titleLarge: TextStyle(
+          color: foreground,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+        titleMedium: TextStyle(
+          color: foreground,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+        bodyLarge: TextStyle(color: foreground, fontSize: 16),
+        bodyMedium: TextStyle(color: foreground, fontSize: 14),
+        bodySmall: TextStyle(color: foreground, fontSize: 12),
+        labelLarge: TextStyle(
+          color: foreground,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: surface,
@@ -415,7 +471,35 @@ class KarigarApp extends StatelessWidget {
       ),
       cardTheme: CardThemeData(
         color: surface,
+        elevation: 2,
+        shadowColor: const Color(0x1F1E1712),
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: border),
+        ),
         surfaceTintColor: Colors.transparent,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(64, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(64, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          side: BorderSide(color: border),
+        ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: surface,
@@ -435,6 +519,267 @@ class KarigarApp extends StatelessWidget {
       ),
     );
   }
+}
+
+class AppLaunchGate extends StatefulWidget {
+  const AppLaunchGate({super.key, required this.child});
+  final Widget child;
+  @override
+  State<AppLaunchGate> createState() => _AppLaunchGateState();
+}
+
+class _AppLaunchGateState extends State<AppLaunchGate> {
+  Timer? _poller;
+  @override
+  void initState() {
+    super.initState();
+    _poller = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _pollMaintenance(),
+    );
+  }
+
+  Future<void> _pollMaintenance() async {
+    if (AppAvailability.maintenance.value == null) return;
+    try {
+      final value = await AppLaunchService().maintenance();
+      if (mounted)
+        AppAvailability.maintenance.value = value['maintenance'] == true
+            ? value
+            : null;
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _poller?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<Map<String, dynamic>?>(
+        valueListenable: AppAvailability.maintenance,
+        builder: (context, maintenance, _) {
+          if (maintenance?['maintenance'] == true)
+            return _MaintenancePage(
+              data: maintenance!,
+              onRetry: _pollMaintenance,
+            );
+          return _UpdateGate(child: widget.child);
+        },
+      );
+}
+
+class _MaintenancePage extends StatelessWidget {
+  const _MaintenancePage({required this.data, required this.onRetry});
+  final Map<String, dynamic> data;
+  final Future<void> Function() onRetry;
+  @override
+  Widget build(BuildContext context) {
+    final until = DateTime.tryParse(data['until']?.toString() ?? '')?.toLocal();
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 92,
+                  height: 92,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: Icon(
+                    Icons.construction_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 46,
+                  ),
+                ),
+                const SizedBox(height: 26),
+                Text(
+                  'We’ll be back soon',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  data['message']?.toString() ??
+                      'We are improving Super Karigar. Back soon.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.45,
+                  ),
+                ),
+                if (until != null) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    'Expected back by ${MaterialLocalizations.of(context).formatMediumDate(until)}',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 26),
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Check again'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UpdateGate extends StatefulWidget {
+  const _UpdateGate({required this.child});
+  final Widget child;
+  @override
+  State<_UpdateGate> createState() => _UpdateGateState();
+}
+
+class _UpdateGateState extends State<_UpdateGate> {
+  bool dismissed = false;
+  @override
+  Widget build(
+    BuildContext context,
+  ) => ValueListenableBuilder<Map<String, dynamic>?>(
+    valueListenable: AppLaunchState.update,
+    builder: (context, update, _) {
+      if (update == null || dismissed) return widget.child;
+      final force = update['force_update'] == true;
+      if (!force) {
+        return _OptionalWorkerUpdateDialog(
+          message:
+              update['message']?.toString() ??
+              'Update Super Karigar for the latest improvements.',
+          storeUrl: update['store_url']?.toString(),
+          child: widget.child,
+        );
+      }
+      return Stack(
+        children: [
+          widget.child,
+          Positioned.fill(
+            child: Material(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          LucideIcons.download,
+                          size: 45,
+                          color: brand,
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'New version available',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          update['message']?.toString() ??
+                              'Update Super Karigar for the latest improvements.',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 18),
+                        FilledButton(
+                          onPressed: () async {
+                            final url = update['store_url']?.toString();
+                            if (url != null)
+                              await launchUrl(
+                                Uri.parse(url),
+                                mode: LaunchMode.externalApplication,
+                              );
+                          },
+                          child: const Text('Update'),
+                        ),
+                        if (!force)
+                          TextButton(
+                            onPressed: () => setState(() => dismissed = true),
+                            child: const Text('Not now'),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+class _OptionalWorkerUpdateDialog extends StatefulWidget {
+  const _OptionalWorkerUpdateDialog({
+    required this.child,
+    required this.message,
+    this.storeUrl,
+  });
+  final Widget child;
+  final String message;
+  final String? storeUrl;
+  @override
+  State<_OptionalWorkerUpdateDialog> createState() =>
+      _OptionalWorkerUpdateDialogState();
+}
+
+class _OptionalWorkerUpdateDialogState
+    extends State<_OptionalWorkerUpdateDialog> {
+  bool shown = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (shown) return;
+    shown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted)
+        showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('New version available'),
+            content: Text(widget.message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Later'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final url = Uri.tryParse(widget.storeUrl ?? '');
+                  if (url?.hasScheme == true)
+                    await launchUrl(url!, mode: LaunchMode.externalApplication);
+                  if (dialogContext.mounted) Navigator.pop(dialogContext);
+                },
+                child: const Text('Update'),
+              ),
+            ],
+          ),
+        );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class AuthGate extends StatefulWidget {
