@@ -332,12 +332,14 @@ class JobDetailModel {
     this.contactPhone,
     this.contactName,
     this.contactDesignation,
+    this.verification,
   });
   final ApiJobModel job;
   final bool isSaved, canApply;
   final ApplicationModel? application;
   final RatingModel employerRating;
   final String? contactPhone, contactName, contactDesignation;
+  final VerificationGate? verification;
   factory JobDetailModel.fromJson(Json json) {
     final meta = jsonMap(json['meta']);
     final responseData = jsonMap(json['data']);
@@ -371,6 +373,9 @@ class JobDetailModel {
       contactDesignation: data['contact_designation']?.toString(),
       application: meta['application'] is Map
           ? ApplicationModel.fromJson(jsonMap(meta['application']))
+          : null,
+      verification: meta['verification'] is Map
+          ? VerificationGate.fromJson(jsonMap(meta['verification']))
           : null,
     );
   }
@@ -649,6 +654,40 @@ class KycModel {
   );
 }
 
+class VerificationGate {
+  const VerificationGate({
+    required this.required,
+    required this.status,
+    required this.canApply,
+    this.message = '',
+  });
+  final bool required, canApply;
+  final String status, message;
+  factory VerificationGate.fromJson(Json json) => VerificationGate(
+    required: jsonBool(json['required']),
+    status: json['status']?.toString() ?? '',
+    canApply: jsonBool(json['can_apply']),
+    message: json['message']?.toString() ?? '',
+  );
+}
+
+class DigilockerModel {
+  const DigilockerModel({
+    required this.available,
+    required this.verified,
+    this.name = '',
+    this.maskedAadhaar = '',
+  });
+  final bool available, verified;
+  final String name, maskedAadhaar;
+  factory DigilockerModel.fromJson(Json json) => DigilockerModel(
+    available: jsonBool(json['available']),
+    verified: jsonBool(json['verified']),
+    name: json['name']?.toString() ?? json['aadhaar_name']?.toString() ?? '',
+    maskedAadhaar: json['masked_aadhaar']?.toString() ?? '',
+  );
+}
+
 class KycDocumentRecord {
   const KycDocumentRecord({
     required this.type,
@@ -695,14 +734,27 @@ class KycAlternateRecord {
 }
 
 class KycResponse {
-  const KycResponse({this.kyc, this.requiredDocuments = const []});
+  const KycResponse({
+    this.kyc,
+    this.requiredDocuments = const [],
+    this.digilocker,
+    this.verification,
+  });
   final KycModel? kyc;
   final List<String> requiredDocuments;
+  final DigilockerModel? digilocker;
+  final VerificationGate? verification;
   factory KycResponse.fromJson(Json json) => KycResponse(
     kyc: json['kyc'] is Map ? KycModel.fromJson(jsonMap(json['kyc'])) : null,
     requiredDocuments: jsonList(
       json['required_documents'],
     ).map((item) => item.toString()).toList(),
+    digilocker: json['digilocker'] is Map
+        ? DigilockerModel.fromJson(jsonMap(json['digilocker']))
+        : null,
+    verification: json['verification'] is Map
+        ? VerificationGate.fromJson(jsonMap(json['verification']))
+        : null,
   );
 }
 

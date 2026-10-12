@@ -22,6 +22,7 @@ class ApiConstants {
   static const applications = '/worker/applications';
   static const saved = '/worker/saved';
   static const kyc = '/kyc';
+  static const kycDigilocker = '/kyc/digilocker';
   static const notifications = '/notifications';
   static const reviews = '/worker/reviews';
   static const dashboard = '/worker/dashboard';
@@ -37,6 +38,8 @@ class ApiConstants {
 
   static String job(int jobId) => '$jobs/$jobId';
   static String applyToJob(int jobId) => '$jobs/$jobId/apply';
+  static String kycDigilockerStatus(String reference) =>
+      '$kycDigilocker/$reference';
   static String saveJob(int jobId) => '$jobs/$jobId/save';
   static String application(int applicationId) =>
       '/applications/$applicationId';

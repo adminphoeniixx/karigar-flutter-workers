@@ -167,6 +167,10 @@ class WorkerApiService {
     Map<String, String> fields,
     Map<String, File> files,
   ) => _api.multipart(ApiConstants.kyc, fields, files);
+  Future<Map<String, dynamic>> startDigilocker() =>
+      _api.post(ApiConstants.kycDigilocker);
+  Future<Map<String, dynamic>> digilockerStatus(String reference) =>
+      _api.get(ApiConstants.kycDigilockerStatus(reference));
   Future<Map<String, dynamic>> notifications({int? page}) => _api.get(
     ApiConstants.notifications,
     query: {if (page != null) 'page': page},

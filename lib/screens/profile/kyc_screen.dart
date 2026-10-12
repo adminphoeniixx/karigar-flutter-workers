@@ -26,6 +26,9 @@ class _KycPageState extends State<KycPage> {
   final api = WorkerApiService();
   final drafts = <_KycDraft>[];
   KycModel? existing;
+  DigilockerModel? digilocker;
+  bool startingDigilocker = false;
+  String? panError;
   bool loading = true, submitting = false, unavailable = false;
 
   @override
@@ -65,6 +68,7 @@ class _KycPageState extends State<KycPage> {
       });
       if (!mounted) return;
       existing = result.kyc;
+      digilocker = result.digilocker;
       for (final definition in definitions) {
         final draft = _KycDraft(definition);
         KycDocumentRecord? record;
@@ -118,6 +122,9 @@ class _KycPageState extends State<KycPage> {
     final files = <String, File>{};
     for (final draft in drafts) {
       final key = draft.definition.key;
+      // DigiLocker is the Aadhaar record: the server deliberately needs no
+      // Aadhaar number or image once it has passed.
+      if (key == 'aadhaar' && digilocker?.verified == true) continue;
       if (draft.missing) {
         if (draft.alternate == null || draft.reason.text.trim().isEmpty) {
           _message('Choose an alternate document and enter a reason.');
@@ -144,10 +151,6 @@ class _KycPageState extends State<KycPage> {
           _message('Enter a valid ${draft.definition.label} number.');
           return;
         }
-        if (draft.file == null && !draft.hasExistingFile) {
-          _message('Upload your ${draft.definition.label}.');
-          return;
-        }
         fields[draft.definition.numberField] = number;
         if (draft.file != null) files['${key}_doc'] = draft.file!;
       }
@@ -164,10 +167,92 @@ class _KycPageState extends State<KycPage> {
       loading = true;
       await _load();
     } on ApiException catch (error) {
-      if (mounted) _message(error.message);
+      if (mounted) {
+        final fieldError = error.errors['pan_number'];
+        if (fieldError != null) {
+          setState(
+            () => panError = fieldError is List
+                ? fieldError.join(' ')
+                : fieldError.toString(),
+          );
+        } else {
+          _message(error.message);
+        }
+      }
     } finally {
       if (mounted) setState(() => submitting = false);
     }
+  }
+
+  Future<void> _verifyWithDigilocker() async {
+    if (startingDigilocker) return;
+    setState(() => startingDigilocker = true);
+    try {
+      final start = await api.startDigilocker();
+      final data = start['data'] is Map
+          ? Map<String, dynamic>.from(start['data'])
+          : start;
+      final url = data['authorization_url']?.toString();
+      final reference = data['reference']?.toString();
+      if (url == null ||
+          reference == null ||
+          url.isEmpty ||
+          reference.isEmpty) {
+        throw ApiException('DigiLocker could not be started.', statusCode: 0);
+      }
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (!mounted) return;
+      final check = await showModalBottomSheet<bool>(
+        context: context,
+        showDragHandle: true,
+        builder: (sheetContext) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(LucideIcons.landmark, size: 32, color: brand),
+              const SizedBox(height: 12),
+              const AppText(
+                'Finish verification in DigiLocker, then return here.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              PrimaryButton(
+                'I have completed verification',
+                onPressed: () => Navigator.pop(sheetContext, true),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (check != true || !mounted) return;
+      final outcome = await api.digilockerStatus(reference);
+      final status = (outcome['status'] ?? (outcome['data'] as Map?)?['status'])
+          ?.toString();
+      if (status == 'passed') {
+        await _reload();
+      } else {
+        _message(
+          (outcome['message'] ??
+                  (outcome['data'] as Map?)?['message'] ??
+                  'DigiLocker verification was not completed.')
+              .toString(),
+        );
+      }
+    } on ApiException catch (error) {
+      if (mounted) _message(error.message);
+    } finally {
+      if (mounted) setState(() => startingDigilocker = false);
+    }
+  }
+
+  Future<void> _reload() async {
+    for (final draft in drafts) {
+      draft.dispose();
+    }
+    drafts.clear();
+    setState(() => loading = true);
+    await _load();
   }
 
   void _message(String value) => ScaffoldMessenger.of(context)
@@ -194,9 +279,49 @@ class _KycPageState extends State<KycPage> {
             padding: const EdgeInsets.all(16),
             children: [
               _StatusCard(existing: existing),
+              if (digilocker?.verified == true) ...[
+                const SizedBox(height: 12),
+                AppCard(
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.badgeCheck, color: brand),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: AppText(
+                          'Aadhaar verified: ${digilocker!.name.isEmpty ? 'Verified' : digilocker!.name}${digilocker!.maskedAadhaar.isEmpty ? '' : ' · ${digilocker!.maskedAadhaar}'}',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (digilocker?.available == true &&
+                  digilocker?.verified != true) ...[
+                const SizedBox(height: 16),
+                PrimaryButton(
+                  existing?.status == 'pending'
+                      ? 'Skip the wait: Verify with DigiLocker'
+                      : 'Verify with DigiLocker',
+                  isLoading: startingDigilocker,
+                  onPressed: _verifyWithDigilocker,
+                ),
+                const SizedBox(height: 8),
+                const Center(
+                  child: AppText(
+                    'Or enter Aadhaar number instead',
+                    style: TextStyle(color: muted, fontSize: 12),
+                  ),
+                ),
+              ],
               if (existing == null || existing!.status == 'rejected') ...[
                 const SizedBox(height: 16),
-                ...drafts.map(_documentCard),
+                ...drafts
+                    .where(
+                      (draft) =>
+                          !(draft.definition.key == 'aadhaar' &&
+                              digilocker?.verified == true),
+                    )
+                    .map(_documentCard),
                 const SizedBox(height: 8),
                 PrimaryButton(
                   'Submit for Verification',
@@ -227,14 +352,22 @@ class _KycPageState extends State<KycPage> {
           if (!draft.missing) ...[
             TextField(
               controller: draft.number,
-              decoration: InputDecoration(hintText: draft.definition.hint),
+              decoration: InputDecoration(
+                hintText: draft.definition.hint,
+                errorText: draft.definition.key == 'pan' ? panError : null,
+              ),
+              onChanged: draft.definition.key == 'pan'
+                  ? (_) {
+                      if (panError != null) setState(() => panError = null);
+                    }
+                  : null,
             ),
             const SizedBox(height: 10),
             UploadTile(
               draft.file?.path.split(Platform.pathSeparator).last ??
                   (draft.hasExistingFile
                       ? 'Document on record'
-                      : 'Upload photo / PDF'),
+                      : 'Upload photo / PDF (optional)'),
               LucideIcons.upload,
               dashed: true,
               onTap: () => _pick(draft, alternate: false),

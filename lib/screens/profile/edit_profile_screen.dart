@@ -26,6 +26,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final wage = TextEditingController();
   final upi = TextEditingController();
   final address = TextEditingController();
+  final area = TextEditingController();
   List<String> skillOptions = [], languageOptions = [];
   String? loadError;
   List<String> skills = [], languages = [], states = [], cities = [];
@@ -37,6 +38,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   int cityRequest = 0;
   String? avatarUrl;
   double? latitude, longitude;
+  String? locationSource;
   int travelRadiusKm = 15;
 
   String _loadedAddress(Map<String, dynamic> data) {
@@ -88,6 +90,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (!mounted) return;
       setState(() {
         address.text = _loadedAddress(data);
+        area.text = data['area']?.toString() ?? '';
+        locationSource = data['location_source']?.toString();
         name.text = data['name']?.toString() ?? '';
         email.text = data['email']?.toString() ?? '';
         phone.text = data['phone']?.toString() ?? '';
@@ -214,6 +218,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
         'city': city,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
+        if (area.text.trim().isNotEmpty) 'area': area.text.trim(),
+        if (locationSource != null) 'location_source': locationSource,
         'travel_radius_km': travelRadiusKm,
         'available': available,
         'payout_upi': upi.text.trim(),
@@ -345,6 +351,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       setState(() {
         latitude = position.latitude;
         longitude = position.longitude;
+        locationSource = 'gps';
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -377,6 +384,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       wage,
       upi,
       address,
+      area,
     ]) {
       item.dispose();
     }
@@ -560,6 +568,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               const SizedBox(height: 14),
               const SectionTitle('Location'),
+              const FieldLabel('Area / Mohalla'),
+              TextField(
+                controller: area,
+                onChanged: (_) => locationSource = 'area',
+                decoration: const InputDecoration(
+                  hintText: 'e.g. Sanganer, Vaishali Nagar',
+                ),
+              ),
+              const SizedBox(height: 8),
               const FieldLabel('Full address'),
               TextField(
                 key: const ValueKey('profile-address'),

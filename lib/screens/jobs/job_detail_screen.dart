@@ -12,6 +12,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
   bool loading = false;
   bool detailLoading = true;
   bool canApply = true;
+  VerificationGate? verification;
   bool _viewLogged = false;
   RatingModel employerRating = const RatingModel(average: 0, count: 0);
   String? contactPhone, contactName, contactDesignation;
@@ -40,6 +41,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
           saved = response.isSaved;
           applied = response.application != null;
           canApply = response.canApply;
+          verification = response.verification;
           employerRating = response.employerRating;
           contactPhone = response.contactPhone;
           contactName = response.contactName;
@@ -47,13 +49,22 @@ class _JobDetailPageState extends State<JobDetailPage> {
         });
       }
     } on ApiException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(error.message)));
+      }
     } finally {
       if (mounted) setState(() => detailLoading = false);
     }
+  }
+
+  Future<void> _completeKyc() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const KycPage()),
+    );
+    if (mounted) _loadDetail();
   }
 
   Future<void> _toggleSaved() async {
@@ -74,10 +85,24 @@ class _JobDetailPageState extends State<JobDetailPage> {
         );
       }
     } on ApiException catch (error) {
-      if (mounted)
+      if (!mounted) return;
+      final gate = error.errors['verification'];
+      if (error.statusCode == 422 && error.code == 'verification_required') {
+        setState(
+          () => verification = gate is Map
+              ? VerificationGate.fromJson(Map<String, dynamic>.from(gate))
+              : const VerificationGate(
+                  required: true,
+                  status: '',
+                  canApply: false,
+                  message: 'Complete KYC before applying for jobs.',
+                ),
+        );
+      } else {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(error.message)));
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -169,6 +194,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
   @override
   Widget build(BuildContext context) {
     final j = detailJob ?? widget.job;
+    final needsKyc = verification?.canApply == false;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -387,40 +413,58 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   color: context.surfaceColor,
                   border: Border(top: BorderSide(color: context.borderColor)),
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
-                      width: 52,
-                      height: 50,
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                    if (needsKyc && verification!.message.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: AppText(
+                          verification!.message,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: muted, fontSize: 12),
+                        ),
+                      ),
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 52,
+                          height: 50,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            onPressed: _callEmployer,
+                            child: const Icon(LucideIcons.phone, color: brand),
                           ),
                         ),
-                        onPressed: _callEmployer,
-                        child: const Icon(LucideIcons.phone, color: brand),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: PrimaryButton(
-                        applied
-                            ? 'Applied ✓'
-                            : canApply
-                            ? 'Apply Now'
-                            : 'Applications closed',
-                        isLoading: loading,
-                        onPressed: applied || !canApply
-                            ? null
-                            : () => showModalBottomSheet(
-                                context: context,
-                                showDragHandle: true,
-                                isScrollControlled: true,
-                                builder: (_) => ApplySheet(onApply: _apply),
-                              ),
-                      ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: PrimaryButton(
+                            applied
+                                ? 'Applied ✓'
+                                : needsKyc
+                                ? 'Complete KYC'
+                                : canApply
+                                ? 'Apply Now'
+                                : 'Applications closed',
+                            isLoading: loading,
+                            onPressed: applied || (!canApply && !needsKyc)
+                                ? null
+                                : needsKyc
+                                ? _completeKyc
+                                : () => showModalBottomSheet(
+                                    context: context,
+                                    showDragHandle: true,
+                                    isScrollControlled: true,
+                                    builder: (_) => ApplySheet(onApply: _apply),
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

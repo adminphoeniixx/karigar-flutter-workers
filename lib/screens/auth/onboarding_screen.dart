@@ -22,7 +22,7 @@ class OnboardingPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Image.asset(
-            'assets/images/onboarding_logo_white.png',
+            'assets/images/superkarigar.png',
             width: 80,
             height: 84,
             fit: BoxFit.contain,
