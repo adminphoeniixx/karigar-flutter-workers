@@ -243,6 +243,23 @@ class WorkerApiService {
     await _api.delete(ApiConstants.resume);
   }
 
+  /// Returns the pre-filled builder form and, when available, the last AI resume.
+  Future<Map<String, dynamic>> resumeBuilder() =>
+      _api.get(ApiConstants.resumeBuilder);
+
+  Future<Map<String, dynamic>> draftResume(Map<String, dynamic> values) =>
+      _api.post(ApiConstants.resumeBuilderDraft, values);
+
+  Future<Map<String, dynamic>> saveBuiltResume(Map<String, dynamic> values) =>
+      _api.post(ApiConstants.resumeBuilder, values);
+
+  Future<File> downloadResumePdf() async {
+    final bytes = await _api.getBytes(ApiConstants.resumeFile);
+    final file = File('${Directory.systemTemp.path}/super-karigar-resume.pdf');
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  }
+
   Future<PreferencesModel> fetchPreferences() async =>
       PreferencesModel.fromJson(
         jsonMap((await _api.get(ApiConstants.preferences))['preferences']),

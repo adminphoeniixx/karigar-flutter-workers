@@ -159,6 +159,28 @@ class _ResumePageState extends State<ResumePage> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: saving
+                            ? null
+                            : () async {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const ResumeBuilderPage(),
+                                  ),
+                                );
+                                _load();
+                              },
+                        icon: const Icon(LucideIcons.sparkles),
+                        label: AppText(
+                          resume?.source == 'ai'
+                              ? 'Edit in AI builder'
+                              : 'Make my resume with AI',
+                        ),
+                      ),
+                    ),
                     if (resume != null)
                       SizedBox(
                         width: double.infinity,

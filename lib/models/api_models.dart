@@ -458,14 +458,17 @@ class ResumeModel {
     required this.uploadedAgo,
     required this.characters,
     required this.maxCharacters,
+    this.source,
   });
   final String name, uploadedAgo;
   final int characters, maxCharacters;
+  final String? source;
   factory ResumeModel.fromJson(Json j) => ResumeModel(
     name: j['name']?.toString() ?? 'Resume.pdf',
     uploadedAgo: j['uploaded_ago']?.toString() ?? '',
     characters: jsonInt(j['characters']),
     maxCharacters: jsonInt(j['max_characters']),
+    source: j['source']?.toString(),
   );
 }
 

@@ -50,6 +50,7 @@ part 'screens/jobs/saved_screen.dart';
 part 'screens/profile/reviews_screen.dart';
 part 'screens/profile/settings_screen.dart';
 part 'screens/profile/resume_screen.dart';
+part 'screens/profile/resume_builder_screen.dart';
 part 'screens/profile/sessions_screen.dart';
 part 'screens/conversations_screen.dart';
 part 'widgets/common_widgets.dart';

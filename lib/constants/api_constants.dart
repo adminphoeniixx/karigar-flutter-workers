@@ -29,6 +29,9 @@ class ApiConstants {
   static const locale = '/locale';
   static const deviceTokens = '/device-tokens';
   static const resume = '/worker/resume';
+  static const resumeBuilder = '$resume/builder';
+  static const resumeBuilderDraft = '$resume/builder/draft';
+  static const resumeFile = '$resume/file';
   static const conversations = '/conversations';
   static const preferences = '/preferences';
   static const sessions = '/auth/sessions';

@@ -69,6 +69,28 @@ class ApiClient {
     return _send('GET', uri, () => http.get(uri, headers: _headersFor(uri)));
   }
 
+  /// Fetches a private non-JSON resource with the current bearer token.
+  Future<List<int>> getBytes(String path) async {
+    final uri = _uri(path);
+    try {
+      final response = await http.get(uri, headers: _headersFor(uri));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ApiException(
+          'Unable to open the resume PDF.',
+          statusCode: response.statusCode,
+        );
+      }
+      return response.bodyBytes;
+    } on SocketException {
+      throw ApiException(
+        'Please check your internet connection.',
+        statusCode: 0,
+      );
+    } on http.ClientException {
+      throw ApiException('Unable to connect to the server.', statusCode: 0);
+    }
+  }
+
   Future<Map<String, dynamic>> post(String path, [Map<String, dynamic>? body]) {
     final uri = _uri(path);
     return _send(
