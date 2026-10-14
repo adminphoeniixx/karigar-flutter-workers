@@ -137,6 +137,18 @@ class WorkerApiService {
   Future<List<SavedJobModel>> fetchSavedJobs({int? page}) async => jsonList(
     (await savedJobs(page: page))['data'],
   ).map((e) => SavedJobModel.fromJson(jsonMap(e))).toList();
+
+  /// The dashboard counter can be cached briefly.  The profile uses this
+  /// endpoint so its saved-jobs label always agrees with the Saved Jobs page.
+  Future<int> fetchSavedJobCount() async {
+    final response = await savedJobs();
+    final meta = response['meta'];
+    if (meta is Map && meta['total'] is num) {
+      return (meta['total'] as num).toInt();
+    }
+    return jsonList(response['data']).length;
+  }
+
   Future<bool> toggleSaved(int jobId) async {
     final saved =
         (await _api.post(ApiConstants.saveJob(jobId)))['saved'] == true;
@@ -244,14 +256,15 @@ class WorkerApiService {
   }
 
   /// Returns the pre-filled builder form and, when available, the last AI resume.
-  Future<Map<String, dynamic>> resumeBuilder() =>
-      _api.get(ApiConstants.resumeBuilder);
+  Future<Map<String, dynamic>> resumeBuilder() async =>
+      _payload(await _api.get(ApiConstants.resumeBuilder));
 
-  Future<Map<String, dynamic>> draftResume(Map<String, dynamic> values) =>
-      _api.post(ApiConstants.resumeBuilderDraft, values);
+  Future<Map<String, dynamic>> draftResume(Map<String, dynamic> values) async =>
+      _payload(await _api.post(ApiConstants.resumeBuilderDraft, values));
 
-  Future<Map<String, dynamic>> saveBuiltResume(Map<String, dynamic> values) =>
-      _api.post(ApiConstants.resumeBuilder, values);
+  Future<Map<String, dynamic>> saveBuiltResume(
+    Map<String, dynamic> values,
+  ) async => _payload(await _api.post(ApiConstants.resumeBuilder, values));
 
   Future<File> downloadResumePdf() async {
     final bytes = await _api.getBytes(ApiConstants.resumeFile);

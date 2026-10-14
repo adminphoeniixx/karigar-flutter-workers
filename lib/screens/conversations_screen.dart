@@ -41,6 +41,19 @@ class _ConversationsPageState extends State<ConversationsPage> {
     }
   }
 
+  String _timeLabel(String value) {
+    final date = DateTime.tryParse(value)?.toLocal();
+    if (date == null) return value;
+    final now = DateTime.now();
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
+      final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+      return '$hour:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}';
+    }
+    return '${date.day}/${date.month}';
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const AppText('Messages')),
@@ -50,30 +63,31 @@ class _ConversationsPageState extends State<ConversationsPage> {
             onRefresh: _load,
             child: items.isEmpty
                 ? ListView(
-                    padding: const EdgeInsets.only(top: 120),
-                    children: const [
-                      Icon(LucideIcons.messageCircle, color: muted, size: 42),
-                      SizedBox(height: 12),
-                      AppText(
-                        'No conversations yet',
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(24, 110, 24, 24),
+                    children: const [Center(child: _MessagesEmptyState())],
                   )
-                : ListView(
-                    children: items
-                        .map(
-                          (c) => ListTile(
-                            leading: const CircleAvatar(
-                              child: Icon(LucideIcons.building2),
-                            ),
-                            title: Text(c.otherParty),
-                            subtitle: AppText(
-                              c.job?.title ?? 'Job conversation',
-                            ),
-                            trailing: c.unread > 0
-                                ? StatusPill('${c.unread}', brand, Colors.white)
-                                : null,
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                    itemCount: items.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return const Padding(
+                          padding: EdgeInsets.fromLTRB(4, 2, 4, 14),
+                          child: AppText(
+                            'Messages from employers about your applications',
+                            style: TextStyle(color: muted, fontSize: 13),
+                          ),
+                        );
+                      }
+                      final c = items[index - 1];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Material(
+                          color: context.surfaceColor,
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
                             onTap: () async {
                               await Navigator.push(
                                 context,
@@ -83,9 +97,100 @@ class _ConversationsPageState extends State<ConversationsPage> {
                               );
                               _load();
                             },
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: context.borderColor),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 46,
+                                    height: 46,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: context.brandTint,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      LucideIcons.building2,
+                                      color: brand,
+                                      size: 21,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        AppText(
+                                          c.otherParty,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        AppText(
+                                          c.job?.title ?? 'Job conversation',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: muted,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      AppText(
+                                        _timeLabel(c.lastMessageAt),
+                                        style: const TextStyle(
+                                          color: muted,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 7),
+                                      if (c.unread > 0)
+                                        Container(
+                                          constraints: const BoxConstraints(
+                                            minWidth: 20,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: brand,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${c.unread}',
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        )
-                        .toList(),
+                        ),
+                      );
+                    },
                   ),
           ),
   );
@@ -202,7 +307,7 @@ class _ConversationPageState extends State<ConversationPage> {
                               ? Alignment.centerRight
                               : Alignment.centerLeft,
                           child: Container(
-                            margin: const EdgeInsets.only(top: 8),
+                            margin: const EdgeInsets.only(top: 10),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 9,
@@ -212,7 +317,12 @@ class _ConversationPageState extends State<ConversationPage> {
                             ),
                             decoration: BoxDecoration(
                               color: m.mine ? brand : context.surfaceColor,
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(16),
+                                topRight: const Radius.circular(16),
+                                bottomLeft: Radius.circular(m.mine ? 16 : 4),
+                                bottomRight: Radius.circular(m.mine ? 4 : 16),
+                              ),
                               border: m.mine
                                   ? null
                                   : Border.all(color: context.borderColor),
@@ -233,33 +343,80 @@ class _ConversationPageState extends State<ConversationPage> {
               ),
               SafeArea(
                 top: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: input,
-                          minLines: 1,
-                          maxLines: 4,
-                          textInputAction: TextInputAction.newline,
-                          onSubmitted: (_) => _send(),
-                          decoration: InputDecoration(
-                            hintText: context.tr('Type a message'),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 9, 12, 12),
+                  decoration: BoxDecoration(
+                    color: context.surfaceColor,
+                    border: Border(top: BorderSide(color: context.borderColor)),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.viewInsetsOf(context).bottom,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: input,
+                            minLines: 1,
+                            maxLines: 4,
+                            textInputAction: TextInputAction.newline,
+                            onSubmitted: (_) => _send(),
+                            decoration: InputDecoration(
+                              hintText: context.tr('Type a message'),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 15,
+                                vertical: 12,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filled(
-                        onPressed: sending ? null : _send,
-                        icon: const Icon(LucideIcons.send),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        IconButton.filled(
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size(46, 46),
+                          ),
+                          onPressed: sending ? null : _send,
+                          icon: const Icon(LucideIcons.send),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ],
           ),
+  );
+}
+
+class _MessagesEmptyState extends StatelessWidget {
+  const _MessagesEmptyState();
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Container(
+        width: 72,
+        height: 72,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: context.brandTint,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(LucideIcons.messageCircle, color: brand, size: 30),
+      ),
+      const SizedBox(height: 18),
+      const AppText(
+        'No conversations yet',
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+      ),
+      const SizedBox(height: 6),
+      const AppText(
+        'Employers can message you after you apply for a job.',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: muted, height: 1.4),
+      ),
+    ],
   );
 }

@@ -22,20 +22,32 @@ class _ProfileTabState extends State<ProfileTab> {
     _load();
   }
 
+  Future<int?> _savedJobCount(WorkerApiService service) async {
+    try {
+      return await service.fetchSavedJobCount();
+    } on ApiException {
+      // Keep the profile usable when the optional count refresh is unavailable.
+      return null;
+    }
+  }
+
   Future<void> _load() async {
     try {
       final service = WorkerApiService();
       final results = await Future.wait([
         service.profile(),
         service.dashboard(),
+        _savedJobCount(service),
       ]);
       if (!mounted) return;
       final worker = results[0] as WorkerProfileModel;
       final dashboard = results[1] as Map<String, dynamic>;
+      final savedCount = results[2] as int?;
       setState(() {
         profile = worker.data;
         profileAvatarUrl.value = worker.data['avatar_url']?.toString();
         stats = Map<String, dynamic>.from(dashboard['stats'] as Map? ?? {});
+        if (savedCount != null) stats['saved_jobs'] = savedCount;
       });
     } on ApiException catch (error) {
       if (mounted) {
