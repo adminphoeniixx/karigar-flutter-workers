@@ -228,13 +228,12 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
     try {
       final file = await WorkerApiService().downloadResumePdf();
       if (!mounted) return;
-      final opened = await launchUrl(
-        file.uri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (!opened && mounted) {
+      final result = await OpenFilex.open(file.path, type: 'application/pdf');
+      if (result.type != ResultType.done && mounted) {
         _message(
-          'PDF downloaded, but no PDF viewer is available on this device.',
+          result.message.isNotEmpty
+              ? result.message
+              : 'PDF downloaded, but no PDF viewer is available on this device.',
         );
       }
     } on ApiException catch (e) {

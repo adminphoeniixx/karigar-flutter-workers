@@ -72,12 +72,26 @@ class ApiClient {
   /// Fetches a private non-JSON resource with the current bearer token.
   Future<List<int>> getBytes(String path) async {
     final uri = _uri(path);
+    _logRequest('GET', uri, null);
     try {
       final response = await http.get(uri, headers: _headersFor(uri));
+      _logResponse('GET', uri, response);
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        String message = 'Unable to open the resume PDF.';
+        String? code;
+        try {
+          final body = Map<String, dynamic>.from(jsonDecode(response.body));
+          message = body['message']?.toString().trim().isNotEmpty == true
+              ? body['message'].toString()
+              : message;
+          code = body['code']?.toString();
+        } catch (_) {
+          // File endpoints can return an empty or HTML error response.
+        }
         throw ApiException(
-          'Unable to open the resume PDF.',
+          message,
           statusCode: response.statusCode,
+          code: code,
         );
       }
       return response.bodyBytes;

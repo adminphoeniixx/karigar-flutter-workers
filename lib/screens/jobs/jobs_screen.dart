@@ -147,15 +147,18 @@ class _JobsTabState extends State<JobsTab> {
 
   Future<void> _load({bool refreshLocation = false}) async {
     final sequence = ++_loadSequence;
+    Future<FeedPosition?>? positionFuture;
     setState(() {
       loading = true;
       loadingMore = false;
       error = null;
+      // Do not use a previous position while a fresh one is being acquired.
+      if (refreshLocation) position = null;
     });
     if (refreshLocation) {
-      final current = await locationService.current(requestPermission: true);
-      if (!mounted || sequence != _loadSequence) return;
-      position = current;
+      // A cold GPS can take seconds. Keep it outside the initial jobs request
+      // so the tab is useful immediately with the server's normal fallback.
+      positionFuture = locationService.current(requestPermission: true);
     }
     final filters = requestFilters;
     // This key stays in memory only; free text and locations never go to Meta.
@@ -206,6 +209,33 @@ class _JobsTabState extends State<JobsTab> {
       if (mounted && sequence == _loadSequence) {
         setState(() => loading = false);
       }
+    }
+    if (positionFuture != null) {
+      unawaited(_refreshForCurrentLocation(positionFuture, sequence));
+    }
+  }
+
+  Future<void> _refreshForCurrentLocation(
+    Future<FeedPosition?> positionFuture,
+    int sequence,
+  ) async {
+    final current = await positionFuture;
+    if (!mounted || sequence != _loadSequence || current == null) return;
+    position = current;
+    final filters = requestFilters;
+    try {
+      final response = await service.fetchJobs(filters: filters);
+      if (!mounted || sequence != _loadSequence) return;
+      setState(() {
+        apiJobs = response.jobs.map(Job.fromApi).toList();
+        feed = response.feed;
+        pagination = response.pagination;
+        unavailable = response.unavailable;
+        unavailableMessage = response.message;
+      });
+    } on ApiException {
+      // Keep the initial city/profile results visible if this optional
+      // location-based refresh is unavailable.
     }
   }
 

@@ -270,16 +270,28 @@ class FilterSheet extends StatelessWidget {
 }
 
 class ApplySheet extends StatefulWidget {
-  const ApplySheet({super.key, required this.onApply});
+  const ApplySheet({
+    super.key,
+    required this.onApply,
+    this.initialWage = '',
+    this.initialNote = '',
+    this.jobTitle,
+    this.onDraftChanged,
+  });
   final Future<void> Function(String? coverNote, num? expectedWage) onApply;
+  final String initialWage, initialNote;
+  final String? jobTitle;
+  final void Function(String wage, String note)? onDraftChanged;
   @override
   State<ApplySheet> createState() => _ApplySheetState();
 }
 
 class _ApplySheetState extends State<ApplySheet> {
-  final wage = TextEditingController();
-  final note = TextEditingController();
+  late final wage = TextEditingController(text: widget.initialWage);
+  late final note = TextEditingController(text: widget.initialNote);
   bool submitting = false;
+
+  void _saveDraft() => widget.onDraftChanged?.call(wage.text, note.text);
 
   @override
   void dispose() {
@@ -310,8 +322,10 @@ class _ApplySheetState extends State<ApplySheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AppText(
-          'Apply for this job',
+        AppText(
+          widget.jobTitle?.trim().isNotEmpty == true
+              ? 'Apply for ${widget.jobTitle}'
+              : 'Apply for this job',
           style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 4),
@@ -323,6 +337,7 @@ class _ApplySheetState extends State<ApplySheet> {
         const FieldLabel('Expected salary per month (optional)'),
         TextField(
           controller: wage,
+          onChanged: (_) => _saveDraft(),
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
             prefixText: '₹ ',
@@ -334,6 +349,7 @@ class _ApplySheetState extends State<ApplySheet> {
         const FieldLabel('Message to employer (optional)'),
         TextField(
           controller: note,
+          onChanged: (_) => _saveDraft(),
           maxLines: 3,
           decoration: InputDecoration(
             hintText: context.tr("I'm available from tomorrow…"),
@@ -554,49 +570,64 @@ class StatCard extends StatelessWidget {
     this.color, {
     super.key,
     this.compact = false,
+    this.onTap,
   });
   final String value, label;
   final IconData icon;
   final Color bgColor, color;
   final bool compact;
+  final VoidCallback? onTap;
+
   @override
-  Widget build(BuildContext context) => AppCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: context.isDark
-                ? Color.alphaBlend(
-                    bgColor.withValues(alpha: .16),
-                    context.surfaceColor,
-                  )
-                : bgColor,
-            borderRadius: BorderRadius.circular(10),
+  Widget build(BuildContext context) {
+    final card = AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: context.isDark
+                  ? Color.alphaBlend(
+                      bgColor.withValues(alpha: .16),
+                      context.surfaceColor,
+                    )
+                  : bgColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 18),
           ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-        const SizedBox(height: 6),
-        AppText(
-          value,
-          style: TextStyle(
-            fontSize: compact ? 19 : 24,
-            fontWeight: FontWeight.w700,
+          const SizedBox(height: 6),
+          AppText(
+            value,
+            style: TextStyle(
+              fontSize: compact ? 19 : 24,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-        AppText(
-          label,
-          style: const TextStyle(
-            color: muted,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
+          AppText(
+            label,
+            style: const TextStyle(
+              color: muted,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+    if (onTap == null) return card;
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: card,
+      ),
+    );
+  }
 }
 
 class SectionHeader extends StatelessWidget {

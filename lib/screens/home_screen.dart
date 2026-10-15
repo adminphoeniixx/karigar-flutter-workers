@@ -74,37 +74,16 @@ class _HomeTabState extends State<HomeTab> {
     }
     try {
       final service = widget.api ?? WorkerApiService();
-      final position = await (widget.locationService ?? FeedLocationService())
+      // Location acquisition can take several seconds on a cold GPS.  Do not
+      // keep the entire home screen waiting for it: show the server's normal
+      // (chosen/profile-city) feed first, then refresh nearby jobs once a
+      // fresh position is available.
+      final position = (widget.locationService ?? FeedLocationService())
           .current(requestPermission: true);
+      final response = await service.fetchDashboard();
       if (!mounted || sequence != _loadSequence) return;
-      final response = await service.fetchDashboard(location: position?.query);
-      final homeJobs = response.latestJobs;
-      if (!mounted || sequence != _loadSequence) return;
-      setState(() {
-        dashboard = {
-          'greeting': response.greeting,
-          'profile': response.profile.data,
-          'stats': {
-            'available_jobs': response.stats.availableJobs,
-            'applications': response.stats.applications,
-            'saved_jobs': response.stats.savedJobs,
-            'kyc_status_label': response.stats.kycStatusLabel,
-            'profile_completion': response.stats.profileCompletion,
-            'unread_notifications': response.stats.unreadNotifications,
-          },
-        };
-        available = response.profile.available;
-        profileAvatarUrl.value = response.profile.data['avatar_url']
-            ?.toString();
-        latestJobs = homeJobs.map(Job.fromApi).toList();
-        feedLocation = response.feedLocation;
-      });
-      // A selected feed location is the location the jobs are actually using.
-      // Never overwrite it with the phone's reverse-geocoded address.
-      if (position != null && !hasChosenFeedLocation) {
-        unawaited(_resolveCurrentLocation(position, sequence));
-      }
-      widget.onUnreadChanged(response.stats.unreadNotifications);
+      _applyDashboard(response);
+      unawaited(_refreshForCurrentLocation(service, position, sequence));
     } on ApiException catch (error) {
       if (mounted && sequence == _loadSequence) {
         setState(() {
@@ -118,6 +97,50 @@ class _HomeTabState extends State<HomeTab> {
       }
     } finally {
       if (mounted && sequence == _loadSequence) setState(() => loading = false);
+    }
+  }
+
+  void _applyDashboard(DashboardModel response) {
+    setState(() {
+      dashboard = {
+        'greeting': response.greeting,
+        'profile': response.profile.data,
+        'stats': {
+          'available_jobs': response.stats.availableJobs,
+          'applications': response.stats.applications,
+          'saved_jobs': response.stats.savedJobs,
+          'kyc_status_label': response.stats.kycStatusLabel,
+          'profile_completion': response.stats.profileCompletion,
+          'unread_notifications': response.stats.unreadNotifications,
+        },
+      };
+      available = response.profile.available;
+      profileAvatarUrl.value = response.profile.data['avatar_url']?.toString();
+      latestJobs = response.latestJobs.map(Job.fromApi).toList();
+      feedLocation = response.feedLocation;
+    });
+    widget.onUnreadChanged(response.stats.unreadNotifications);
+  }
+
+  Future<void> _refreshForCurrentLocation(
+    WorkerApiService service,
+    Future<FeedPosition?> positionFuture,
+    int sequence,
+  ) async {
+    final position = await positionFuture;
+    if (!mounted || sequence != _loadSequence || position == null) return;
+    try {
+      final response = await service.fetchDashboard(location: position.query);
+      if (!mounted || sequence != _loadSequence) return;
+      _applyDashboard(response);
+      // A selected feed location is the location the jobs are actually using.
+      // Never overwrite it with the phone's reverse-geocoded address.
+      if (!hasChosenFeedLocation) {
+        unawaited(_resolveCurrentLocation(position, sequence));
+      }
+    } on ApiException {
+      // The first dashboard response remains visible if the location refresh
+      // fails, so a transient GPS/network failure cannot block Home.
     }
   }
 
@@ -163,6 +186,11 @@ class _HomeTabState extends State<HomeTab> {
       MaterialPageRoute(builder: (_) => const LoginPage()),
       (_) => false,
     );
+  }
+
+  Future<void> _openPage(Widget page) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    if (mounted) _loadDashboard();
   }
 
   Future<void> _setAvailability(bool value) async {
@@ -381,6 +409,7 @@ class _HomeTabState extends State<HomeTab> {
                         LucideIcons.briefcaseBusiness,
                         Color(0xFFFFF3EE),
                         brand,
+                        onTap: widget.onBrowse,
                       ),
                     ),
                     SizedBox(width: 12),
@@ -393,6 +422,7 @@ class _HomeTabState extends State<HomeTab> {
                         Color(0xFFFFF7ED),
                         Color(0xFFB45309),
                         compact: true,
+                        onTap: () => _openPage(const KycPage()),
                       ),
                     ),
                   ],
@@ -407,6 +437,7 @@ class _HomeTabState extends State<HomeTab> {
                         LucideIcons.check,
                         Color(0xFFECFDF5),
                         Color(0xFF047857),
+                        onTap: () => _openPage(const ApplicationsTab()),
                       ),
                     ),
                     SizedBox(width: 12),
@@ -418,6 +449,7 @@ class _HomeTabState extends State<HomeTab> {
                         Color(0xFFEEF2FF),
                         Color(0xFF4F46E5),
                         compact: true,
+                        onTap: widget.onProfile,
                       ),
                     ),
                   ],
@@ -504,8 +536,11 @@ class _HomeTabState extends State<HomeTab> {
                   UnavailableJobsCard(
                     onEnable: () =>
                         _setAvailability(true).then((_) => _loadDashboard()),
-                  )
-                else if (latestJobs.isEmpty)
+                  ),
+                // Availability controls whether the worker receives new work;
+                // it must not hide jobs they can still browse. The Jobs tab
+                // already follows this behaviour.
+                if (latestJobs.isEmpty)
                   AppCard(
                     child: Column(
                       children: [

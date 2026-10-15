@@ -354,8 +354,9 @@ Removes the token so the device stops receiving pushes. → `{ "removed": true }
 ## 10. Dashboard & Locale 🔒 (worker)
 
 ### `GET /worker/dashboard?lat=&lng=`
-Everything the home screen needs. `latest_jobs` is the top 5 of the karigar's
-feed (see `GET /jobs`): send the phone's `lat`/`lng` for nearest first.
+Everything the home screen needs. `latest_jobs` is a direct array containing
+the top 5 jobs from the karigar's feed (see `GET /jobs`): send the phone's
+`lat`/`lng` for nearest first.
 ```json
 {
   "greeting": "Rakesh Kumar",
@@ -365,7 +366,7 @@ feed (see `GET /jobs`): send the phone's `lat`/`lng` for nearest first.
     "kyc_status": "not_submitted", "kyc_status_label": "Not submitted",
     "profile_completion": 70, "unread_notifications": 2
   },
-  "latest_jobs": { "data": [ { ...JobResource } ] }
+  "latest_jobs": [ { ...JobResource } ]
 }
 ```
 

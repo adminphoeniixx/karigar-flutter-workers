@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +27,13 @@ class LocationStub extends FeedLocationService {
     requests++;
     return position;
   }
+}
+
+class DelayedLocationStub extends FeedLocationService {
+  final result = Completer<FeedPosition?>();
+  @override
+  Future<FeedPosition?> current({bool requestPermission = false}) =>
+      result.future;
 }
 
 class FeedApi extends WorkerApiService {
@@ -70,7 +78,10 @@ class RecordingClient implements ApiClient {
 }
 
 class HomeApi extends WorkerApiService {
+  HomeApi({this.dashboardJobs = const [], this.available = false});
   final queries = <Map<String, dynamic>?>[];
+  final List<Map<String, dynamic>> dashboardJobs;
+  final bool available;
   @override
   Future<DashboardModel> fetchDashboard({
     Map<String, dynamic>? location,
@@ -78,18 +89,10 @@ class HomeApi extends WorkerApiService {
     queries.add(location);
     return DashboardModel.fromJson({
       'greeting': 'Aman',
-      'profile': {},
+      'profile': {'available': available},
       'stats': {},
-      'latest_jobs': {'data': []},
+      'latest_jobs': dashboardJobs,
     });
-  }
-
-  @override
-  Future<JobPageModel> fetchJobs({
-    Map<String, dynamic>? filters,
-    int? page,
-  }) async {
-    throw StateError('An empty dashboard must not fetch an unrelated feed');
   }
 }
 
@@ -112,16 +115,47 @@ void main() {
       );
       await tester.pumpWidget(home(0));
       await tester.pumpAndSettle();
-      expect(api.queries.last, {'lat': 26.9, 'lng': 75.7});
+      expect(api.queries, [
+        null,
+        {'lat': 26.9, 'lng': 75.7},
+      ]);
       location.position = const FeedPosition(27.0, 76.0);
       await tester.pumpWidget(home(1));
       await tester.pumpAndSettle();
-      expect(api.queries.last, {'lat': 27.0, 'lng': 76.0});
-      expect(api.queries.length, 2);
+      expect(api.queries, [
+        null,
+        {'lat': 26.9, 'lng': 75.7},
+        null,
+        {'lat': 27.0, 'lng': 76.0},
+      ]);
       expect(find.byType(JobCard), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('Home renders jobs from the dashboard array response', (
+    tester,
+  ) async {
+    final api = HomeApi(dashboardJobs: [jobJson()], available: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeTab(
+          api: api,
+          locationService: LocationStub(null),
+          onBrowse: () {},
+          onAlerts: () {},
+          onProfile: () {},
+          onUnreadChanged: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Handloom weaver'),
+      400,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('Handloom weaver'), findsOneWidget);
+  });
 
   for (final language in ['en', 'hi', 'ta', 'te', 'bn', 'mr']) {
     testWidgets(
@@ -246,6 +280,23 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('jobs load before a slow GPS lookup completes', (tester) async {
+    final api = FeedApi();
+    final location = DelayedLocationStub();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: JobsTab(api: api, locationService: location),
+      ),
+    );
+    await tester.pump();
+
+    // The fallback feed starts without waiting for GPS.
+    expect(api.requests, [{}]);
+
+    location.result.complete(const FeedPosition(26.9, 75.7));
+    await tester.pumpAndSettle();
+    expect(api.requests.last, {'lat': 26.9, 'lng': 75.7});
+  });
   testWidgets('denied location falls back and offers location prompt', (
     tester,
   ) async {

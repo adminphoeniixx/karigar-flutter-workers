@@ -849,13 +849,15 @@ class DashboardModel {
   final List<ApiJobModel> latestJobs;
   final Map<String, dynamic>? feedLocation;
   factory DashboardModel.fromJson(Json json) {
-    final latest = jsonMap(json['latest_jobs']);
+    // The dashboard returns its five latest jobs as a plain array.  Keep the
+    // old wrapped shape as a compatibility fallback for older API snapshots.
+    final latest = json['latest_jobs'];
     return DashboardModel(
       greeting: json['greeting']?.toString() ?? '',
       profile: WorkerProfileModel.fromJson(jsonMap(json['profile'])),
       stats: DashboardStatsModel.fromJson(jsonMap(json['stats'])),
       latestJobs: jsonList(
-        latest['data'],
+        latest is Map ? latest['data'] : latest,
       ).map((e) => ApiJobModel.fromJson(jsonMap(e))).toList(),
       feedLocation: json['feed_location'] is Map
           ? jsonMap(json['feed_location'])

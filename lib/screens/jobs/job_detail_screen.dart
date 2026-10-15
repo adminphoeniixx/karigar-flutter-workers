@@ -17,6 +17,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
   RatingModel employerRating = const RatingModel(average: 0, count: 0);
   String? contactPhone, contactName, contactDesignation;
   Job? detailJob;
+  String _applicationWage = '', _applicationNote = '';
 
   @override
   void initState() {
@@ -190,6 +191,22 @@ class _JobDetailPageState extends State<JobDetailPage> {
       if (mounted) setState(() => loading = false);
     }
   }
+
+  Future<void> _openApplicationSheet(Job job) => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (_) => ApplySheet(
+      jobTitle: job.title,
+      initialWage: _applicationWage,
+      initialNote: _applicationNote,
+      onDraftChanged: (wage, note) {
+        _applicationWage = wage;
+        _applicationNote = note;
+      },
+      onApply: _apply,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -456,12 +473,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                 ? null
                                 : needsKyc
                                 ? _completeKyc
-                                : () => showModalBottomSheet(
-                                    context: context,
-                                    showDragHandle: true,
-                                    isScrollControlled: true,
-                                    builder: (_) => ApplySheet(onApply: _apply),
-                                  ),
+                                : () => _openApplicationSheet(j),
                           ),
                         ),
                       ],

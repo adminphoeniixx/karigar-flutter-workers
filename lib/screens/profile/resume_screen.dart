@@ -8,7 +8,7 @@ class ResumePage extends StatefulWidget {
 
 class _ResumePageState extends State<ResumePage> {
   ResumeModel? resume;
-  bool loading = true, saving = false;
+  bool loading = true, saving = false, opening = false;
 
   @override
   void initState() {
@@ -108,6 +108,26 @@ class _ResumePageState extends State<ResumePage> {
     }
   }
 
+  Future<void> _viewPdf() async {
+    setState(() => opening = true);
+    try {
+      final file = await WorkerApiService().downloadResumePdf();
+      if (!mounted) return;
+      final result = await OpenFilex.open(file.path, type: 'application/pdf');
+      if (result.type != ResultType.done && mounted) {
+        _message(
+          result.message.isNotEmpty
+              ? result.message
+              : 'No PDF viewer is available on this device.',
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) _message(e.message);
+    } finally {
+      if (mounted) setState(() => opening = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const AppText('My Resume')),
@@ -149,6 +169,25 @@ class _ResumePageState extends State<ResumePage> {
                       style: const TextStyle(color: muted, height: 1.4),
                     ),
                     const SizedBox(height: 16),
+                    if (resume != null) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: saving || opening ? null : _viewPdf,
+                          icon: opening
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(LucideIcons.eye),
+                          label: const Text('View PDF'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
