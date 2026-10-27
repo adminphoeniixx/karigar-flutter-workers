@@ -173,8 +173,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
         expectedWage: expectedWage,
       );
       if (!mounted) return;
-      Navigator.pop(context);
-      setState(() => applied = true);
+      // Tell the feed that opened this page to remove the job immediately.
+      // The API also omits applied jobs from a later unfiltered feed refresh.
+      Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: AppText(

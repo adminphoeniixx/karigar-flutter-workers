@@ -93,6 +93,11 @@ class _JobsTabState extends State<JobsTab> {
     }
   }
 
+  void _removeAppliedJob(int jobId) {
+    if (!mounted) return;
+    setState(() => apiJobs.removeWhere((job) => job.id == jobId));
+  }
+
   Future<void> _loadReference() async {
     if (mounted) setState(() => referenceError = null);
     try {
@@ -466,7 +471,12 @@ class _JobsTabState extends State<JobsTab> {
                             ),
                           )
                         else
-                          ...filtered.map(JobCard.new),
+                          ...filtered.map(
+                            (job) => JobCard(
+                              job,
+                              onApplied: () => _removeAppliedJob(job.id),
+                            ),
+                          ),
                         if (!loading &&
                             pagination != null &&
                             pagination!.currentPage < pagination!.lastPage)
@@ -915,10 +925,25 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
 }
 
 class JobCard extends StatelessWidget {
-  const JobCard(this.job, {super.key, this.trailing, this.onTap});
+  const JobCard(
+    this.job, {
+    super.key,
+    this.trailing,
+    this.onTap,
+    this.onApplied,
+  });
   final Job job;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final VoidCallback? onApplied;
+
+  Future<void> _openDetail(BuildContext context) async {
+    final applied = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => JobDetailPage(job)),
+    );
+    if (applied == true) onApplied?.call();
+  }
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -929,12 +954,7 @@ class JobCard extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 720),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap:
-              onTap ??
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => JobDetailPage(job)),
-              ),
+          onTap: onTap ?? () => _openDetail(context),
           child: AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

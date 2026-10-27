@@ -272,6 +272,9 @@ class _ConversationPageState extends State<ConversationPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    // Let Scaffold move the composer with the keyboard. Adding the keyboard
+    // inset inside the composer as well makes it expand upward dramatically.
+    resizeToAvoidBottomInset: true,
     appBar: AppBar(
       title: Column(
         mainAxisSize: MainAxisSize.min,
@@ -349,40 +352,35 @@ class _ConversationPageState extends State<ConversationPage> {
                     color: context.surfaceColor,
                     border: Border(top: BorderSide(color: context.borderColor)),
                   ),
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.viewInsetsOf(context).bottom,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: input,
-                            minLines: 1,
-                            maxLines: 4,
-                            textInputAction: TextInputAction.newline,
-                            onSubmitted: (_) => _send(),
-                            decoration: InputDecoration(
-                              hintText: context.tr('Type a message'),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 15,
-                                vertical: 12,
-                              ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: input,
+                          minLines: 1,
+                          maxLines: 4,
+                          textInputAction: TextInputAction.newline,
+                          onSubmitted: (_) => _send(),
+                          decoration: InputDecoration(
+                            hintText: context.tr('Type a message'),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 15,
+                              vertical: 12,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        IconButton.filled(
-                          style: IconButton.styleFrom(
-                            minimumSize: const Size(46, 46),
-                          ),
-                          onPressed: sending ? null : _send,
-                          icon: const Icon(LucideIcons.send),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        style: IconButton.styleFrom(
+                          minimumSize: const Size(46, 46),
                         ),
-                      ],
-                    ),
+                        onPressed: sending ? null : _send,
+                        icon: const Icon(LucideIcons.send),
+                      ),
+                    ],
                   ),
                 ),
               ),

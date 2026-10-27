@@ -122,6 +122,11 @@ class _HomeTabState extends State<HomeTab> {
     widget.onUnreadChanged(response.stats.unreadNotifications);
   }
 
+  void _removeAppliedJob(int jobId) {
+    if (!mounted) return;
+    setState(() => latestJobs.removeWhere((job) => job.id == jobId));
+  }
+
   Future<void> _refreshForCurrentLocation(
     WorkerApiService service,
     Future<FeedPosition?> positionFuture,
@@ -563,7 +568,12 @@ class _HomeTabState extends State<HomeTab> {
                     ),
                   )
                 else
-                  ...latestJobs.map(JobCard.new),
+                  ...latestJobs.map(
+                    (job) => JobCard(
+                      job,
+                      onApplied: () => _removeAppliedJob(job.id),
+                    ),
+                  ),
               ],
             ),
           ),
