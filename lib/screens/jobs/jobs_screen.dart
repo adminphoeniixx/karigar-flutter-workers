@@ -940,7 +940,9 @@ class JobCard extends StatelessWidget {
   Future<void> _openDetail(BuildContext context) async {
     final applied = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => JobDetailPage(job)),
+      MaterialPageRoute(
+        builder: (_) => JobDetailPage(job, onApplied: onApplied),
+      ),
     );
     if (applied == true) onApplied?.call();
   }

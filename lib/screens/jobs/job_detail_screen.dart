@@ -1,8 +1,9 @@
 part of '../../main.dart';
 
 class JobDetailPage extends StatefulWidget {
-  const JobDetailPage(this.job, {super.key});
+  const JobDetailPage(this.job, {super.key, this.onApplied});
   final Job job;
+  final VoidCallback? onApplied;
   @override
   State<JobDetailPage> createState() => _JobDetailPageState();
 }
@@ -173,9 +174,11 @@ class _JobDetailPageState extends State<JobDetailPage> {
         expectedWage: expectedWage,
       );
       if (!mounted) return;
-      // Tell the feed that opened this page to remove the job immediately.
-      // The API also omits applied jobs from a later unfiltered feed refresh.
-      Navigator.pop(context, true);
+      // This pops the apply sheet, not the detail page. Update both this
+      // screen and its source feed immediately after a successful apply.
+      Navigator.pop(context);
+      setState(() => applied = true);
+      widget.onApplied?.call();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: AppText(
