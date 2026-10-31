@@ -21,12 +21,15 @@ class OnboardingPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.asset(
-            'assets/images/superkarigar.png',
-            width: 80,
-            height: 84,
-            fit: BoxFit.contain,
-            semanticLabel: 'Super Karigar',
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.asset(
+              'assets/images/superkarigar.png',
+              width: 88,
+              height: 42,
+              fit: BoxFit.cover,
+              semanticLabel: 'Super Karigar',
+            ),
           ),
           const SizedBox(height: 16),
           AppText(

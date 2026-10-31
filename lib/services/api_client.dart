@@ -105,6 +105,39 @@ class ApiClient {
     }
   }
 
+  /// Posts JSON and returns a binary response (used by the resume preview).
+  Future<List<int>> postBytes(String path, Map<String, dynamic> body) async {
+    final uri = _uri(path);
+    _logRequest('POST', uri, body);
+    try {
+      final response = await http.post(
+        uri,
+        headers: _headersFor(uri),
+        body: jsonEncode(body),
+      );
+      _logResponse('POST', uri, response);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        Map<String, dynamic> decoded = {};
+        try {
+          decoded = Map<String, dynamic>.from(jsonDecode(response.body));
+        } catch (_) {}
+        throw ApiException(
+          decoded['message']?.toString() ?? 'Could not update the preview.',
+          statusCode: response.statusCode,
+          errors: Map<String, dynamic>.from(decoded['errors'] as Map? ?? {}),
+        );
+      }
+      return response.bodyBytes;
+    } on SocketException {
+      throw ApiException(
+        'Please check your internet connection.',
+        statusCode: 0,
+      );
+    } on http.ClientException {
+      throw ApiException('Unable to connect to the server.', statusCode: 0);
+    }
+  }
+
   Future<Map<String, dynamic>> post(String path, [Map<String, dynamic>? body]) {
     final uri = _uri(path);
     return _send(

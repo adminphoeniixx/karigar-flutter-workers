@@ -31,6 +31,7 @@ class ApiConstants {
   static const resume = '/worker/resume';
   static const resumeBuilder = '$resume/builder';
   static const resumeBuilderDraft = '$resume/builder/draft';
+  static const resumeBuilderPreview = '$resume/builder/preview';
   static const resumeFile = '$resume/file';
   static const conversations = '/conversations';
   static const preferences = '/preferences';

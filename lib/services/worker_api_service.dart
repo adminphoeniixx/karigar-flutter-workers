@@ -266,6 +266,9 @@ class WorkerApiService {
     Map<String, dynamic> values,
   ) async => _payload(await _api.post(ApiConstants.resumeBuilder, values));
 
+  Future<List<int>> previewBuiltResume(Map<String, dynamic> values) =>
+      _api.postBytes(ApiConstants.resumeBuilderPreview, values);
+
   Future<File> downloadResumePdf() async {
     final bytes = await _api.getBytes(ApiConstants.resumeFile);
     final file = File('${Directory.systemTemp.path}/super-karigar-resume.pdf');
