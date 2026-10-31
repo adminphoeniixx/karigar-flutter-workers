@@ -110,9 +110,11 @@ class _HomeTabState extends State<HomeTab> {
           'applications': response.stats.applications,
           'saved_jobs': response.stats.savedJobs,
           'kyc_status_label': response.stats.kycStatusLabel,
+          'kyc_status': response.stats.kycStatus,
           'profile_completion': response.stats.profileCompletion,
           'unread_notifications': response.stats.unreadNotifications,
         },
+        'features': {'verification_enabled': response.verificationEnabled},
       };
       available = response.profile.available;
       profileAvatarUrl.value = response.profile.data['avatar_url']?.toString();
@@ -223,6 +225,37 @@ class _HomeTabState extends State<HomeTab> {
         ).showSnackBar(SnackBar(content: AppText(error.message)));
       }
     }
+  }
+
+  Widget _kycCard() {
+    final status = stats['kyc_status']?.toString() ?? 'not_submitted';
+    final (label, tint, color) = switch (status) {
+      'verified' => (
+        'Verified ✓',
+        const Color(0xFFECFDF5),
+        const Color(0xFF047857),
+      ),
+      'pending' => (
+        'Under review',
+        const Color(0xFFFFF7ED),
+        const Color(0xFFB45309),
+      ),
+      'rejected' => (
+        'Fix & resubmit',
+        const Color(0xFFFEF2F2),
+        const Color(0xFFB91C1C),
+      ),
+      _ => ('Verify now', const Color(0xFFFFF3EE), brand),
+    };
+    return StatCard(
+      label,
+      context.tr('KYC Status'),
+      LucideIcons.shieldCheck,
+      tint,
+      color,
+      compact: true,
+      onTap: () => _openPage(const KycPage()),
+    );
   }
 
   @override
@@ -417,19 +450,16 @@ class _HomeTabState extends State<HomeTab> {
                         onTap: widget.onBrowse,
                       ),
                     ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: StatCard(
-                        stats['kyc_status_label']?.toString() ??
-                            'Not submitted',
-                        context.tr('KYC Status'),
-                        LucideIcons.shieldCheck,
-                        Color(0xFFFFF7ED),
-                        Color(0xFFB45309),
-                        compact: true,
-                        onTap: () => _openPage(const KycPage()),
-                      ),
-                    ),
+                    if (dashboard['features'] is Map &&
+                        (dashboard['features']
+                                as Map)['verification_enabled'] ==
+                            true)
+                      SizedBox(width: 12),
+                    if (dashboard['features'] is Map &&
+                        (dashboard['features']
+                                as Map)['verification_enabled'] ==
+                            true)
+                      Expanded(child: _kycCard()),
                   ],
                 ),
                 const SizedBox(height: 12),

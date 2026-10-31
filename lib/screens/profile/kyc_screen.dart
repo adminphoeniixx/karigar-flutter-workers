@@ -88,10 +88,14 @@ class _KycPageState extends State<KycPage> {
       }
       setState(() {});
     } on ApiException catch (error) {
-      if (error.statusCode == 404)
+      if (error.code == 'verification_disabled') {
         unavailable = true;
-      else
+        if (mounted) Navigator.of(context).pop();
+      } else if (error.statusCode == 404) {
+        unavailable = true;
+      } else {
         _message(error.message);
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -194,48 +198,36 @@ class _KycPageState extends State<KycPage> {
           : start;
       final url = data['authorization_url']?.toString();
       final reference = data['reference']?.toString();
+      final returnPrefix = data['return_url_prefix']?.toString();
       if (url == null ||
           reference == null ||
+          returnPrefix == null ||
           url.isEmpty ||
-          reference.isEmpty) {
+          reference.isEmpty ||
+          returnPrefix.isEmpty) {
         throw ApiException('DigiLocker could not be started.', statusCode: 0);
       }
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      if (!mounted) return;
-      final check = await showModalBottomSheet<bool>(
-        context: context,
-        showDragHandle: true,
-        builder: (sheetContext) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(LucideIcons.landmark, size: 32, color: brand),
-              const SizedBox(height: 12),
-              const AppText(
-                'Finish verification in DigiLocker, then return here.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              PrimaryButton(
-                'I have completed verification',
-                onPressed: () => Navigator.pop(sheetContext, true),
-              ),
-            ],
+      final completed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => DigiLockerWebViewPage(
+            authorizationUrl: url,
+            returnUrlPrefix: returnPrefix,
           ),
         ),
       );
-      if (check != true || !mounted) return;
+      if (!mounted) return;
       final outcome = await api.digilockerStatus(reference);
       final status = (outcome['status'] ?? (outcome['data'] as Map?)?['status'])
           ?.toString();
       if (status == 'passed') {
         await _reload();
       } else {
-        _message(
+        await _showDigilockerFailure(
           (outcome['message'] ??
                   (outcome['data'] as Map?)?['message'] ??
-                  'DigiLocker verification was not completed.')
+                  (completed == true
+                      ? 'DigiLocker verification was not completed.'
+                      : 'DigiLocker did not share your Aadhaar. Try again and tap "Allow" at the end, or type your Aadhaar number instead.'))
               .toString(),
         );
       }
@@ -244,6 +236,42 @@ class _KycPageState extends State<KycPage> {
     } finally {
       if (mounted) setState(() => startingDigilocker = false);
     }
+  }
+
+  Future<void> _showDigilockerFailure(String message) async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(LucideIcons.info, color: brand, size: 30),
+            const SizedBox(height: 12),
+            AppText(message, style: const TextStyle(height: 1.4)),
+            const SizedBox(height: 18),
+            PrimaryButton(
+              'Try again',
+              onPressed: () {
+                Navigator.pop(sheetContext);
+                _verifyWithDigilocker();
+              },
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(sheetContext),
+                child: const Text('Type Aadhaar number'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _reload() async {
@@ -441,6 +469,20 @@ class _StatusCard extends StatelessWidget {
             existing!.remarks!,
             textAlign: TextAlign.center,
             style: const TextStyle(color: muted),
+          ),
+        ],
+        if (existing != null &&
+            (existing!.status == 'pending' || existing!.status == 'verified') &&
+            (existing!.maskedAadhaar.isNotEmpty ||
+                existing!.maskedPan.isNotEmpty)) ...[
+          const SizedBox(height: 6),
+          AppText(
+            [
+              existing!.maskedAadhaar,
+              existing!.maskedPan,
+            ].where((value) => value.isNotEmpty).join(' · '),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: muted, fontSize: 13),
           ),
         ],
       ],

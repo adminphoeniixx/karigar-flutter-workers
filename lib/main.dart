@@ -13,6 +13,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -47,6 +48,7 @@ part 'screens/notifications_screen.dart';
 part 'screens/profile/profile_screen.dart';
 part 'screens/profile/edit_profile_screen.dart';
 part 'screens/profile/kyc_screen.dart';
+part 'screens/profile/digilocker_webview_screen.dart';
 part 'screens/jobs/saved_screen.dart';
 part 'screens/profile/reviews_screen.dart';
 part 'screens/profile/settings_screen.dart';

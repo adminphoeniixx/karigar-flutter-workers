@@ -816,6 +816,7 @@ class DashboardStatsModel {
     required this.applications,
     required this.savedJobs,
     required this.kycStatusLabel,
+    required this.kycStatus,
     required this.profileCompletion,
     required this.unreadNotifications,
   });
@@ -825,11 +826,13 @@ class DashboardStatsModel {
       profileCompletion,
       unreadNotifications;
   final String kycStatusLabel;
+  final String? kycStatus;
   factory DashboardStatsModel.fromJson(Json json) => DashboardStatsModel(
     availableJobs: jsonInt(json['available_jobs']),
     applications: jsonInt(json['applications']),
     savedJobs: jsonInt(json['saved_jobs']),
     kycStatusLabel: json['kyc_status_label']?.toString() ?? '',
+    kycStatus: json['kyc_status']?.toString(),
     profileCompletion: jsonInt(json['profile_completion']),
     unreadNotifications: jsonInt(json['unread_notifications']),
   );
@@ -841,12 +844,14 @@ class DashboardModel {
     required this.profile,
     required this.stats,
     required this.latestJobs,
+    required this.verificationEnabled,
     this.feedLocation,
   });
   final String greeting;
   final WorkerProfileModel profile;
   final DashboardStatsModel stats;
   final List<ApiJobModel> latestJobs;
+  final bool verificationEnabled;
   final Map<String, dynamic>? feedLocation;
   factory DashboardModel.fromJson(Json json) {
     // The dashboard returns its five latest jobs as a plain array.  Keep the
@@ -859,6 +864,9 @@ class DashboardModel {
       latestJobs: jsonList(
         latest is Map ? latest['data'] : latest,
       ).map((e) => ApiJobModel.fromJson(jsonMap(e))).toList(),
+      verificationEnabled: jsonBool(
+        jsonMap(json['features'])['verification_enabled'],
+      ),
       feedLocation: json['feed_location'] is Map
           ? jsonMap(json['feed_location'])
           : null,
