@@ -303,7 +303,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 MenuRow(
                   LucideIcons.shieldCheck,
                   'KYC Verification',
-                  'Verify your PAN & Aadhaar',
+                  'Verify your Aadhaar',
                   () => _open(const KycPage()),
                   trailing: StatusPill(
                     stats['kyc_status_label']?.toString() ?? 'Not submitted',

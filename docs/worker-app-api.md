@@ -295,13 +295,20 @@ Withdraw your own application. → `{ "message": "Application withdrawn." }`
 ## 7. KYC 🔒 (worker, **optional**)
 
 ### `GET /kyc`
-`{ "kyc": null }` or `{ "kyc": { "status": "pending", "masked_pan": "ABXXXXX1", "masked_aadhaar": "XXXX XXXX 9012", "remarks": null, ... } }`
+`{ "kyc": null, "required_documents": ["aadhaar"] }` or `{ "kyc": { "status": "pending", "masked_aadhaar": "XXXX XXXX 9012", "remarks": null, ... } }`
 
 ### `POST /kyc` (multipart)
-Fields: `pan_number` (ABCDE1234F), `aadhaar_number` (12 digits),
-`pan_doc`, `aadhaar_doc` (jpg/png/pdf ≤4 MB; required on first submit).
+Fields: `aadhaar_number` (12 digits), with optional `aadhaar_doc`
+(jpg/png/pdf ≤4 MB). If Aadhaar is unavailable, submit `aadhaar_missing=1`,
+`aadhaar_alt_type`, `aadhaar_alt_number`, `aadhaar_alt_doc`, and
+`aadhaar_reason` for review.
 → `201 { "message": "KYC submitted for review.", "kyc": {...} }`. Raw numbers are
 encrypted at rest and never returned.
+
+### DigiLocker
+After the user shares Aadhaar in DigiLocker, poll `GET /kyc/digilocker/{reference}`.
+When it returns `status: "passed"`, the returned KYC status is already
+`"verified"`; do not submit KYC again.
 
 ---
 

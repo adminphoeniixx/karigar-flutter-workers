@@ -138,7 +138,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "Pin your exact location": "अपना सही स्थान चुनें",
     "Pin your location": "अपना स्थान चुनें",
     "KYC Verification": "KYC सत्यापन",
-    "Verify your PAN & Aadhaar": "PAN और आधार सत्यापित करें",
+    "Verify your Aadhaar": "आधार सत्यापित करें",
     "Not submitted": "जमा नहीं किया",
     "Pending": "लंबित",
     "Verified": "सत्यापित",
@@ -263,8 +263,8 @@ const appTextTranslations = <String, Map<String, String>>{
         "कुछ नौकरियों में न्यूनतम शिक्षा जरूरी है। इससे सही नौकरी ढूंढने में मदद मिलती है।",
     "Pick your main category and add your skills — jobs are matched to these.":
         "मुख्य श्रेणी चुनें और कौशल जोड़ें — इसी आधार पर नौकरियां मिलेंगी।",
-    "Add Aadhaar & PAN to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.":
-        "सत्यापित बैज के लिए आधार और PAN जोड़ें — सत्यापित कामगारों को 2 गुना अधिक जवाब मिलते हैं। इसे बाद में भी कर सकते हैं।",
+    "Add Aadhaar to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.":
+        "सत्यापित बैज के लिए आधार जोड़ें — सत्यापित कामगारों को 2 गुना अधिक जवाब मिलते हैं। इसे बाद में भी कर सकते हैं।",
     "Tap to select. You can add more later in your profile.":
         "चुनने के लिए टैप करें। बाद में प्रोफ़ाइल में और जोड़ सकते हैं।",
     "Tap to change photo": "फ़ोटो बदलने के लिए टैप करें",
@@ -408,7 +408,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "Enter a valid PAN number.": "सही PAN नंबर दर्ज करें।",
     "Enter a valid 12-digit Aadhaar number.":
         "सही 12 अंकों का आधार नंबर दर्ज करें।",
-    "Upload both PAN and Aadhaar documents.": "PAN और आधार दोनों अपलोड करें।",
+    "Upload Aadhaar document.": "आधार दस्तावेज़ अपलोड करें।",
     "Document must be 4 MB or smaller.": "दस्तावेज़ 4 MB या छोटा होना चाहिए।",
     "KYC submitted for review.": "KYC समीक्षा के लिए जमा हुआ।",
     "Apply Now": "अभी आवेदन करें",
@@ -449,8 +449,8 @@ const appTextTranslations = <String, Map<String, String>>{
         "अपलोड करने के लिए टैप करें\nJPG / PNG · अधिकतम 4MB",
     "Upload PAN photo\nJPG / PNG · max 4MB":
         "PAN फ़ोटो अपलोड करें\nJPG / PNG · अधिकतम 4MB",
-    "Upload Aadhaar & PAN photo\nJPG / PNG / PDF · max 5MB each":
-        "आधार और PAN फ़ोटो अपलोड करें\nJPG / PNG / PDF · अधिकतम 5MB प्रति फ़ाइल",
+    "Upload Aadhaar photo\nJPG / PNG / PDF · max 5MB":
+        "आधार फ़ोटो अपलोड करें\nJPG / PNG / PDF · अधिकतम 5MB",
     "Your session has expired. Please sign in again.":
         "आपका सत्र समाप्त हो गया। दोबारा लॉगिन करें।",
     "This account cannot access the worker dashboard. Sign in with a worker account. If this is a worker account, contact support.":
@@ -607,7 +607,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "Pin your exact location": "உங்கள் சரியான இடத்தைக் குறிக்கவும்",
     "Pin your location": "உங்கள் இடத்தைக் குறிக்கவும்",
     "KYC Verification": "KYC சரிபார்ப்பு",
-    "Verify your PAN & Aadhaar": "PAN மற்றும் ஆதாரைச் சரிபார்க்கவும்",
+    "Verify your Aadhaar": "ஆதாரைச் சரிபார்க்கவும்",
     "Not submitted": "சமர்ப்பிக்கவில்லை",
     "Pending": "நிலுவையில்",
     "Verified": "சரிபார்க்கப்பட்டது",
@@ -737,8 +737,8 @@ const appTextTranslations = <String, Map<String, String>>{
         "சில வேலைகளுக்குக் குறைந்தபட்ச கல்வி தேவை. பொருத்தமான வேலையைக் கண்டறிய இது உதவும்.",
     "Pick your main category and add your skills — jobs are matched to these.":
         "முக்கிய வகையைத் தேர்ந்தெடுத்து திறன்களைச் சேர்க்கவும் — இதன்படி வேலைகள் பொருத்தப்படும்.",
-    "Add Aadhaar & PAN to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.":
-        "சரிபார்ப்பு அடையாளத்திற்கு ஆதார் மற்றும் PAN சேர்க்கவும் — சரிபார்க்கப்பட்டவர்களுக்கு 2 மடங்கு பதில்கள் கிடைக்கும். பின்னரும் செய்யலாம்.",
+    "Add Aadhaar to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.":
+        "சரிபார்ப்பு அடையாளத்திற்கு ஆதார் சேர்க்கவும் — சரிபார்க்கப்பட்டவர்களுக்கு 2 மடங்கு பதில்கள் கிடைக்கும். பின்னரும் செய்யலாம்.",
     "Tap to select. You can add more later in your profile.":
         "தேர்ந்தெடுக்கத் தட்டவும். பின்னர் மேலும் சேர்க்கலாம்.",
     "Tap to change photo": "படத்தை மாற்றத் தட்டவும்",
@@ -888,8 +888,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "Enter a valid PAN number.": "சரியான PAN எண்ணை உள்ளிடவும்.",
     "Enter a valid 12-digit Aadhaar number.":
         "சரியான 12 இலக்க ஆதார் எண்ணை உள்ளிடவும்.",
-    "Upload both PAN and Aadhaar documents.":
-        "PAN மற்றும் ஆதார் இரண்டையும் பதிவேற்றவும்.",
+    "Upload Aadhaar document.": "ஆதார் ஆவணத்தைப் பதிவேற்றவும்.",
     "Document must be 4 MB or smaller.":
         "ஆவணம் 4 MB அல்லது குறைவாக இருக்க வேண்டும்.",
     "KYC submitted for review.": "KYC ஆய்வுக்குச் சமர்ப்பிக்கப்பட்டது.",
@@ -932,8 +931,8 @@ const appTextTranslations = <String, Map<String, String>>{
         "பதிவேற்றத் தட்டவும்\nJPG / PNG · அதிகபட்சம் 4MB",
     "Upload PAN photo\nJPG / PNG · max 4MB":
         "PAN படத்தைப் பதிவேற்று\nJPG / PNG · அதிகபட்சம் 4MB",
-    "Upload Aadhaar & PAN photo\nJPG / PNG / PDF · max 5MB each":
-        "ஆதார் மற்றும் PAN படத்தைப் பதிவேற்று\nJPG / PNG / PDF · தலா அதிகபட்சம் 5MB",
+    "Upload Aadhaar photo\nJPG / PNG / PDF · max 5MB":
+        "ஆதார் படத்தைப் பதிவேற்று\nJPG / PNG / PDF · அதிகபட்சம் 5MB",
     "Your session has expired. Please sign in again.":
         "உங்கள் அமர்வு முடிந்தது. மீண்டும் உள்நுழையவும்.",
     "This account cannot access the worker dashboard. Sign in with a worker account. If this is a worker account, contact support.":
@@ -1087,7 +1086,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "Pin your exact location": "మీ ఖచ్చితమైన స్థానం ఎంచుకోండి",
     "Pin your location": "మీ స్థానం ఎంచుకోండి",
     "KYC Verification": "KYC ధృవీకరణ",
-    "Verify your PAN & Aadhaar": "PAN మరియు ఆధార్ ధృవీకరించండి",
+    "Verify your Aadhaar": "ఆధార్ ధృవీకరించండి",
     "Not submitted": "సమర్పించలేదు",
     "Pending": "పెండింగ్",
     "Verified": "ధృవీకరించబడింది",
@@ -1213,8 +1212,8 @@ const appTextTranslations = <String, Map<String, String>>{
         "కొన్ని ఉద్యోగాలకు కనీస విద్య అవసరం. సరైన ఉద్యోగం చూపడంలో ఇది సహాయపడుతుంది.",
     "Pick your main category and add your skills — jobs are matched to these.":
         "ప్రధాన వర్గం ఎంచుకుని నైపుణ్యాలు జోడించండి — వీటి ఆధారంగా ఉద్యోగాలు సరిపోలుతాయి.",
-    "Add Aadhaar & PAN to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.":
-        "ధృవీకరణ బ్యాడ్జ్ కోసం ఆధార్ మరియు PAN జోడించండి — ధృవీకరించిన వారికి 2 రెట్లు స్పందనలు వస్తాయి. తర్వాత కూడా చేయవచ్చు.",
+    "Add Aadhaar to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.":
+        "ధృవీకరణ బ్యాడ్జ్ కోసం ఆధార్ జోడించండి — ధృవీకరించిన వారికి 2 రెట్లు స్పందనలు వస్తాయి. తర్వాత కూడా చేయవచ్చు.",
     "Tap to select. You can add more later in your profile.":
         "ఎంచుకోవడానికి తాకండి. తర్వాత ప్రొఫైల్‌లో మరిన్ని జోడించవచ్చు.",
     "Tap to change photo": "ఫోటో మార్చడానికి తాకండి",
@@ -1362,8 +1361,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "Enter a valid PAN number.": "సరైన PAN నంబరు నమోదు చేయండి.",
     "Enter a valid 12-digit Aadhaar number.":
         "సరైన 12 అంకెల ఆధార్ నమోదు చేయండి.",
-    "Upload both PAN and Aadhaar documents.":
-        "PAN మరియు ఆధార్ రెండూ అప్‌లోడ్ చేయండి.",
+    "Upload Aadhaar document.": "ఆధార్ పత్రాన్ని అప్‌లోడ్ చేయండి.",
     "Document must be 4 MB or smaller.": "పత్రం 4 MB లేదా తక్కువ ఉండాలి.",
     "KYC submitted for review.": "KYC సమీక్షకు సమర్పించబడింది.",
     "Apply Now": "ఇప్పుడే దరఖాస్తు చేయండి",
@@ -1405,8 +1403,8 @@ const appTextTranslations = <String, Map<String, String>>{
         "అప్‌లోడ్ చేయడానికి తాకండి\nJPG / PNG · గరిష్ఠం 4MB",
     "Upload PAN photo\nJPG / PNG · max 4MB":
         "PAN ఫోటో అప్‌లోడ్ చేయండి\nJPG / PNG · గరిష్ఠం 4MB",
-    "Upload Aadhaar & PAN photo\nJPG / PNG / PDF · max 5MB each":
-        "ఆధార్ మరియు PAN ఫోటో అప్‌లోడ్ చేయండి\nJPG / PNG / PDF · ఒక్కొక్కటి గరిష్ఠం 5MB",
+    "Upload Aadhaar photo\nJPG / PNG / PDF · max 5MB":
+        "ఆధార్ ఫోటో అప్‌లోడ్ చేయండి\nJPG / PNG / PDF · గరిష్ఠం 5MB",
     "Your session has expired. Please sign in again.":
         "మీ సెషన్ ముగిసింది. మళ్లీ లాగిన్ చేయండి.",
     "This account cannot access the worker dashboard. Sign in with a worker account. If this is a worker account, contact support.":
@@ -1560,7 +1558,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "Pin your exact location": "আপনার সঠিক অবস্থান চিহ্নিত করুন",
     "Pin your location": "আপনার অবস্থান চিহ্নিত করুন",
     "KYC Verification": "KYC যাচাই",
-    "Verify your PAN & Aadhaar": "PAN ও আধার যাচাই করুন",
+    "Verify your Aadhaar": "আধার যাচাই করুন",
     "Not submitted": "জমা হয়নি",
     "Pending": "অপেক্ষমাণ",
     "Verified": "যাচাইকৃত",
@@ -1687,8 +1685,8 @@ const appTextTranslations = <String, Map<String, String>>{
         "কিছু কাজে ন্যূনতম শিক্ষা লাগে। উপযুক্ত কাজ খুঁজতে এটি সাহায্য করে।",
     "Pick your main category and add your skills — jobs are matched to these.":
         "মূল বিভাগ বেছে দক্ষতা যোগ করুন — এর ভিত্তিতে চাকরি মিলবে।",
-    "Add Aadhaar & PAN to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.":
-        "যাচাইকৃত ব্যাজের জন্য আধার ও PAN যোগ করুন — যাচাইকৃত কর্মীরা ২ গুণ সাড়া পান। পরেও করতে পারেন।",
+    "Add Aadhaar to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.":
+        "যাচাইকৃত ব্যাজের জন্য আধার যোগ করুন — যাচাইকৃত কর্মীরা ২ গুণ সাড়া পান। পরেও করতে পারেন।",
     "Tap to select. You can add more later in your profile.":
         "বাছতে ট্যাপ করুন। পরে প্রোফাইলে আরও যোগ করতে পারেন।",
     "Tap to change photo": "ছবি বদলাতে ট্যাপ করুন",
@@ -1832,7 +1830,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "Enter a valid PAN number.": "সঠিক PAN নম্বর লিখুন।",
     "Enter a valid 12-digit Aadhaar number.":
         "সঠিক ১২ সংখ্যার আধার নম্বর লিখুন।",
-    "Upload both PAN and Aadhaar documents.": "PAN ও আধার দুটোই আপলোড করুন।",
+    "Upload Aadhaar document.": "আধার নথি আপলোড করুন।",
     "Document must be 4 MB or smaller.": "নথি ৪ MB বা কম হতে হবে।",
     "KYC submitted for review.": "KYC পর্যালোচনার জন্য জমা হয়েছে।",
     "Apply Now": "এখনই আবেদন করুন",
@@ -1874,8 +1872,8 @@ const appTextTranslations = <String, Map<String, String>>{
         "আপলোড করতে ট্যাপ করুন\nJPG / PNG · সর্বোচ্চ 4MB",
     "Upload PAN photo\nJPG / PNG · max 4MB":
         "PAN ছবি আপলোড করুন\nJPG / PNG · সর্বোচ্চ 4MB",
-    "Upload Aadhaar & PAN photo\nJPG / PNG / PDF · max 5MB each":
-        "আধার ও PAN ছবি আপলোড করুন\nJPG / PNG / PDF · প্রতিটি সর্বোচ্চ 5MB",
+    "Upload Aadhaar photo\nJPG / PNG / PDF · max 5MB":
+        "আধার ছবি আপলোড করুন\nJPG / PNG / PDF · সর্বোচ্চ 5MB",
     "Your session has expired. Please sign in again.":
         "আপনার সেশন শেষ। আবার লগইন করুন।",
     "This account cannot access the worker dashboard. Sign in with a worker account. If this is a worker account, contact support.":
@@ -2028,7 +2026,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "Pin your exact location": "तुमचे अचूक ठिकाण निवडा",
     "Pin your location": "तुमचे ठिकाण निवडा",
     "KYC Verification": "KYC पडताळणी",
-    "Verify your PAN & Aadhaar": "PAN आणि आधार पडताळा",
+    "Verify your Aadhaar": "आधार पडताळा",
     "Not submitted": "सादर केलेले नाही",
     "Pending": "प्रलंबित",
     "Verified": "पडताळलेले",
@@ -2153,8 +2151,8 @@ const appTextTranslations = <String, Map<String, String>>{
         "काही नोकऱ्यांसाठी किमान शिक्षण हवे. योग्य नोकरी शोधण्यात याची मदत होते.",
     "Pick your main category and add your skills — jobs are matched to these.":
         "मुख्य श्रेणी निवडून कौशल्ये जोडा — त्यानुसार नोकऱ्या जुळवल्या जातील.",
-    "Add Aadhaar & PAN to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.":
-        "पडताळणी बॅजसाठी आधार व PAN जोडा — पडताळलेल्या कामगारांना 2 पट प्रतिसाद मिळतात. नंतरही करू शकता.",
+    "Add Aadhaar to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.":
+        "पडताळणी बॅजसाठी आधार जोडा — पडताळलेल्या कामगारांना 2 पट प्रतिसाद मिळतात. नंतरही करू शकता.",
     "Tap to select. You can add more later in your profile.":
         "निवडण्यासाठी टॅप करा. नंतर प्रोफाइलमध्ये आणखी जोडू शकता.",
     "Tap to change photo": "फोटो बदलण्यासाठी टॅप करा",
@@ -2299,7 +2297,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "OTP sent successfully.": "OTP पाठवला.",
     "Enter a valid PAN number.": "योग्य PAN क्रमांक भरा.",
     "Enter a valid 12-digit Aadhaar number.": "योग्य 12 अंकी आधार क्रमांक भरा.",
-    "Upload both PAN and Aadhaar documents.": "PAN आणि आधार दोन्ही अपलोड करा.",
+    "Upload Aadhaar document.": "आधार कागदपत्र अपलोड करा.",
     "Document must be 4 MB or smaller.": "कागदपत्र 4 MB किंवा कमी हवे.",
     "KYC submitted for review.": "KYC तपासणीसाठी सादर झाले.",
     "Apply Now": "आत्ताच अर्ज करा",
@@ -2341,8 +2339,8 @@ const appTextTranslations = <String, Map<String, String>>{
         "अपलोड करण्यासाठी टॅप करा\nJPG / PNG · कमाल 4MB",
     "Upload PAN photo\nJPG / PNG · max 4MB":
         "PAN फोटो अपलोड करा\nJPG / PNG · कमाल 4MB",
-    "Upload Aadhaar & PAN photo\nJPG / PNG / PDF · max 5MB each":
-        "आधार व PAN फोटो अपलोड करा\nJPG / PNG / PDF · प्रत्येकी कमाल 5MB",
+    "Upload Aadhaar photo\nJPG / PNG / PDF · max 5MB":
+        "आधार फोटो अपलोड करा\nJPG / PNG / PDF · कमाल 5MB",
     "Your session has expired. Please sign in again.":
         "तुमचे सत्र संपले. पुन्हा लॉगिन करा.",
     "This account cannot access the worker dashboard. Sign in with a worker account. If this is a worker account, contact support.":

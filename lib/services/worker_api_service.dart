@@ -166,14 +166,12 @@ class WorkerApiService {
   Future<KycModel?> fetchKyc() async => (await fetchKycResponse()).kyc;
 
   Future<Map<String, dynamic>> submitKyc({
-    required String pan,
     required String aadhaar,
-    required File panDoc,
-    required File aadhaarDoc,
+    File? aadhaarDoc,
   }) => _api.multipart(
     ApiConstants.kyc,
-    {'pan_number': pan, 'aadhaar_number': aadhaar},
-    {'pan_doc': panDoc, 'aadhaar_doc': aadhaarDoc},
+    {'aadhaar_number': aadhaar},
+    {if (aadhaarDoc != null) 'aadhaar_doc': aadhaarDoc},
   );
   Future<Map<String, dynamic>> submitKycDocuments(
     Map<String, String> fields,

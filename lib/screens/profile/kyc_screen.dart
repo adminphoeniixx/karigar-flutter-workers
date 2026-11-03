@@ -28,7 +28,6 @@ class _KycPageState extends State<KycPage> {
   KycModel? existing;
   DigilockerModel? digilocker;
   bool startingDigilocker = false;
-  String? panError;
   bool loading = true, submitting = false, unavailable = false;
 
   @override
@@ -37,14 +36,14 @@ class _KycPageState extends State<KycPage> {
     _load();
   }
 
-  VerificationDocumentDefinition _fallback(String key) =>
-      VerificationDocumentDefinition(
-        key: key,
-        label: key == 'pan' ? 'PAN card' : 'Aadhaar card',
-        numberField: '${key}_number',
-        pattern: key == 'pan' ? r'^[A-Z]{5}[0-9]{4}[A-Z]$' : r'^\d{12}$',
-        hint: key == 'pan' ? 'ABCDE1234F' : '12 digits',
-        alternates: const [],
+  VerificationDocumentDefinition _fallback() =>
+      const VerificationDocumentDefinition(
+        key: 'aadhaar',
+        label: 'Aadhaar card',
+        numberField: 'aadhaar_number',
+        pattern: r'^\d{12}$',
+        hint: '12 digits',
+        alternates: [],
       );
 
   Future<void> _load() async {
@@ -55,16 +54,20 @@ class _KycPageState extends State<KycPage> {
       ]);
       final reference = values[0] as ReferenceData;
       final result = values[1] as KycResponse;
-      final keys = result.requiredDocuments.isNotEmpty
-          ? result.requiredDocuments
-          : (reference.verification.workerDocuments.isNotEmpty
-                ? reference.verification.workerDocuments
-                : const ['aadhaar', 'pan']);
+      // Worker KYC is Aadhaar-only. Filter defensively so an outdated
+      // reference response can never bring the retired PAN form back.
+      final keys =
+          (result.requiredDocuments.isNotEmpty
+                  ? result.requiredDocuments
+                  : reference.verification.workerDocuments)
+              .where((key) => key == 'aadhaar')
+              .toList();
+      if (keys.isEmpty) keys.add('aadhaar');
       final definitions = keys.map((key) {
         for (final item in reference.verification.documents) {
           if (item.key == key) return item;
         }
-        return _fallback(key);
+        return _fallback();
       });
       if (!mounted) return;
       existing = result.kyc;
@@ -171,18 +174,7 @@ class _KycPageState extends State<KycPage> {
       loading = true;
       await _load();
     } on ApiException catch (error) {
-      if (mounted) {
-        final fieldError = error.errors['pan_number'];
-        if (fieldError != null) {
-          setState(
-            () => panError = fieldError is List
-                ? fieldError.join(' ')
-                : fieldError.toString(),
-          );
-        } else {
-          _message(error.message);
-        }
-      }
+      if (mounted) _message(error.message);
     } finally {
       if (mounted) setState(() => submitting = false);
     }
@@ -382,13 +374,8 @@ class _KycPageState extends State<KycPage> {
               controller: draft.number,
               decoration: InputDecoration(
                 hintText: draft.definition.hint,
-                errorText: draft.definition.key == 'pan' ? panError : null,
+                errorText: null,
               ),
-              onChanged: draft.definition.key == 'pan'
-                  ? (_) {
-                      if (panError != null) setState(() => panError = null);
-                    }
-                  : null,
             ),
             const SizedBox(height: 10),
             UploadTile(
@@ -473,14 +460,10 @@ class _StatusCard extends StatelessWidget {
         ],
         if (existing != null &&
             (existing!.status == 'pending' || existing!.status == 'verified') &&
-            (existing!.maskedAadhaar.isNotEmpty ||
-                existing!.maskedPan.isNotEmpty)) ...[
+            existing!.maskedAadhaar.isNotEmpty) ...[
           const SizedBox(height: 6),
           AppText(
-            [
-              existing!.maskedAadhaar,
-              existing!.maskedPan,
-            ].where((value) => value.isNotEmpty).join(' · '),
+            existing!.maskedAadhaar,
             textAlign: TextAlign.center,
             style: const TextStyle(color: muted, fontSize: 13),
           ),

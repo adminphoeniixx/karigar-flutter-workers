@@ -24,9 +24,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final emailController = TextEditingController();
   final experienceController = TextEditingController();
   final wageController = TextEditingController();
-  final panController = TextEditingController();
   final aadhaarController = TextEditingController();
-  File? panDoc, aadhaarDoc;
+  File? aadhaarDoc;
   int travelRadiusKm = 15;
   bool submitting = false;
   String education = '10th Pass';
@@ -52,12 +51,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
     emailController.dispose();
     experienceController.dispose();
     wageController.dispose();
-    panController.dispose();
     aadhaarController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickKycDocument(bool isPan) async {
+  Future<void> _pickKycDocument() async {
     final picked = await pickAppImage(context, imageQuality: 90);
     if (picked == null || !mounted) return;
     final file = File(picked.path);
@@ -65,7 +63,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       _showError('Document must be 4 MB or smaller.');
       return;
     }
-    if (mounted) setState(() => isPan ? panDoc = file : aadhaarDoc = file);
+    if (mounted) setState(() => aadhaarDoc = file);
   }
 
   Future<void> _loadStates() async {
@@ -373,29 +371,16 @@ class _RegistrationPageState extends State<RegistrationPage> {
         'wage_type': 'monthly',
         'available': true,
       });
-      final pan = panController.text.trim().toUpperCase();
       final aadhaar = aadhaarController.text.replaceAll(RegExp(r'\D'), '');
-      final hasAnyKyc =
-          pan.isNotEmpty ||
-          aadhaar.isNotEmpty ||
-          panDoc != null ||
-          aadhaarDoc != null;
+      final hasAnyKyc = aadhaar.isNotEmpty || aadhaarDoc != null;
       if (hasAnyKyc && !skipKyc) {
-        if (!RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$').hasMatch(pan) ||
-            aadhaar.length != 12 ||
-            panDoc == null ||
-            aadhaarDoc == null) {
+        if (aadhaar.length != 12) {
           throw ApiException(
-            'Complete all KYC fields or use Skip for now.',
+            'Enter a valid 12-digit Aadhaar number or use Skip for now.',
             statusCode: 422,
           );
         }
-        await workerApi.submitKyc(
-          pan: pan,
-          aadhaar: aadhaar,
-          panDoc: panDoc!,
-          aadhaarDoc: aadhaarDoc!,
-        );
+        await workerApi.submitKyc(aadhaar: aadhaar, aadhaarDoc: aadhaarDoc);
       }
       unawaited(MetaEventsService.instance.registrationCompleted());
       if (!mounted) return;
@@ -433,7 +418,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       'Employers prefer workers who speak their language. Choose all that apply.',
       'Some jobs need a minimum education. This helps us match you.',
       'Pick your main category and add your skills — jobs are matched to these.',
-      'Add Aadhaar & PAN to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.',
+      'Add Aadhaar to get a Verified badge — verified workers get 2x more responses. You can skip and do this later.',
     ];
     final out = <Widget>[
       Row(
@@ -783,31 +768,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
           ],
           decoration: InputDecoration(hintText: context.tr('1234 5678 9012')),
         ),
-        const SizedBox(height: 14),
-        const FieldLabel('PAN number'),
-        TextField(
-          controller: panController,
-          textCapitalization: TextCapitalization.characters,
-          inputFormatters: [LengthLimitingTextInputFormatter(10)],
-          decoration: InputDecoration(hintText: context.tr('ABCDE1234F')),
-        ),
-        const SizedBox(height: 14),
         UploadTile(
           aadhaarDoc == null
-              ? 'Upload Aadhaar photo\nJPG / PNG · max 4MB'
+              ? 'Upload Aadhaar photo (optional)\nJPG / PNG · max 4MB'
               : aadhaarDoc!.path.split(Platform.pathSeparator).last,
           LucideIcons.upload,
           dashed: true,
-          onTap: () => _pickKycDocument(false),
-        ),
-        const SizedBox(height: 10),
-        UploadTile(
-          panDoc == null
-              ? 'Upload PAN photo\nJPG / PNG · max 4MB'
-              : panDoc!.path.split(Platform.pathSeparator).last,
-          LucideIcons.upload,
-          dashed: true,
-          onTap: () => _pickKycDocument(true),
+          onTap: _pickKycDocument,
         ),
         const SizedBox(height: 10),
         const Row(
