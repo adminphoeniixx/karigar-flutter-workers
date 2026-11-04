@@ -245,7 +245,15 @@ class _HomeTabState extends State<HomeTab> {
         const Color(0xFFFEF2F2),
         const Color(0xFFB91C1C),
       ),
-      _ => ('Verify now', const Color(0xFFFFF3EE), brand),
+      // This is the KYC *status*, not the action. The previous “Verify now”
+      // wording made an unsubmitted KYC look as though it had been verified.
+      _ => (
+        stats['kyc_status_label']?.toString().isNotEmpty == true
+            ? stats['kyc_status_label'].toString()
+            : 'Not submitted',
+        const Color(0xFFFFF3EE),
+        brand,
+      ),
     };
     return StatCard(
       label,
