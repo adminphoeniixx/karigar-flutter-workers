@@ -16,12 +16,17 @@ class Job {
     this.distanceKm,
     this.experienceLabel = '',
     this.shiftHoursLabel = '',
+    this.workMode = 'on_site',
+    this.workModeLabel = 'On-site',
+    this.interviewMode = 'on_site',
+    this.interviewModeLabel = 'Interview in person',
     this.latitude,
     this.longitude,
   });
   final bool employerVerified;
   final double? distanceKm;
   final String experienceLabel, shiftHoursLabel;
+  final String workMode, workModeLabel, interviewMode, interviewModeLabel;
   final int id;
   final double? latitude, longitude;
   final String title, category, employer, city, wage, rating, description;
@@ -46,6 +51,16 @@ class Job {
       distanceKm: num.tryParse('${json['distance_km']}')?.toDouble(),
       experienceLabel: json['experience_label']?.toString() ?? '',
       shiftHoursLabel: json['shift_hours_label']?.toString() ?? '',
+      workMode: jobModeValue(json['work_mode'], fallback: 'on_site'),
+      workModeLabel: jobModeLabel(
+        json['work_mode_label'],
+        jobModeValue(json['work_mode'], fallback: 'on_site'),
+      ),
+      interviewMode: jobModeValue(json['interview_mode'], fallback: 'on_site'),
+      interviewModeLabel: deriveInterviewModeLabel(
+        json['interview_mode_label'],
+        jobModeValue(json['interview_mode'], fallback: 'on_site'),
+      ),
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
     );
@@ -66,6 +81,10 @@ class Job {
     distanceKm: job.distanceKm,
     experienceLabel: job.experienceLabel,
     shiftHoursLabel: job.shiftHoursLabel,
+    workMode: job.workMode,
+    workModeLabel: job.workModeLabel,
+    interviewMode: job.interviewMode,
+    interviewModeLabel: job.interviewModeLabel,
     latitude: job.latitude,
     longitude: job.longitude,
   );

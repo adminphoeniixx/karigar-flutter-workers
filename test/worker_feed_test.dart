@@ -210,6 +210,28 @@ void main() {
     expect(monthlyProfileWage(100, 'hourly'), '20800');
     expect(monthlyProfileWage('18000.00', 'monthly'), '18000');
   });
+  test(
+    'job modes use API labels and retain on-site defaults for older jobs',
+    () {
+      final remote = Job.fromApi(
+        ApiJobModel.fromJson({
+          ...jobJson(),
+          'work_mode': 'both',
+          'work_mode_label': 'On-site or from home',
+          'interview_mode': 'remote',
+          'interview_mode_label': 'Interview on phone / video',
+        }),
+      );
+      expect(remote.workMode, 'both');
+      expect(remote.workModeLabel, 'On-site or from home');
+      expect(remote.interviewMode, 'remote');
+      expect(remote.interviewModeLabel, 'Interview on phone / video');
+
+      final olderJob = Job.fromApi(ApiJobModel.fromJson(jobJson()));
+      expect(olderJob.workMode, 'on_site');
+      expect(olderJob.interviewModeLabel, 'Interview in person');
+    },
+  );
   test('dashboard service sends both location coordinates', () async {
     final client = RecordingClient();
     await WorkerApiService(
@@ -244,6 +266,33 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     }
+  });
+  testWidgets('cards show remote work modes and details show both mode chips', (
+    tester,
+  ) async {
+    final job = Job(
+      'Handloom weaver',
+      'Weaving',
+      'Jaipur Looms',
+      'Jaipur, Rajasthan',
+      '₹20,800 – ₹26,000 / monthly',
+      '0',
+      2,
+      const [],
+      '',
+      workMode: 'remote',
+      workModeLabel: 'Work from home',
+      interviewMode: 'remote',
+      interviewModeLabel: 'Interview on phone / video',
+    );
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: JobCard(job))));
+    expect(find.text('Work from home'), findsOneWidget);
+
+    await tester.pumpWidget(MaterialApp(home: JobDetailPage(job)));
+    await tester.pumpAndSettle();
+    expect(find.text('Work from home'), findsOneWidget);
+    expect(find.text('Interview on phone / video'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
   testWidgets(
     'feed uses fresh position on open and all toggle retains location',

@@ -999,6 +999,8 @@ class JobCard extends StatelessWidget {
                   runSpacing: 7,
                   children: [
                     Meta(LucideIcons.mapPin, job.city),
+                    if (job.workMode == 'remote' || job.workMode == 'both')
+                      Meta(LucideIcons.house, job.workModeLabel),
                     if (job.distanceKm != null)
                       Meta(
                         LucideIcons.navigation,

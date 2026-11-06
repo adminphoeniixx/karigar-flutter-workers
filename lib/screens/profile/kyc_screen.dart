@@ -319,9 +319,7 @@ class _KycPageState extends State<KycPage> {
                   digilocker?.verified != true) ...[
                 const SizedBox(height: 16),
                 PrimaryButton(
-                  existing?.status == 'pending'
-                      ? 'Skip the wait: Verify with DigiLocker'
-                      : 'Verify with DigiLocker',
+                  'Verify with DigiLocker',
                   isLoading: startingDigilocker,
                   onPressed: _verifyWithDigilocker,
                 ),
@@ -344,7 +342,7 @@ class _KycPageState extends State<KycPage> {
                     .map(_documentCard),
                 const SizedBox(height: 8),
                 PrimaryButton(
-                  'Submit for Verification',
+                  'Submit',
                   isLoading: submitting,
                   onPressed: _submit,
                 ),
@@ -370,6 +368,7 @@ class _KycPageState extends State<KycPage> {
             onChanged: (value) => setState(() => draft.missing = value),
           ),
           if (!draft.missing) ...[
+            const FieldLabel('Aadhaar number'),
             TextField(
               controller: draft.number,
               decoration: InputDecoration(
@@ -382,7 +381,7 @@ class _KycPageState extends State<KycPage> {
               draft.file?.path.split(Platform.pathSeparator).last ??
                   (draft.hasExistingFile
                       ? 'Document on record'
-                      : 'Upload photo / PDF (optional)'),
+                      : 'Upload Aadhaar photo / PDF (optional)'),
               LucideIcons.upload,
               dashed: true,
               onTap: () => _pick(draft, alternate: false),

@@ -200,6 +200,7 @@ Typesense search across every job, as before; `lat`/`lng`/`radius` filter by
 distance there. No `feed` block, and `distance_km` is `null`.
 
 **JobResource:** `id, title, category, skills, city, state, location_label,
+work_mode` (`on_site` | `remote` | `both`) and `work_mode_label`,
 wage_min, wage_max, wage_type, wage_label ("₹20,800 – ₹26,000 / monthly"),
 vacancies, experience_label, created_at, created_ago, expires_at, distance_km,
 employer{id, name, verified}`. Wages are **monthly**. `employer.verified` is
@@ -213,7 +214,8 @@ Full detail + the worker's context.
   "data": { ...JobDetailResource, "contact_phone": "98..." /* only if callable */ },
   // data.employer: { "id", "name", "verified" }
   // data also: "experience_min", "experience_max", "experience_label" ("2–5 yrs"),
-  // "shift_start", "shift_end", "shift_hours_label" ("9:00 AM – 6:00 PM"), and on
+  // "shift_start", "shift_end", "shift_hours_label" ("9:00 AM – 6:00 PM"),
+  // "work_mode", "work_mode_label", "interview_mode", "interview_mode_label", and on
   // a call job "contact_name" / "contact_designation" (who picks up) with "contact_phone"
   "meta": {
     "employer_rating": { "average": 4.7, "count": 12 },
@@ -309,6 +311,15 @@ encrypted at rest and never returned.
 After the user shares Aadhaar in DigiLocker, poll `GET /kyc/digilocker/{reference}`.
 When it returns `status: "passed"`, the returned KYC status is already
 `"verified"`; do not submit KYC again.
+
+### AI KYC assistance calls
+There is no call endpoint, field, or push notification. The server may call a
+worker with an unstarted or rejected KYC to guide them through the existing
+screens. Keep these worker-facing labels stable: `KYC Status`, `KYC
+Verification`, `Verify with DigiLocker`, `I don't have this`, and `Submit`.
+Workers may opt out by sending `screening_calls_opted_out: true` through
+`PATCH /worker/profile`; the profile read response does not currently return
+that value, so do not display a switch with an assumed state.
 
 ---
 

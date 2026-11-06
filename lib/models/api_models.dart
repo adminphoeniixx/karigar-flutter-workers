@@ -252,9 +252,14 @@ class ApiJobModel {
     this.distanceKm,
     this.experienceLabel = '',
     this.shiftHoursLabel = '',
+    this.workMode = 'on_site',
+    this.workModeLabel = 'On-site',
+    this.interviewMode = 'on_site',
+    this.interviewModeLabel = 'Interview in person',
   });
   final double? distanceKm;
   final String experienceLabel, shiftHoursLabel;
+  final String workMode, workModeLabel, interviewMode, interviewModeLabel;
   final int id, vacancies;
   final String title, category, city, state, locationLabel, wageLabel;
   final String description, createdAgo;
@@ -279,7 +284,40 @@ class ApiJobModel {
     distanceKm: num.tryParse('${json['distance_km']}')?.toDouble(),
     experienceLabel: json['experience_label']?.toString() ?? '',
     shiftHoursLabel: json['shift_hours_label']?.toString() ?? '',
+    workMode: jobModeValue(json['work_mode'], fallback: 'on_site'),
+    workModeLabel: jobModeLabel(
+      json['work_mode_label'],
+      jobModeValue(json['work_mode'], fallback: 'on_site'),
+    ),
+    interviewMode: jobModeValue(json['interview_mode'], fallback: 'on_site'),
+    interviewModeLabel: deriveInterviewModeLabel(
+      json['interview_mode_label'],
+      jobModeValue(json['interview_mode'], fallback: 'on_site'),
+    ),
   );
+}
+
+String jobModeValue(dynamic value, {required String fallback}) {
+  final mode = value?.toString().trim();
+  return mode == null || mode.isEmpty ? fallback : mode;
+}
+
+String jobModeLabel(dynamic label, String mode) {
+  final value = label?.toString().trim();
+  if (value != null && value.isNotEmpty) return value;
+  return switch (mode) {
+    'remote' => 'Work from home',
+    'both' => 'On-site or from home',
+    _ => 'On-site',
+  };
+}
+
+String deriveInterviewModeLabel(dynamic label, String mode) {
+  final value = label?.toString().trim();
+  if (value != null && value.isNotEmpty) return value;
+  return mode == 'remote'
+      ? 'Interview on phone / video'
+      : 'Interview in person';
 }
 
 class PaginationModel {

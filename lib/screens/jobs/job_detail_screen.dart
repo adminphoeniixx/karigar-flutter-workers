@@ -274,6 +274,33 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       }),
                     ),
                   ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (j.shiftHoursLabel.isNotEmpty)
+                      JobDetailChip(
+                        icon: LucideIcons.clock3,
+                        label: j.shiftHoursLabel,
+                      ),
+                    if (j.experienceLabel.isNotEmpty)
+                      JobDetailChip(
+                        icon: LucideIcons.briefcaseBusiness,
+                        label: j.experienceLabel,
+                      ),
+                    JobDetailChip(
+                      icon: LucideIcons.house,
+                      label: j.workModeLabel,
+                    ),
+                    JobDetailChip(
+                      icon: j.interviewMode == 'remote'
+                          ? LucideIcons.video
+                          : LucideIcons.handshake,
+                      label: j.interviewModeLabel,
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -299,24 +326,10 @@ class _JobDetailPageState extends State<JobDetailPage> {
                           width: cardWidth,
                           child: MiniStat('Location', j.city),
                         ),
-                        SizedBox(
-                          width: cardWidth,
-                          child: MiniStat(
-                            'Shift',
-                            j.shiftHoursLabel.isEmpty
-                                ? 'Not disclosed'
-                                : j.shiftHoursLabel,
-                          ),
-                        ),
                       ],
                     );
                   },
                 ),
-                if (j.experienceLabel.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: MiniStat('Experience', j.experienceLabel),
-                  ),
                 if (contactPhone?.isNotEmpty == true &&
                     contactName?.isNotEmpty == true)
                   Padding(
@@ -488,4 +501,34 @@ class _JobDetailPageState extends State<JobDetailPage> {
             ),
     );
   }
+}
+
+class JobDetailChip extends StatelessWidget {
+  const JobDetailChip({super.key, required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    decoration: BoxDecoration(
+      color: context.isDark ? const Color(0xFF30221D) : const Color(0xFFFFF3EE),
+      border: Border.all(color: context.borderColor),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: brand),
+        const SizedBox(width: 5),
+        Flexible(
+          child: AppText(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
 }
