@@ -10,15 +10,13 @@ class _KycDraft {
   _KycDraft(this.definition);
   final VerificationDocumentDefinition definition;
   final number = TextEditingController(),
-      alternateNumber = TextEditingController(),
-      reason = TextEditingController();
+      alternateNumber = TextEditingController();
   bool missing = false, hasExistingFile = false;
   String? alternate;
   File? file, alternateFile;
   void dispose() {
     number.dispose();
     alternateNumber.dispose();
-    reason.dispose();
   }
 }
 
@@ -85,7 +83,6 @@ class _KycPageState extends State<KycPage> {
               record.hasFile || (record.alternate?.hasFile ?? false);
           draft.alternate = record.alternate?.type;
           draft.alternateNumber.text = record.alternate?.number ?? '';
-          draft.reason.text = record.alternate?.reason ?? '';
         }
         drafts.add(draft);
       }
@@ -133,8 +130,8 @@ class _KycPageState extends State<KycPage> {
       // Aadhaar number or image once it has passed.
       if (key == 'aadhaar' && digilocker?.verified == true) continue;
       if (draft.missing) {
-        if (draft.alternate == null || draft.reason.text.trim().isEmpty) {
-          _message('Choose an alternate document and enter a reason.');
+        if (draft.alternate == null) {
+          _message('Choose an alternate document.');
           return;
         }
         if (draft.alternateFile == null && !draft.hasExistingFile) {
@@ -145,7 +142,6 @@ class _KycPageState extends State<KycPage> {
         fields['${key}_alt_type'] = draft.alternate!;
         if (draft.alternateNumber.text.trim().isNotEmpty)
           fields['${key}_alt_number'] = draft.alternateNumber.text.trim();
-        fields['${key}_reason'] = draft.reason.text.trim();
         if (draft.alternateFile != null)
           files['${key}_alt_doc'] = draft.alternateFile!;
       } else {
@@ -414,15 +410,6 @@ class _KycPageState extends State<KycPage> {
               LucideIcons.upload,
               dashed: true,
               onTap: () => _pick(draft, alternate: true),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: draft.reason,
-              maxLength: 500,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                hintText: "Why don't you have it?",
-              ),
             ),
           ],
         ],

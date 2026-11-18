@@ -12,12 +12,36 @@ class _MainShellState extends State<MainShell> {
   int feedRefresh = 0;
   int unreadAlerts = 0;
   late final List<Widget?> _pages;
+  StreamSubscription<WorkerPushDestination>? _pushOpenSubscription;
 
   @override
   void initState() {
     super.initState();
     _pages = List<Widget?>.filled(5, null);
     _pages[0] = _buildPage(0);
+    _pushOpenSubscription = PushNotificationService.instance.openedDestinations
+        .listen(_openPushDestination);
+    final initialDestination = PushNotificationService.instance
+        .takeInitialDestination();
+    if (initialDestination != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _openPushDestination(initialDestination),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _pushOpenSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _openPushDestination(WorkerPushDestination destination) {
+    if (!mounted) return;
+    switch (destination) {
+      case WorkerPushDestination.applications:
+        _selectTab(2);
+    }
   }
 
   void _setUnread(int value) {
@@ -37,7 +61,10 @@ class _MainShellState extends State<MainShell> {
       ),
       1 => JobsTab(refreshToken: feedRefresh),
       2 => const ApplicationsTab(),
-      3 => NotificationsTab(onUnreadChanged: _setUnread),
+      3 => NotificationsTab(
+        onUnreadChanged: _setUnread,
+        onApplicationsRequested: () => _selectTab(2),
+      ),
       4 => const ProfileTab(),
       _ => const SizedBox.shrink(),
     };

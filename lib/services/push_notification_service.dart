@@ -8,6 +8,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'device_token_service.dart';
 
+/// The destinations supported by worker notification payloads.
+///
+/// Keep this mapping in one place so a notification opened from the system
+/// tray and the same item opened from Alerts always behave alike.
+enum WorkerPushDestination { applications }
+
+class WorkerPushRoute {
+  static const interviewTypes = <String>{
+    'application.interview',
+    'application.interview_reminder',
+  };
+
+  static WorkerPushDestination? fromData(Map<String, dynamic> data) {
+    final type = data['type']?.toString();
+    if (interviewTypes.contains(type)) {
+      return WorkerPushDestination.applications;
+    }
+    return null;
+  }
+}
+
 class PushNotificationService {
   PushNotificationService._();
 
@@ -16,10 +37,23 @@ class PushNotificationService {
 
   FirebaseMessaging get _messaging => FirebaseMessaging.instance;
   final DeviceTokenService _deviceTokens = DeviceTokenService();
+  final StreamController<WorkerPushDestination> _openedDestinations =
+      StreamController<WorkerPushDestination>.broadcast();
   StreamSubscription<String>? _tokenRefreshSubscription;
+  StreamSubscription<RemoteMessage>? _openedSubscription;
+  WorkerPushDestination? _initialDestination;
   Stream<RemoteMessage> get foregroundMessages => Firebase.apps.isEmpty
       ? const Stream<RemoteMessage>.empty()
       : FirebaseMessaging.onMessage;
+  Stream<WorkerPushDestination> get openedDestinations =>
+      _openedDestinations.stream;
+
+  /// Returns the route that launched a terminated app, at most once.
+  WorkerPushDestination? takeInitialDestination() {
+    final destination = _initialDestination;
+    _initialDestination = null;
+    return destination;
+  }
 
   Future<void> initialize() async {
     if (Firebase.apps.isEmpty) return;
@@ -29,8 +63,31 @@ class PushNotificationService {
       onError: (Object error) =>
           debugPrint('[FCM] Token refresh failed: $error'),
     );
+    _openedSubscription ??= FirebaseMessaging.onMessageOpenedApp.listen(
+      _handleOpenedMessage,
+      onError: (Object error) =>
+          debugPrint('[FCM] Open handler failed: $error'),
+    );
+    try {
+      final initialMessage = await _messaging.getInitialMessage();
+      final destination = initialMessage == null
+          ? null
+          : WorkerPushRoute.fromData(initialMessage.data);
+      if (destination != null) {
+        _initialDestination ??= destination;
+      }
+    } catch (error) {
+      debugPrint('[FCM] Unable to read launch notification: $error');
+    }
 
     if (ApiClient.instance.isAuthenticated) await syncToken();
+  }
+
+  void _handleOpenedMessage(RemoteMessage message) {
+    final destination = WorkerPushRoute.fromData(message.data);
+    if (destination != null) {
+      _openedDestinations.add(destination);
+    }
   }
 
   /// Registers the current FCM token after a login or session restore.

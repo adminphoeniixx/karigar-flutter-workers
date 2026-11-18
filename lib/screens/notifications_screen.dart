@@ -1,8 +1,13 @@
 part of '../main.dart';
 
 class NotificationsTab extends StatefulWidget {
-  const NotificationsTab({super.key, this.onUnreadChanged});
+  const NotificationsTab({
+    super.key,
+    this.onUnreadChanged,
+    this.onApplicationsRequested,
+  });
   final ValueChanged<int>? onUnreadChanged;
+  final VoidCallback? onApplicationsRequested;
   @override
   State<NotificationsTab> createState() => _NotificationsTabState();
 }
@@ -61,6 +66,18 @@ class _NotificationsTabState extends State<NotificationsTab> {
     }
   }
 
+  Future<void> _open(int index) async {
+    final note = notes[index];
+    final destination = WorkerPushRoute.fromData(note);
+    // A network issue should not prevent a worker from reaching a time-sensitive
+    // interview update. Marking it read is still attempted first.
+    await _read(index);
+    if (!mounted) return;
+    if (destination == WorkerPushDestination.applications) {
+      widget.onApplicationsRequested?.call();
+    }
+  }
+
   Future<void> _readAll() async {
     if (markingAll || !hasUnread) return;
     setState(() => markingAll = true);
@@ -110,6 +127,11 @@ class _NotificationsTabState extends State<NotificationsTab> {
     if (value == 'Just now') return 'अभी';
     return value;
   }
+
+  IconData _iconFor(Map<String, dynamic> note) =>
+      WorkerPushRoute.interviewTypes.contains(note['type']?.toString())
+      ? LucideIcons.calendarCheck
+      : LucideIcons.bell;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -207,7 +229,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: InkWell(
-                                onTap: unread ? () => _read(index) : null,
+                                onTap: () => _open(index),
                                 child: Padding(
                                   padding: const EdgeInsets.all(15),
                                   child: Row(
@@ -227,7 +249,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                           ),
                                         ),
                                         child: Icon(
-                                          LucideIcons.bell,
+                                          _iconFor(note),
                                           color: unread ? brand : muted,
                                           size: 19,
                                         ),

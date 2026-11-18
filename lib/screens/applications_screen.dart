@@ -21,8 +21,11 @@ class _ApplicationsTabState extends State<ApplicationsTab>
     _pushSubscription = PushNotificationService.instance.foregroundMessages
         .listen((message) {
           final type = message.data['type']?.toString() ?? '';
-          if (type == 'application.accepted' || type == 'application.rejected')
+          if (type == 'application.accepted' ||
+              type == 'application.rejected' ||
+              WorkerPushRoute.interviewTypes.contains(type)) {
             _load();
+          }
         });
     _load();
   }
