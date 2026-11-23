@@ -218,7 +218,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
     final needsKyc = verification?.canApply == false;
     final requirements = JobRequirements.rows(
       j,
-      hindi: Localizations.localeOf(context).languageCode == 'hi',
+      language: selectedLanguageCode.value,
     );
     return Scaffold(
       appBar: AppBar(
@@ -255,7 +255,6 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   runSpacing: 6,
                   children: [
                     Tag(j.category),
-                    if (j.isPartTime) const Tag('Part time'),
                     if (j.isUrgent) const _JobUrgentTag(),
                   ],
                 ),
@@ -328,7 +327,13 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       children: [
                         SizedBox(
                           width: cardWidth,
-                          child: MiniStat('Wage', j.wage),
+                          child: _WageStat(
+                            wage: j.wage,
+                            incentive: JobRequirements.incentiveLabel(
+                              j,
+                              language: selectedLanguageCode.value,
+                            ),
+                          ),
                         ),
                         SizedBox(
                           width: cardWidth,
@@ -622,23 +627,15 @@ class JobRequirementsList extends StatelessWidget {
 class JobRequirements {
   static List<({String label, String value})> rows(
     Job job, {
-    required bool hindi,
+    required String language,
   }) {
+    final hindi = language == 'hi';
     final data = job.details;
     String text(String key) => data[key]?.toString().trim() ?? '';
     List<String> list(String key) => (data[key] as List? ?? const [])
         .map((value) => value.toString().trim())
         .where((value) => value.isNotEmpty)
         .toList();
-    String labelOr(
-      String labelKey,
-      String rawKey,
-      String Function(String) localize,
-    ) {
-      final raw = text(rawKey);
-      return hindi && raw.isNotEmpty ? localize(raw) : text(labelKey);
-    }
-
     String days() {
       final values = list('work_days');
       if (!hindi) return text('work_days_label');
@@ -673,16 +670,7 @@ class JobRequirements {
       if (value.isNotEmpty) items.add((label: label, value: value));
     }
 
-    add(
-      'Job type',
-      labelOr(
-        'job_type_label',
-        'job_type',
-        (v) => v == 'part_time' ? 'पार्ट टाइम' : 'फ़ुल टाइम',
-      ),
-    );
-    add('Education', labelOr('education_label', 'education', _hindiEducation));
-    add('English', labelOr('english_label', 'english', _hindiEnglish));
+    add('English', _english(text('english'), text('english_label'), language));
     add('Age', text('age_label'));
     final languages = list('languages');
     add('Languages', languages.join(', '));
@@ -690,13 +678,9 @@ class JobRequirements {
         ? list('assets').map(_hindiAsset).toList()
         : list('asset_labels');
     add('Must have', assets.join(', '));
-    add(
-      'Karigars from',
-      hindi ? _hindiReach(data, job.city) : text('reach_label'),
-    );
+    add('Karigars from', _reach(data, job.city, language));
     add('Working days', days());
     add('Interview', interview());
-    add('Bonus / incentive', text('incentive_label'));
     add('Other requirements', text('other_requirements'));
     return items;
   }
@@ -721,29 +705,23 @@ class JobRequirements {
         : 'Joining fee: $fee · for $purpose';
   }
 
-  static String _hindiEducation(String value) =>
-      const {
-        'below_10th': '10वीं से कम भी चलेगा',
-        'below 10th': '10वीं से कम भी चलेगा',
-        '10th': '10वीं पास या ऊपर',
-        '10th_pass': '10वीं पास या ऊपर',
-        '10th pass': '10वीं पास या ऊपर',
-        '12th': '12वीं पास या ऊपर',
-        '12th_pass': '12वीं पास या ऊपर',
-        '12th pass': '12वीं पास या ऊपर',
-        'iti_diploma': 'ITI / डिप्लोमा या ऊपर',
-        'iti / diploma': 'ITI / डिप्लोमा या ऊपर',
-        'graduate': 'ग्रेजुएट या ऊपर',
-        'post_graduate': 'पोस्ट ग्रेजुएट',
-        'post graduate': 'पोस्ट ग्रेजुएट',
-      }[value.toLowerCase()] ??
-      value;
+  static String _english(String value, String label, String language) {
+    if (value.isEmpty) return label;
+    if (language == 'hi') return _hindiEnglish(value);
+    if (language == 'hinglish') {
+      return const {'basic': 'Basic', 'good': 'Achhi', 'fluent': 'Fluent'}[value
+              .toLowerCase()] ??
+          label;
+    }
+    return label.isEmpty ? value : label;
+  }
+
   static String _hindiEnglish(String value) =>
       const {
-        'none': 'अंग्रेज़ी ज़रूरी नहीं',
-        'basic': 'थोड़ी अंग्रेज़ी',
-        'good': 'अच्छी अंग्रेज़ी',
-        'fluent': 'धाराप्रवाह अंग्रेज़ी',
+        'none': 'बेसिक',
+        'basic': 'बेसिक',
+        'good': 'अच्छी',
+        'fluent': 'फ़्लुएंट',
       }[value.toLowerCase()] ??
       value;
   static String _hindiAsset(String value) =>
@@ -758,12 +736,102 @@ class JobRequirements {
         'certificate': 'ITI / ट्रेनिंग सर्टिफ़िकेट',
       }[value.toLowerCase()] ??
       value;
-  static String _hindiReach(Map<String, dynamic> data, String city) {
+  static String _reach(
+    Map<String, dynamic> data,
+    String city,
+    String language,
+  ) {
     final reach = data['reach']?.toString();
-    if (reach == 'nearby') return '${data['reach_km'] ?? 10} किमी के अंदर';
-    if (reach == 'city') return '${city.isEmpty ? 'शहर' : city} में कहीं से भी';
+    if (language == 'en') return data['reach_label']?.toString() ?? '';
+    if (reach == 'nearby') {
+      final km = data['reach_km'] ?? 10;
+      return language == 'hi' ? '$km किमी के अंदर' : 'Within $km km';
+    }
+    if (reach == 'city') {
+      final name = data['reach_city']?.toString().trim();
+      final place = name == null || name.isEmpty ? city : name;
+      return language == 'hi'
+          ? '${place.isEmpty ? 'शहर' : place} में कहीं से भी'
+          : 'Anywhere in ${place.isEmpty ? 'the city' : place}';
+    }
     return data['reach_label']?.toString() ?? '';
   }
+
+  /// Uses the API label when possible and composes a locale-aware fallback for
+  /// older payloads that only include the amount and type.
+  static String incentiveLabel(Job job, {required String language}) {
+    final data = job.details;
+    final apiLabel = data['incentive_label']?.toString().trim() ?? '';
+    final amount = data['incentive_max']?.toString().trim() ?? '';
+    final type =
+        data['incentive_type_label']?.toString().trim() ??
+        data['incentive_type']?.toString().trim() ??
+        '';
+    if (amount.isEmpty && apiLabel.isEmpty) return '';
+    var bonusAmount = amount;
+    var bonusType = type;
+    if (bonusAmount.isEmpty) {
+      final match = RegExp(
+        r'^Up to\s+(.+?)\s+a month(?:\s+·\s+(.+))?$',
+        caseSensitive: false,
+      ).firstMatch(apiLabel);
+      if (match == null)
+        return language == 'en' ? '+ Bonus $apiLabel' : '+ $apiLabel';
+      bonusAmount = match.group(1)?.trim() ?? '';
+      bonusType = bonusType.isEmpty
+          ? (match.group(2)?.trim() ?? '')
+          : bonusType;
+    }
+    final formattedAmount = bonusAmount.startsWith('₹')
+        ? bonusAmount
+        : '₹$bonusAmount';
+    final suffix = bonusType.isEmpty ? '' : ' · $bonusType';
+    return switch (language) {
+      'hi' => '+ महीने में $formattedAmount तक बोनस$suffix',
+      'hinglish' => '+ Mahine mein $formattedAmount tak bonus$suffix',
+      _ => '+ Bonus up to $formattedAmount a month$suffix',
+    };
+  }
+}
+
+class _WageStat extends StatelessWidget {
+  const _WageStat({required this.wage, required this.incentive});
+  final String wage, incentive;
+
+  @override
+  Widget build(BuildContext context) => AppCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const AppText(
+          'Wage',
+          style: TextStyle(
+            color: muted,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 5),
+        AppText(
+          wage,
+          maxLines: 3,
+          softWrap: true,
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.2,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (incentive.isNotEmpty) ...[
+          const SizedBox(height: 5),
+          AppText(
+            incentive,
+            style: const TextStyle(color: muted, fontSize: 11.5, height: 1.25),
+          ),
+        ],
+      ],
+    ),
+  );
 }
 
 class JobDetailChip extends StatelessWidget {

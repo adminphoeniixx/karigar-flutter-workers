@@ -359,4 +359,71 @@ void main() {
     expect(find.text('Turn on location to see jobs near you'), findsOneWidget);
     expect(find.text('Handloom weaver'), findsOneWidget);
   });
+
+  test(
+    'new job requirements use reach, English, and employer-provided values',
+    () {
+      const job = Job(
+        'Tailor',
+        'Tailoring',
+        'Karigar Fashions',
+        'Kanpur, Uttar Pradesh',
+        '₹18,000 / month',
+        '0',
+        2,
+        [],
+        '',
+        details: {
+          'job_type': 'part_time',
+          'education': '10th_pass',
+          'english': 'basic',
+          'english_label': 'Basic',
+          'languages': ['Hindi', 'Marwari'],
+          'assets': ['aadhaar', 'Sewing machine'],
+          'asset_labels': ['Aadhaar card', 'Sewing machine'],
+          'reach': 'nearby',
+          'reach_km': 15,
+          'reach_label': 'Karigars within 15 km',
+          'incentive_label': 'Up to ₹2,000 a month · Per-piece rate',
+        },
+      );
+
+      final english = JobRequirements.rows(job, language: 'en');
+      expect(english, contains((label: 'English', value: 'Basic')));
+      expect(
+        english,
+        contains((label: 'Karigars from', value: 'Karigars within 15 km')),
+      );
+      expect(english, contains((label: 'Languages', value: 'Hindi, Marwari')));
+      expect(
+        english,
+        contains((label: 'Must have', value: 'Aadhaar card, Sewing machine')),
+      );
+      expect(english.map((row) => row.label), isNot(contains('Job type')));
+      expect(english.map((row) => row.label), isNot(contains('Education')));
+      expect(
+        english.map((row) => row.label),
+        isNot(contains('Bonus / incentive')),
+      );
+      expect(
+        JobRequirements.incentiveLabel(job, language: 'en'),
+        '+ Bonus up to ₹2,000 a month · Per-piece rate',
+      );
+
+      final hindi = JobRequirements.rows(job, language: 'hi');
+      expect(hindi, contains((label: 'English', value: 'बेसिक')));
+      expect(
+        hindi,
+        contains((label: 'Karigars from', value: '15 किमी के अंदर')),
+      );
+      expect(
+        hindi,
+        contains((label: 'Must have', value: 'आधार कार्ड, Sewing machine')),
+      );
+      expect(
+        JobRequirements.incentiveLabel(job, language: 'hinglish'),
+        '+ Mahine mein ₹2,000 tak bonus · Per-piece rate',
+      );
+    },
+  );
 }

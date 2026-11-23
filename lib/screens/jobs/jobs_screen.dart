@@ -970,7 +970,6 @@ class JobCard extends StatelessWidget {
                         runSpacing: 6,
                         children: [
                           Tag(job.category),
-                          if (job.isPartTime) const Tag('Part time'),
                           if (job.isUrgent) const _UrgentTag(),
                         ],
                       ),
@@ -1013,7 +1012,6 @@ class JobCard extends StatelessWidget {
                           'distance': job.distanceKm!.toStringAsFixed(1),
                         }),
                       ),
-                    Meta(LucideIcons.indianRupee, job.wage, bold: true),
                     Meta(
                       LucideIcons.calendarDays,
                       context.trArgs('{count} openings', {
@@ -1022,6 +1020,22 @@ class JobCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 9),
+                Meta(LucideIcons.indianRupee, job.wage, bold: true),
+                if (JobRequirements.incentiveLabel(
+                  job,
+                  language: selectedLanguageCode.value,
+                ).isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: AppText(
+                      JobRequirements.incentiveLabel(
+                        job,
+                        language: selectedLanguageCode.value,
+                      ),
+                      style: const TextStyle(color: muted, fontSize: 12),
+                    ),
+                  ),
               ],
             ),
           ),

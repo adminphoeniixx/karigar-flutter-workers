@@ -93,7 +93,6 @@ class Job {
     details: job.details,
   );
 
-  bool get isPartTime => details['job_type']?.toString() == 'part_time';
   bool get isUrgent =>
       jsonBool(details['urgent']) ||
       details['hiring_urgency']?.toString() == 'immediate';
