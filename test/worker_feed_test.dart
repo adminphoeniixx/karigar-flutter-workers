@@ -229,6 +229,7 @@ void main() {
 
       final olderJob = Job.fromApi(ApiJobModel.fromJson(jobJson()));
       expect(olderJob.workMode, 'on_site');
+      expect(olderJob.workModeLabel, 'At workplace / Site');
       expect(olderJob.interviewModeLabel, 'Interview in person');
     },
   );

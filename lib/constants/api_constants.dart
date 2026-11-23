@@ -8,6 +8,7 @@ class ApiConstants {
   static const logout = '/auth/logout';
   static const me = '/auth/me';
   static const account = '/account';
+  static const accountDeletion = '$account/deletion';
   static const reference = '/reference';
   static const cities = '/reference/cities';
   static const jobCategories = '/reference/job-categories';

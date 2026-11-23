@@ -216,6 +216,10 @@ class _JobDetailPageState extends State<JobDetailPage> {
   Widget build(BuildContext context) {
     final j = detailJob ?? widget.job;
     final needsKyc = verification?.canApply == false;
+    final requirements = JobRequirements.rows(
+      j,
+      hindi: Localizations.localeOf(context).languageCode == 'hi',
+    );
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -246,7 +250,15 @@ class _JobDetailPageState extends State<JobDetailPage> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Tag(j.category),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    Tag(j.category),
+                    if (j.isPartTime) const Tag('Part time'),
+                    if (j.isUrgent) const _JobUrgentTag(),
+                  ],
+                ),
                 const SizedBox(height: 10),
                 Text(
                   j.title,
@@ -299,6 +311,11 @@ class _JobDetailPageState extends State<JobDetailPage> {
                           : LucideIcons.handshake,
                       label: j.interviewModeLabel,
                     ),
+                    if (JobRequirements.feeLabel(j).isNotEmpty)
+                      JobDetailChip(
+                        icon: LucideIcons.badgeIndianRupee,
+                        label: JobRequirements.feeLabel(j),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -355,6 +372,15 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   runSpacing: 8,
                   children: j.skills.map(Tag.new).toList(),
                 ),
+                if (requirements.isNotEmpty) ...[
+                  const SectionTitle('Requirements'),
+                  JobRequirementsList(rows: requirements),
+                ],
+                if (JobRequirements.relocationAllowed(j))
+                  const Padding(
+                    padding: EdgeInsets.only(top: 14),
+                    child: _RelocationNotice(),
+                  ),
                 const SectionTitle('Perks & benefits'),
                 const Wrap(
                   spacing: 8,
@@ -500,6 +526,243 @@ class _JobDetailPageState extends State<JobDetailPage> {
               ),
             ),
     );
+  }
+}
+
+class _JobUrgentTag extends StatelessWidget {
+  const _JobUrgentTag();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFEF2F2),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: const AppText(
+      'Urgent hiring',
+      style: TextStyle(
+        color: Color(0xFFB91C1C),
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+}
+
+class _RelocationNotice extends StatelessWidget {
+  const _RelocationNotice();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFFEFF6FF),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(LucideIcons.circleCheck, color: Color(0xFF2563EB), size: 18),
+        SizedBox(width: 8),
+        Expanded(
+          child: AppText(
+            'Karigars from other cities who will move here can apply',
+            style: TextStyle(fontSize: 12.5, height: 1.35),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class JobRequirementsList extends StatelessWidget {
+  const JobRequirementsList({super.key, required this.rows});
+  final List<({String label, String value})> rows;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: context.surfaceColor,
+      border: Border.all(color: context.borderColor),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Column(
+      children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 116,
+                  child: AppText(
+                    rows[i].label,
+                    style: const TextStyle(color: muted, fontSize: 12),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    rows[i].value,
+                    style: const TextStyle(fontSize: 13, height: 1.35),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (i != rows.length - 1)
+            Divider(height: 1, color: context.borderColor),
+        ],
+      ],
+    ),
+  );
+}
+
+class JobRequirements {
+  static List<({String label, String value})> rows(
+    Job job, {
+    required bool hindi,
+  }) {
+    final data = job.details;
+    String text(String key) => data[key]?.toString().trim() ?? '';
+    List<String> list(String key) => (data[key] as List? ?? const [])
+        .map((value) => value.toString().trim())
+        .where((value) => value.isNotEmpty)
+        .toList();
+    String labelOr(
+      String labelKey,
+      String rawKey,
+      String Function(String) localize,
+    ) {
+      final raw = text(rawKey);
+      return hindi && raw.isNotEmpty ? localize(raw) : text(labelKey);
+    }
+
+    String days() {
+      final values = list('work_days');
+      if (!hindi) return text('work_days_label');
+      if (values.length == 7) return 'हर दिन';
+      const names = {
+        'mon': 'सोम',
+        'tue': 'मंगल',
+        'wed': 'बुध',
+        'thu': 'गुरु',
+        'fri': 'शुक्र',
+        'sat': 'शनि',
+        'sun': 'रवि',
+      };
+      return values
+          .map((value) => names[value.toLowerCase()] ?? value)
+          .join(', ');
+    }
+
+    String interview() {
+      final parts = [
+        text('interview_days_label'),
+        text('interview_hours_label'),
+      ].where((value) => value.isNotEmpty).toList();
+      var address = text('interview_address');
+      if (address.isEmpty && job.interviewMode != 'remote') address = job.city;
+      if (address.isNotEmpty) parts.add(address);
+      return parts.join(' · ');
+    }
+
+    final items = <({String label, String value})>[];
+    void add(String label, String value) {
+      if (value.isNotEmpty) items.add((label: label, value: value));
+    }
+
+    add(
+      'Job type',
+      labelOr(
+        'job_type_label',
+        'job_type',
+        (v) => v == 'part_time' ? 'पार्ट टाइम' : 'फ़ुल टाइम',
+      ),
+    );
+    add('Education', labelOr('education_label', 'education', _hindiEducation));
+    add('English', labelOr('english_label', 'english', _hindiEnglish));
+    add('Age', text('age_label'));
+    final languages = list('languages');
+    add('Languages', languages.join(', '));
+    final assets = hindi
+        ? list('assets').map(_hindiAsset).toList()
+        : list('asset_labels');
+    add('Must have', assets.join(', '));
+    add(
+      'Karigars from',
+      hindi ? _hindiReach(data, job.city) : text('reach_label'),
+    );
+    add('Working days', days());
+    add('Interview', interview());
+    add('Bonus / incentive', text('incentive_label'));
+    add('Other requirements', text('other_requirements'));
+    return items;
+  }
+
+  static bool relocationAllowed(Job job) =>
+      jsonBool(job.details['relocation_allowed']);
+
+  static String feeLabel(Job job) {
+    final data = job.details;
+    final rawFee =
+        data['worker_fee_label'] ??
+        data['worker_fee'] ??
+        data['worker_fee_amount'] ??
+        data['fee'];
+    final fee = rawFee is num
+        ? '₹${rawFee == rawFee.roundToDouble() ? rawFee.toInt() : rawFee}'
+        : rawFee?.toString().trim() ?? '';
+    final purpose = data['worker_fee_purpose_label']?.toString().trim() ?? '';
+    if (fee.isEmpty) return '';
+    return purpose.isEmpty
+        ? 'Joining fee: $fee'
+        : 'Joining fee: $fee · for $purpose';
+  }
+
+  static String _hindiEducation(String value) =>
+      const {
+        'below_10th': '10वीं से कम भी चलेगा',
+        'below 10th': '10वीं से कम भी चलेगा',
+        '10th': '10वीं पास या ऊपर',
+        '10th_pass': '10वीं पास या ऊपर',
+        '10th pass': '10वीं पास या ऊपर',
+        '12th': '12वीं पास या ऊपर',
+        '12th_pass': '12वीं पास या ऊपर',
+        '12th pass': '12वीं पास या ऊपर',
+        'iti_diploma': 'ITI / डिप्लोमा या ऊपर',
+        'iti / diploma': 'ITI / डिप्लोमा या ऊपर',
+        'graduate': 'ग्रेजुएट या ऊपर',
+        'post_graduate': 'पोस्ट ग्रेजुएट',
+        'post graduate': 'पोस्ट ग्रेजुएट',
+      }[value.toLowerCase()] ??
+      value;
+  static String _hindiEnglish(String value) =>
+      const {
+        'none': 'अंग्रेज़ी ज़रूरी नहीं',
+        'basic': 'थोड़ी अंग्रेज़ी',
+        'good': 'अच्छी अंग्रेज़ी',
+        'fluent': 'धाराप्रवाह अंग्रेज़ी',
+      }[value.toLowerCase()] ??
+      value;
+  static String _hindiAsset(String value) =>
+      const {
+        'aadhaar': 'आधार कार्ड',
+        'pan': 'पैन कार्ड',
+        'bank_account': 'बैंक खाता',
+        'smartphone': 'स्मार्टफ़ोन',
+        'bike': 'बाइक',
+        'driving_licence': 'ड्राइविंग लाइसेंस',
+        'own_tools': 'अपने औज़ार',
+        'certificate': 'ITI / ट्रेनिंग सर्टिफ़िकेट',
+      }[value.toLowerCase()] ??
+      value;
+  static String _hindiReach(Map<String, dynamic> data, String city) {
+    final reach = data['reach']?.toString();
+    if (reach == 'nearby') return '${data['reach_km'] ?? 10} किमी के अंदर';
+    if (reach == 'city') return '${city.isEmpty ? 'शहर' : city} में कहीं से भी';
+    return data['reach_label']?.toString() ?? '';
   }
 }
 

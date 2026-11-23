@@ -217,6 +217,29 @@ class RatingModel {
   );
 }
 
+class AccountDeletionSummary {
+  const AccountDeletionSummary({
+    required this.canDelete,
+    required this.applications,
+    required this.warnings,
+    this.blockedMessage,
+  });
+
+  final bool canDelete;
+  final int applications;
+  final List<String> warnings;
+  final String? blockedMessage;
+
+  factory AccountDeletionSummary.fromJson(Json json) => AccountDeletionSummary(
+    canDelete: jsonBool(json['can_delete']),
+    applications: jsonInt(json['applications']),
+    warnings: jsonList(
+      json['warnings'],
+    ).map((item) => item.toString()).toList(),
+    blockedMessage: json['blocked_message']?.toString(),
+  );
+}
+
 class EmployerModel {
   const EmployerModel({
     required this.id,
@@ -253,9 +276,10 @@ class ApiJobModel {
     this.experienceLabel = '',
     this.shiftHoursLabel = '',
     this.workMode = 'on_site',
-    this.workModeLabel = 'On-site',
+    this.workModeLabel = 'At workplace / Site',
     this.interviewMode = 'on_site',
     this.interviewModeLabel = 'Interview in person',
+    this.details = const {},
   });
   final double? distanceKm;
   final String experienceLabel, shiftHoursLabel;
@@ -266,6 +290,10 @@ class ApiJobModel {
   final double? latitude, longitude;
   final List<String> skills;
   final EmployerModel employer;
+
+  /// Additional job fields returned by the API. Kept intact because detail
+  /// labels are locale-specific and are composed by the presentation layer.
+  final Map<String, dynamic> details;
   factory ApiJobModel.fromJson(Json json) => ApiJobModel(
     id: jsonInt(json['id']),
     title: json['title']?.toString() ?? '',
@@ -294,6 +322,7 @@ class ApiJobModel {
       json['interview_mode_label'],
       jobModeValue(json['interview_mode'], fallback: 'on_site'),
     ),
+    details: Map<String, dynamic>.from(json),
   );
 }
 
@@ -307,8 +336,8 @@ String jobModeLabel(dynamic label, String mode) {
   if (value != null && value.isNotEmpty) return value;
   return switch (mode) {
     'remote' => 'Work from home',
-    'both' => 'On-site or from home',
-    _ => 'On-site',
+    'both' => 'Both (Site & Home)',
+    _ => 'At workplace / Site',
   };
 }
 

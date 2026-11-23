@@ -48,8 +48,15 @@ class AuthService {
   }
 
   Future<void> deleteAccount() async {
+    // Keep the current session intact if the server refuses deletion (for
+    // example, for the shared test account).
+    await _api.delete('${ApiConstants.account}?confirm=1', {'confirm': true});
     await PushNotificationService.instance.unregisterToken();
-    await _api.delete(ApiConstants.account, {'confirm': true});
     await _api.setToken(null);
   }
+
+  Future<AccountDeletionSummary> deletionSummary() async =>
+      AccountDeletionSummary.fromJson(
+        await _api.get(ApiConstants.accountDeletion),
+      );
 }

@@ -84,27 +84,19 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _deleteAccount() async {
-    final confirmed = await showDialog<bool>(
+    AccountDeletionSummary? summary;
+    try {
+      summary = await AuthService().deletionSummary();
+    } on ApiException {
+      // The preview endpoint is optional. Deletion remains available if an
+      // older server has not deployed it yet.
+    }
+    if (!mounted) return;
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const AppText('Delete account permanently?'),
-        content: const AppText(
-          'Your profile and account data will be permanently deleted. This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const AppText('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE11D48),
-            ),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const AppText('Delete account'),
-          ),
-        ],
-      ),
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => _DeleteAccountSheet(summary: summary),
     );
     if (confirmed != true) return;
     try {
@@ -270,6 +262,114 @@ class _SettingsPageState extends State<SettingsPage> {
       ],
     ),
   );
+}
+
+class _DeleteAccountSheet extends StatelessWidget {
+  const _DeleteAccountSheet({this.summary});
+
+  final AccountDeletionSummary? summary;
+
+  List<String> _warnings() {
+    // Server warnings are English. Keep this important confirmation readable
+    // for the app's Hindi/Hinglish default as well.
+    if (selectedLanguageCode.value == 'hi') {
+      final applications = summary?.applications ?? 0;
+      return [
+        if (applications > 0)
+          'Aapke $applications job application${applications == 1 ? '' : 's'} delete ho jayenge.',
+        'Aapka profile, messages aur documents delete ho jayenge. Aap sabhi devices se sign out ho jayenge. Yeh wapas nahi ho sakta.',
+      ];
+    }
+    return summary?.warnings.isNotEmpty == true
+        ? summary!.warnings
+        : const [
+            'Your profile, messages and documents will be deleted, and you will be signed out everywhere. This cannot be undone.',
+          ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canDelete = summary?.canDelete ?? true;
+    final blockedMessage = summary?.blockedMessage?.trim();
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(LucideIcons.triangleAlert, color: Color(0xFFE11D48)),
+                SizedBox(width: 10),
+                AppText(
+                  'Delete account permanently?',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (!canDelete && blockedMessage?.isNotEmpty == true)
+              AppText(blockedMessage!, style: const TextStyle(height: 1.45))
+            else ...[
+              const AppText(
+                'This is what will happen:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 10),
+              ..._warnings().map(
+                (warning) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 7),
+                        child: Icon(
+                          Icons.circle,
+                          size: 6,
+                          color: Color(0xFFE11D48),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: AppText(
+                          warning,
+                          style: const TextStyle(height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            if (canDelete)
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE11D48),
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const AppText('Delete account'),
+                ),
+              ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: AppText(canDelete ? 'Cancel' : 'Close'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class LegalDocumentsPage extends StatefulWidget {

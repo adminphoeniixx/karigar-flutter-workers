@@ -17,11 +17,12 @@ class Job {
     this.experienceLabel = '',
     this.shiftHoursLabel = '',
     this.workMode = 'on_site',
-    this.workModeLabel = 'On-site',
+    this.workModeLabel = 'At workplace / Site',
     this.interviewMode = 'on_site',
     this.interviewModeLabel = 'Interview in person',
     this.latitude,
     this.longitude,
+    this.details = const {},
   });
   final bool employerVerified;
   final double? distanceKm;
@@ -29,6 +30,7 @@ class Job {
   final String workMode, workModeLabel, interviewMode, interviewModeLabel;
   final int id;
   final double? latitude, longitude;
+  final Map<String, dynamic> details;
   final String title, category, employer, city, wage, rating, description;
   final int openings;
   final List<String> skills;
@@ -63,6 +65,7 @@ class Job {
       ),
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      details: Map<String, dynamic>.from(json),
     );
   }
 
@@ -87,7 +90,13 @@ class Job {
     interviewModeLabel: job.interviewModeLabel,
     latitude: job.latitude,
     longitude: job.longitude,
+    details: job.details,
   );
+
+  bool get isPartTime => details['job_type']?.toString() == 'part_time';
+  bool get isUrgent =>
+      jsonBool(details['urgent']) ||
+      details['hiring_urgency']?.toString() == 'immediate';
 }
 
 const jobs = [

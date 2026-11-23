@@ -965,9 +965,14 @@ class JobCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Tag(job.category),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          Tag(job.category),
+                          if (job.isPartTime) const Tag('Part time'),
+                          if (job.isUrgent) const _UrgentTag(),
+                        ],
                       ),
                     ),
                     if (trailing != null) const SizedBox(width: 8),
@@ -1021,6 +1026,27 @@ class JobCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    ),
+  );
+}
+
+class _UrgentTag extends StatelessWidget {
+  const _UrgentTag();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFEF2F2),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: const AppText(
+      'Urgent hiring',
+      style: TextStyle(
+        color: Color(0xFFB91C1C),
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
       ),
     ),
   );
