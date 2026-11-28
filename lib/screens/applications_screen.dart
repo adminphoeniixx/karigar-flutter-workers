@@ -457,16 +457,17 @@ class _ApiApplicationCard extends StatelessWidget {
         application.trackingSteps.any(
           (step) => step.key == 'shortlisted' && step.state == 'done',
         );
+    final dark = context.isDark;
     final color = accepted || shortlisted
-        ? const Color(0xFF047857)
+        ? (dark ? const Color(0xFF8FB487) : const Color(0xFF3F5C3A))
         : pending
-        ? const Color(0xFFB45309)
-        : const Color(0xFFE11D48);
+        ? (dark ? const Color(0xFFE0B36A) : const Color(0xFF9A6413))
+        : (dark ? const Color(0xFFF2A39E) : const Color(0xFFB3261E));
     final background = accepted || shortlisted
-        ? const Color(0xFFECFDF5)
+        ? context.greenTint
         : pending
-        ? const Color(0xFFFFF7ED)
-        : const Color(0xFFFFF1F2);
+        ? context.amberTint
+        : (dark ? const Color(0xFF3A1D1B) : const Color(0xFFFDECEB));
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Align(
@@ -492,7 +493,8 @@ class _ApiApplicationCard extends StatelessWidget {
                         builder: (_) => JobDetailPage(Job.fromApi(job)),
                       ),
                     ),
-              child: AppCard(
+              child: _StripeCard(
+                color: color,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -654,6 +656,47 @@ class _ApiApplicationCard extends StatelessWidget {
   }
 }
 
+/// [AppCard] with a status-coloured stripe down the left edge.
+class _StripeCard extends StatelessWidget {
+  const _StripeCard({required this.color, required this.child});
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      color: context.surfaceColor,
+      border: Border.all(color: context.borderColor),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x0D101828),
+          blurRadius: 24,
+          offset: Offset(0, 8),
+        ),
+      ],
+    ),
+    // A Stack, not IntrinsicHeight: the action buttons use a LayoutBuilder,
+    // which cannot report an intrinsic height.
+    child: Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
+          child: child,
+        ),
+        PositionedDirectional(
+          start: 0,
+          top: 0,
+          bottom: 0,
+          width: 5,
+          child: ColoredBox(color: color),
+        ),
+      ],
+    ),
+  );
+}
+
 class _ResponsiveApplicationActions extends StatelessWidget {
   const _ResponsiveApplicationActions({
     required this.first,
@@ -746,106 +789,145 @@ class _ApplicationTracker extends StatelessWidget {
     'decision': 'Decision',
   };
 
+  // One row: a dot per step joined by lines, the label under each. The old
+  // vertical list took a third of the screen for four words.
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      border: Border.all(color: context.borderColor),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const AppText(
-          'Application status',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-        ),
-        const SizedBox(height: 10),
-        ...steps.indexed.map((entry) {
-          final index = entry.$1;
-          final step = entry.$2;
-          final done = step.state == 'done' || applicationStatus == 'accepted';
-          final current =
-              step.state == 'current' && applicationStatus != 'accepted';
-          final rejected =
-              step.state == 'rejected' && applicationStatus != 'accepted';
-          final activeColor = rejected
-              ? const Color(0xFFE11D48)
-              : done
-              ? const Color(0xFF10B981)
-              : current
-              ? brand
-              : muted;
-          var label = labels[step.key] ?? step.key;
-          if (step.key == 'decision' && applicationStatus == 'accepted') {
-            label = 'Selected 🎉';
-          }
-          if (step.key == 'decision' && step.result?.isNotEmpty == true) {
-            label = switch (step.result) {
-              'accepted' => 'Selected 🎉',
-              'rejected' => 'Not selected',
-              'withdrawn' => 'Withdrawn',
-              _ =>
-                '${step.result![0].toUpperCase()}${step.result!.substring(1)}',
-            };
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
+  Widget build(BuildContext context) {
+    final green = context.isDark
+        ? const Color(0xFF8FB487)
+        : const Color(0xFF3F5C3A);
+    const rose = Color(0xFFB3261E);
+    final items = steps.map((step) {
+      final done = step.state == 'done' || applicationStatus == 'accepted';
+      final current =
+          step.state == 'current' && applicationStatus != 'accepted';
+      final rejected =
+          step.state == 'rejected' && applicationStatus != 'accepted';
+      final color = rejected
+          ? rose
+          : done
+          ? green
+          : current
+          ? context.brandText
+          : context.borderColor;
+      var label = labels[step.key] ?? step.key;
+      if (step.key == 'decision' && applicationStatus == 'accepted') {
+        label = 'Selected 🎉';
+      }
+      if (step.key == 'decision' && step.result?.isNotEmpty == true) {
+        label = switch (step.result) {
+          'accepted' => 'Selected 🎉',
+          'rejected' => 'Not selected',
+          'withdrawn' => 'Withdrawn',
+          _ => '${step.result![0].toUpperCase()}${step.result!.substring(1)}',
+        };
+      }
+      return (
+        done: done,
+        current: current,
+        rejected: rejected,
+        color: color,
+        label: label,
+      );
+    }).toList();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 9),
+      decoration: BoxDecoration(
+        color: context.subduedColor.withValues(alpha: .45),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < items.length; i++)
+            Expanded(
+              child: Column(
                 children: [
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: done || current || rejected
-                          ? activeColor
-                          : Colors.transparent,
-                      border: Border.all(color: activeColor, width: 2),
-                    ),
-                    child: Icon(
-                      rejected
-                          ? Icons.close
-                          : done
-                          ? Icons.check
-                          : current
-                          ? Icons.circle
-                          : null,
-                      size: 12,
-                      color: Colors.white,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: i == 0
+                            ? const SizedBox.shrink()
+                            : Container(
+                                height: 2.5,
+                                color:
+                                    items[i].done ||
+                                        items[i].current ||
+                                        items[i].rejected
+                                    ? items[i - 1].color
+                                    : context.borderColor,
+                              ),
+                      ),
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color:
+                              items[i].done ||
+                                  items[i].current ||
+                                  items[i].rejected
+                              ? items[i].color
+                              : context.surfaceColor,
+                          border: Border.all(color: items[i].color, width: 2),
+                        ),
+                        child: Icon(
+                          items[i].rejected
+                              ? Icons.close
+                              : items[i].done
+                              ? Icons.check
+                              : items[i].current
+                              ? Icons.circle
+                              : null,
+                          size: items[i].current ? 8 : 13,
+                          color: context.isDark && items[i].done
+                              ? const Color(0xFF17120F)
+                              : Colors.white,
+                        ),
+                      ),
+                      Expanded(
+                        child: i == items.length - 1
+                            ? const SizedBox.shrink()
+                            : Container(
+                                height: 2.5,
+                                color:
+                                    items[i + 1].done ||
+                                        items[i + 1].current ||
+                                        items[i + 1].rejected
+                                    ? items[i].color
+                                    : context.borderColor,
+                              ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: AppText(
+                      items[i].label,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.15,
+                        fontWeight: items[i].current || items[i].rejected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        color:
+                            items[i].done ||
+                                items[i].current ||
+                                items[i].rejected
+                            ? items[i].color
+                            : context.mutedText,
+                      ),
                     ),
                   ),
-                  if (index < steps.length - 1)
-                    Container(
-                      width: 2,
-                      height: 22,
-                      color: done ? activeColor : context.borderColor,
-                    ),
                 ],
               ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 1),
-                  child: AppText(
-                    label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: done
-                          ? activeColor
-                          : step.state == 'upcoming' || step.state == 'skipped'
-                          ? muted
-                          : activeColor,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        }),
-      ],
-    ),
-  );
+            ),
+        ],
+      ),
+    );
+  }
 }

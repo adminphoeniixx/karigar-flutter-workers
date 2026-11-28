@@ -1056,109 +1056,269 @@ class JobCard extends StatelessWidget {
     if (applied == true) onApplied?.call();
   }
 
+  // A stripe down the left (red for urgent jobs), the pay as a bold pill
+  // with an arrow button beside it, and the distance highlighted: what a
+  // karigar scans a list for first.
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap ?? () => _openDetail(context),
-          child: AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final incentive = JobRequirements.incentiveLabel(
+      job,
+      language: selectedLanguageCode.value,
+    );
+    final stripe = job.isUrgent ? const Color(0xFFB3261E) : brand;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: context.surfaceColor,
+              border: Border.all(color: context.borderColor),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0D101828),
+                  blurRadius: 24,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap ?? () => _openDetail(context),
+                // A Stack, not IntrinsicHeight, so any trailing widget is safe.
+                child: Stack(
                   children: [
-                    Expanded(
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 13, 13, 13),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Tag(
-                            job.category.trim().isEmpty
-                                ? 'Other'
-                                : job.category,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: [
+                                    Tag(
+                                      job.category.trim().isEmpty
+                                          ? 'Other'
+                                          : job.category,
+                                    ),
+                                    if (job.isUrgent) const _UrgentTag(),
+                                  ],
+                                ),
+                              ),
+                              if (trailing != null) const SizedBox(width: 8),
+                              ?trailing,
+                            ],
                           ),
-                          if (job.isUrgent) const _UrgentTag(),
+                          const SizedBox(height: 8),
+                          AppText(
+                            job.title,
+                            style: const TextStyle(
+                              fontSize: 16.5,
+                              height: 1.2,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -.2,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: AppText(
+                                  job.employer,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: context.mutedText,
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                              ),
+                              if (job.employerVerified) ...[
+                                const SizedBox(width: 6),
+                                const VerifiedEmployerBadge(),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 7,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              if (job.distanceKm != null)
+                                _JobPill(
+                                  icon: LucideIcons.navigation,
+                                  label: context.trArgs('{distance} km away', {
+                                    'distance': formatKm(job.distanceKm!),
+                                  }),
+                                  strong: true,
+                                ),
+                              _JobPill(
+                                icon: LucideIcons.mapPin,
+                                label: job.city,
+                              ),
+                              if (job.workMode == 'remote' ||
+                                  job.workMode == 'both')
+                                _JobPill(
+                                  icon: LucideIcons.house,
+                                  label: job.workModeLabel,
+                                ),
+                              _JobPill(
+                                icon: LucideIcons.usersRound,
+                                label: context.trArgs(
+                                  job.openings == 1
+                                      ? '{count} opening'
+                                      : '{count} openings',
+                                  {'count': '${job.openings}'},
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 11),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Align(
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: context.greenTint,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          LucideIcons.indianRupee,
+                                          size: 14,
+                                          color: context.isDark
+                                              ? const Color(0xFFA9C7A2)
+                                              : const Color(0xFF3F5C3A),
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Flexible(
+                                          child: AppText(
+                                            job.wage,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: context.isDark
+                                                  ? const Color(0xFFA9C7A2)
+                                                  : const Color(0xFF3F5C3A),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: const BoxDecoration(
+                                  color: brand,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  LucideIcons.arrowRight,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (incentive.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: AppText(
+                                incentive,
+                                style: TextStyle(
+                                  color: context.mutedText,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                    if (trailing != null) const SizedBox(width: 8),
-                    ?trailing,
-                  ],
-                ),
-                const SizedBox(height: 9),
-                AppText(
-                  job.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -.2,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                AppText(
-                  job.employer,
-                  style: const TextStyle(color: muted, fontSize: 12),
-                ),
-                if (job.employerVerified)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: VerifiedEmployerBadge(),
-                  ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 7,
-                  children: [
-                    Meta(LucideIcons.mapPin, job.city),
-                    if (job.workMode == 'remote' || job.workMode == 'both')
-                      Meta(LucideIcons.house, job.workModeLabel),
-                    if (job.distanceKm != null)
-                      Meta(
-                        LucideIcons.navigation,
-                        context.trArgs('{distance} km away', {
-                          'distance': formatKm(job.distanceKm!),
-                        }),
-                      ),
-                    Meta(
-                      LucideIcons.usersRound,
-                      context.trArgs(
-                        job.openings == 1
-                            ? '{count} opening'
-                            : '{count} openings',
-                        {'count': '${job.openings}'},
-                      ),
+                    PositionedDirectional(
+                      start: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 5,
+                      child: ColoredBox(color: stripe),
                     ),
                   ],
                 ),
-                const SizedBox(height: 9),
-                Meta(LucideIcons.indianRupee, job.wage, bold: true),
-                if (JobRequirements.incentiveLabel(
-                  job,
-                  language: selectedLanguageCode.value,
-                ).isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: AppText(
-                      JobRequirements.incentiveLabel(
-                        job,
-                        language: selectedLanguageCode.value,
-                      ),
-                      style: const TextStyle(color: muted, fontSize: 12),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+/// One detail on a job card. [strong] (the distance) gets the brand tint.
+class _JobPill extends StatelessWidget {
+  const _JobPill({
+    required this.icon,
+    required this.label,
+    this.strong = false,
+  });
+  final IconData icon;
+  final String label;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = strong ? context.brandText : context.mutedText;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: strong ? context.brandTint : Colors.transparent,
+        border: Border.all(
+          color: strong ? context.brandTintBorder : context.borderColor,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Flexible(
+            child: AppText(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: strong ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _UrgentTag extends StatelessWidget {

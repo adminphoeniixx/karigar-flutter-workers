@@ -437,23 +437,17 @@ class _HomeTabState extends State<HomeTab> {
                   onAvailability: _setAvailability,
                 ),
                 const SizedBox(height: 10),
+                // Find jobs and Applied already have their own tabs (and
+                // Applied is in the strip below), so only the two pages
+                // without a tab get a shortcut here.
                 Row(
                   children: [
-                    _QuickAction(
-                      LucideIcons.search,
-                      context.tr('Find jobs'),
-                      widget.onBrowse,
-                    ),
-                    _QuickAction(
-                      LucideIcons.clipboardCheck,
-                      context.tr('Applied'),
-                      () => _openPage(const ApplicationsTab()),
-                    ),
                     _QuickAction(
                       LucideIcons.bookmark,
                       context.tr('Saved Jobs'),
                       () => _openPage(const SavedPage()),
                     ),
+                    const SizedBox(width: 8),
                     _QuickAction(
                       LucideIcons.fileText,
                       context.tr('My Resume'),
@@ -466,7 +460,7 @@ class _HomeTabState extends State<HomeTab> {
                   stats: [
                     _HomeStat(
                       icon: LucideIcons.send,
-                      color: const Color(0xFF047857),
+                      color: const Color(0xFF3F5C3A),
                       value: stats['applications']?.toString() ?? '0',
                       label: context.tr('Applied'),
                       onTap: () => _openPage(const ApplicationsTab()),
@@ -478,7 +472,7 @@ class _HomeTabState extends State<HomeTab> {
                       _kycStat(),
                     _HomeStat(
                       icon: LucideIcons.userRoundCheck,
-                      color: const Color(0xFF4F46E5),
+                      color: brand,
                       value: '$completion%',
                       label: context.tr('Profile'),
                       onTap: widget.onProfile,
@@ -795,38 +789,55 @@ class _QuickAction extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
+  /// A slim pill (icon, label, arrow) so the job list starts higher.
   @override
   Widget build(BuildContext context) => Expanded(
-    child: InkWell(
+    child: Material(
+      color: context.surfaceColor,
       borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: context.brandTint,
-                borderRadius: BorderRadius.circular(13),
-                border: Border.all(color: context.borderColor),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.fromLTRB(8, 6, 10, 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: context.borderColor),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: context.brandTint,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: context.brandText, size: 17),
               ),
-              child: Icon(icon, color: brand, size: 19),
-            ),
-            const SizedBox(height: 5),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: AppText(
-                label,
-                maxLines: 1,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: 8),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: AppText(
+                    label,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ],
+              Icon(
+                LucideIcons.chevronRight,
+                size: 16,
+                color: context.mutedText,
+              ),
+            ],
+          ),
         ),
       ),
     ),

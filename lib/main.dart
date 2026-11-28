@@ -367,6 +367,17 @@ extension AppThemeColors on BuildContext {
       isDark ? const Color(0xFF1D2C1B) : const Color(0xFFEEF4EC);
   Color get subduedColor =>
       isDark ? const Color(0xFF2B251F) : const Color(0xFFECE5DA);
+
+  /// [brand] as text or an icon: lightened in dark mode, where the deep
+  /// orange is hard to read on the dark surface.
+  Color get brandText => isDark ? const Color(0xFFFFB39A) : brand;
+
+  /// The border that goes with [brandTint].
+  Color get brandTintBorder =>
+      isDark ? const Color(0xFF68402F) : const Color(0xFFF4C3AD);
+
+  /// Secondary text that stays readable in dark mode ([muted] is light-only).
+  Color get mutedText => Theme.of(this).colorScheme.onSurfaceVariant;
 }
 
 class KarigarApp extends StatelessWidget {
