@@ -114,10 +114,11 @@ class _KycPageState extends State<KycPage> {
       return;
     }
     setState(() {
-      if (alternate)
+      if (alternate) {
         draft.alternateFile = file;
-      else
+      } else {
         draft.file = file;
+      }
     });
   }
 
@@ -140,10 +141,12 @@ class _KycPageState extends State<KycPage> {
         }
         fields['${key}_missing'] = '1';
         fields['${key}_alt_type'] = draft.alternate!;
-        if (draft.alternateNumber.text.trim().isNotEmpty)
+        if (draft.alternateNumber.text.trim().isNotEmpty) {
           fields['${key}_alt_number'] = draft.alternateNumber.text.trim();
-        if (draft.alternateFile != null)
+        }
+        if (draft.alternateFile != null) {
           files['${key}_alt_doc'] = draft.alternateFile!;
+        }
       } else {
         final number = draft.number.text
             .trim()
@@ -195,6 +198,7 @@ class _KycPageState extends State<KycPage> {
           returnPrefix.isEmpty) {
         throw ApiException('DigiLocker could not be started.', statusCode: 0);
       }
+      if (!mounted) return;
       final completed = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
           builder: (_) => DigiLockerWebViewPage(
@@ -311,8 +315,12 @@ class _KycPageState extends State<KycPage> {
                   ),
                 ),
               ],
+              // Not for an account already verified (or waiting) through
+              // the typed Aadhaar or an admin: that showed both buttons
+              // under "Verified".
               if (digilocker?.available == true &&
-                  digilocker?.verified != true) ...[
+                  digilocker?.verified != true &&
+                  (existing == null || existing!.status == 'rejected')) ...[
                 const SizedBox(height: 16),
                 PrimaryButton(
                   'Verify with DigiLocker',
@@ -384,7 +392,7 @@ class _KycPageState extends State<KycPage> {
             ),
           ] else ...[
             DropdownButtonFormField<String>(
-              value: draft.alternate,
+              initialValue: draft.alternate,
               hint: AppText(context.tr('Document you have')),
               items: draft.definition.alternates
                   .map(

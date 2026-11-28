@@ -460,10 +460,14 @@ class ApplicationModel {
     this.interview,
     this.offer,
     this.canReview = true,
+    this.jobClosed = false,
   });
   final int id;
   final String status, statusLabel, createdAgo;
   final ApiJobModel? job;
+
+  /// The employer closed the job, or it ran past its end date.
+  final bool jobClosed;
   final String? statusChangedAt;
   final List<TrackingStepModel> trackingSteps;
   final InterviewModel? interview;
@@ -487,6 +491,7 @@ class ApplicationModel {
         ? OfferModel.fromJson(jsonMap(json['offer']))
         : null,
     canReview: jsonBool(json['can_review']),
+    jobClosed: json['job'] is Map && jsonBool(jsonMap(json['job'])['closed']),
   );
 }
 
@@ -509,13 +514,29 @@ class OfferModel {
     required this.wage,
     required this.startDate,
     required this.message,
+    this.wageLabel = '',
+    this.startDateLabel = '',
+    this.address = '',
+    this.contactName = '',
+    this.contactPhone = '',
   });
   final double wage;
   final String startDate, message;
+
+  /// Ready to show: "₹24,700 / month", "27 Nov 2026". Empty when the hire
+  /// came without them (older hires), so the card skips the line instead of
+  /// printing "₹0 /month •".
+  final String wageLabel, startDateLabel;
+  final String address, contactName, contactPhone;
   factory OfferModel.fromJson(Json j) => OfferModel(
     wage: jsonDouble(j['wage']),
     startDate: j['start_date']?.toString() ?? '',
     message: j['message']?.toString() ?? '',
+    wageLabel: j['wage_label']?.toString() ?? '',
+    startDateLabel: j['start_date_label']?.toString() ?? '',
+    address: j['address']?.toString() ?? '',
+    contactName: j['contact_name']?.toString() ?? '',
+    contactPhone: j['contact_phone']?.toString() ?? '',
   );
 }
 
@@ -567,7 +588,12 @@ class ConversationModel {
   final ApiJobModel? job;
   factory ConversationModel.fromJson(Json j) => ConversationModel(
     id: jsonInt(j['id']),
-    otherParty: jsonMap(j['other_party'])['name']?.toString() ?? 'Employer',
+    // The server sends the other person as `participant`; reading only
+    // `other_party` showed "Employer" on every chat.
+    otherParty:
+        (jsonMap(j['participant'])['name'] ?? jsonMap(j['other_party'])['name'])
+            ?.toString() ??
+        'Employer',
     unread: jsonInt(j['unread']),
     lastMessageAt: j['last_message_at']?.toString() ?? '',
     job: j['job'] is Map ? ApiJobModel.fromJson(jsonMap(j['job'])) : null,
@@ -613,14 +639,21 @@ class ConversationPageModel {
   const ConversationPageModel({
     required this.conversations,
     required this.unreadTotal,
+    this.pagination = const PaginationModel(
+      currentPage: 1,
+      lastPage: 1,
+      total: 0,
+    ),
   });
   final List<ConversationModel> conversations;
   final int unreadTotal;
+  final PaginationModel pagination;
   factory ConversationPageModel.fromJson(Json j) => ConversationPageModel(
     conversations: jsonList(
       j['conversations'] ?? j['data'],
     ).map((e) => ConversationModel.fromJson(jsonMap(e))).toList(),
     unreadTotal: jsonInt(j['unread_total']),
+    pagination: PaginationModel.fromJson(jsonMap(j['meta'])),
   );
 }
 
@@ -628,11 +661,20 @@ class ConversationDetailModel {
   const ConversationDetailModel({
     required this.conversation,
     required this.messages,
+    this.pagination = const PaginationModel(
+      currentPage: 1,
+      lastPage: 1,
+      total: 0,
+    ),
   });
   final ConversationModel conversation;
   final List<MessageModel> messages;
+
+  /// Page 1 holds the newest messages; higher pages are older ones.
+  final PaginationModel pagination;
   factory ConversationDetailModel.fromJson(Json j, {int? currentUserId}) =>
       ConversationDetailModel(
+        pagination: PaginationModel.fromJson(jsonMap(j['meta'])),
         conversation: ConversationModel.fromJson(jsonMap(j['conversation'])),
         messages:
             jsonList(

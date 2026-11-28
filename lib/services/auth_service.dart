@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'meta_events_service.dart';
 import '../constants/api_constants.dart';
 import '../models/api_models.dart';
 import 'api_client.dart';
 import 'push_notification_service.dart';
+import 'worker_api_service.dart';
 
 class AuthService {
   AuthService([ApiClient? client]) : _api = client ?? ApiClient.instance;
@@ -28,6 +30,7 @@ class AuthService {
       );
     }
     await _api.setToken(result.token);
+    WorkerApiService.forgetCurrentUser();
     await PushNotificationService.instance.syncToken();
     unawaited(MetaEventsService.instance.login());
     return result;
@@ -38,12 +41,17 @@ class AuthService {
   );
   Future<MeModel> fetchMe() async =>
       MeModel.fromJson(await _api.get(ApiConstants.me));
+  /// Always signs out on this phone. Without internet the server session
+  /// can't be closed, but the worker must not be left half signed in.
   Future<void> logout() async {
     try {
       await PushNotificationService.instance.unregisterToken();
       await _api.post(ApiConstants.logout);
+    } on ApiException catch (error) {
+      debugPrint('[AUTH] Server logout failed: ${error.message}');
     } finally {
       await _api.setToken(null);
+      WorkerApiService.forgetCurrentUser();
     }
   }
 

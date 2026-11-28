@@ -47,7 +47,7 @@ class FeedApi extends WorkerApiService {
     Map<String, dynamic>? filters,
     int? page,
   }) async {
-    requests.add({...?filters, if (page != null) 'page': page});
+    requests.add({...?filters, 'page': ?page});
     final search = filters?['q'] != null;
     return JobPageModel.fromJson({
       'data': [jobJson()],

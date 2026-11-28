@@ -187,10 +187,11 @@ class _JobDetailPageState extends State<JobDetailPage> {
         ),
       );
     } on ApiException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(error.message)));
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -216,6 +217,10 @@ class _JobDetailPageState extends State<JobDetailPage> {
   Widget build(BuildContext context) {
     final j = detailJob ?? widget.job;
     final needsKyc = verification?.canApply == false;
+    final perks = (j.details['perks'] as List? ?? const [])
+        .map((perk) => '$perk'.trim())
+        .where((perk) => perk.isNotEmpty)
+        .toList();
     final requirements = JobRequirements.rows(
       j,
       language: selectedLanguageCode.value,
@@ -254,7 +259,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    Tag(j.category),
+                    // "Other (not in the list)" jobs have no category; the
+                    // tag was an empty pink pill.
+                    Tag(j.category.trim().isEmpty ? 'Other' : j.category),
                     if (j.isUrgent) const _JobUrgentTag(),
                   ],
                 ),
@@ -268,7 +275,10 @@ class _JobDetailPageState extends State<JobDetailPage> {
                 ),
                 const SizedBox(height: 4),
                 AppText(
-                  '${j.employer} · ★ ${employerRating.average.toStringAsFixed(1)} (${context.trArgs('{count} reviews', {'count': '${employerRating.count}'})})',
+                  // No reviews yet: just the name, not "★ 0.0 (0 reviews)".
+                  employerRating.count == 0
+                      ? j.employer
+                      : '${j.employer} · ★ ${employerRating.average.toStringAsFixed(1)} (${context.trArgs(employerRating.count == 1 ? '{count} review' : '{count} reviews', {'count': '${employerRating.count}'})})',
                   style: const TextStyle(color: muted, fontSize: 12),
                 ),
                 if (j.employerVerified)
@@ -281,7 +291,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                     padding: const EdgeInsets.only(top: 6),
                     child: AppText(
                       context.trArgs('{distance} km away', {
-                        'distance': j.distanceKm!.toStringAsFixed(1),
+                        'distance': formatKm(j.distanceKm!),
                       }),
                     ),
                   ),
@@ -318,57 +328,55 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final cardWidth = (constraints.maxWidth - 12) / 2;
-                    return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        SizedBox(
-                          width: cardWidth,
-                          child: _WageStat(
-                            wage: j.wage,
-                            incentive: JobRequirements.incentiveLabel(
-                              j,
-                              language: selectedLanguageCode.value,
-                            ),
-                          ),
+                // Wage gets the full width: in a half-width tile a range
+                // broke as "₹25,000 –" / "₹30,000 /" / "monthly".
+                _WageStat(
+                  wage: j.wage,
+                  incentive: JobRequirements.incentiveLabel(
+                    j,
+                    language: selectedLanguageCode.value,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: MiniStat(
+                          'Openings',
+                          context.trArgs('{count} needed', {
+                            'count': '${j.openings}',
+                          }),
                         ),
-                        SizedBox(
-                          width: cardWidth,
-                          child: MiniStat(
-                            'Openings',
-                            context.trArgs('{count} needed', {
-                              'count': '${j.openings}',
-                            }),
-                          ),
-                        ),
-                        SizedBox(
-                          width: cardWidth,
-                          child: MiniStat('Location', j.city),
-                        ),
-                      ],
-                    );
-                  },
+                      ),
+                      const SizedBox(width: 12),
+                      // A full street address needs more than three lines here.
+                      Expanded(
+                        child: MiniStat('Location', j.city, maxLines: 6),
+                      ),
+                    ],
+                  ),
                 ),
                 if (contactPhone?.isNotEmpty == true &&
                     contactName?.isNotEmpty == true)
+                  // Labelled: a bare "kaushal · Manager" read like stray text.
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      [contactName, contactDesignation]
-                          .whereType<String>()
-                          .where((value) => value.trim().isNotEmpty)
-                          .join(' · '),
+                    child: Meta(
+                      LucideIcons.userRound,
+                      '${context.tr('Contact')}: ${[contactName, contactDesignation].whereType<String>().where((value) => value.trim().isNotEmpty).join(' · ')}',
                     ),
                   ),
                 const SectionTitle('Job description'),
                 Text(
                   j.description,
-                  style: const TextStyle(
+                  // Was a fixed dark grey: unreadable on the dark theme.
+                  style: TextStyle(
                     height: 1.55,
-                    color: Color(0xFF374151),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: .82),
                   ),
                 ),
                 const SectionTitle('Skills required'),
@@ -386,11 +394,16 @@ class _JobDetailPageState extends State<JobDetailPage> {
                     padding: EdgeInsets.only(top: 14),
                     child: _RelocationNotice(),
                   ),
-                const SectionTitle('Perks & benefits'),
-                const Wrap(
-                  spacing: 8,
-                  children: [Tag('Food'), Tag('Accommodation')],
-                ),
+                // The employer's own perks. This used to be a fixed
+                // "Food, Accommodation" on every job.
+                if (perks.isNotEmpty) ...[
+                  const SectionTitle('Perks & benefits'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: perks.map(Tag.new).toList(),
+                  ),
+                ],
                 const SectionTitle('Location'),
                 Semantics(
                   button: true,
@@ -492,21 +505,29 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       ),
                     Row(
                       children: [
-                        SizedBox(
-                          width: 52,
-                          height: 50,
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                        // Only when the employer shares a number: on an
+                        // "apply in the app" job the button just said the
+                        // number was not available.
+                        if (contactPhone?.trim().isNotEmpty == true) ...[
+                          SizedBox(
+                            width: 52,
+                            height: 50,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              onPressed: _callEmployer,
+                              child: const Icon(
+                                LucideIcons.phone,
+                                color: brand,
                               ),
                             ),
-                            onPressed: _callEmployer,
-                            child: const Icon(LucideIcons.phone, color: brand),
                           ),
-                        ),
-                        const SizedBox(width: 10),
+                          const SizedBox(width: 10),
+                        ],
                         Expanded(
                           child: PrimaryButton(
                             applied
@@ -775,8 +796,9 @@ class JobRequirements {
         r'^Up to\s+(.+?)\s+a month(?:\s+·\s+(.+))?$',
         caseSensitive: false,
       ).firstMatch(apiLabel);
-      if (match == null)
+      if (match == null) {
         return language == 'en' ? '+ Bonus $apiLabel' : '+ $apiLabel';
+      }
       bonusAmount = match.group(1)?.trim() ?? '';
       bonusType = bonusType.isEmpty
           ? (match.group(2)?.trim() ?? '')

@@ -17,19 +17,53 @@ class _SavedPageState extends State<SavedPage> {
     _load();
   }
 
+  int _page = 1, _lastPage = 1;
+  bool _loadingMore = false;
+
   Future<void> _load() async {
     setState(() {
       loading = true;
       error = null;
     });
     try {
-      final result = await WorkerApiService().fetchSavedJobs();
-      if (mounted) setState(() => saved = result);
+      final response = await WorkerApiService().savedJobs();
+      if (mounted) setState(() => _apply(response, more: false));
     } on ApiException catch (e) {
       if (mounted) setState(() => error = e.message);
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  /// The server sends 15 saved jobs at a time; the rest load on scroll.
+  Future<void> _loadMore() async {
+    if (_loadingMore || loading || _page >= _lastPage) return;
+    setState(() => _loadingMore = true);
+    try {
+      final response = await WorkerApiService().savedJobs(page: _page + 1);
+      if (mounted) setState(() => _apply(response, more: true));
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  void _apply(Map<String, dynamic> response, {required bool more}) {
+    final incoming = jsonList(
+      response['data'],
+    ).map((e) => SavedJobModel.fromJson(jsonMap(e))).toList();
+    final known = {for (final item in saved) item.job.id};
+    saved = more
+        ? [...saved, ...incoming.where((item) => !known.contains(item.job.id))]
+        : incoming;
+    final meta = PaginationModel.fromJson(jsonMap(response['meta']));
+    _page = meta.currentPage > 0 ? meta.currentPage : 1;
+    _lastPage = meta.lastPage;
   }
 
   Future<bool> _remove(SavedJobModel item, {bool updateList = true}) async {
@@ -47,10 +81,11 @@ class _SavedPageState extends State<SavedPage> {
       }
       return false;
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
       return false;
     }
   }
@@ -111,8 +146,11 @@ class _SavedPageState extends State<SavedPage> {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: saved.length,
+                    itemCount: saved.length + (_page < _lastPage ? 1 : 0),
                     itemBuilder: (context, index) {
+                      if (index == saved.length) {
+                        return PageEndLoader(onReached: _loadMore);
+                      }
                       final item = saved[index];
                       final job = Job.fromApi(item.job);
                       return Dismissible(

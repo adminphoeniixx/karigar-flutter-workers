@@ -18,12 +18,18 @@ class _SessionsPageState extends State<SessionsPage> {
   Future<void> _load() async {
     try {
       final v = await WorkerApiService().fetchSessions();
-      if (mounted) setState(() => sessions = v);
+      // This phone first, then the rest as the server orders them.
+      final rows = [
+        ...v.where((s) => s.current),
+        ...v.where((s) => !s.current),
+      ];
+      if (mounted) setState(() => sessions = rows);
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -61,6 +67,7 @@ class _SessionsPageState extends State<SessionsPage> {
       if (!mounted) return;
       if (session.current) {
         await ApiClient.instance.setToken(null);
+        if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const OnboardingPage()),
@@ -70,10 +77,11 @@ class _SessionsPageState extends State<SessionsPage> {
         await _load();
       }
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
     }
   }
 
@@ -94,6 +102,10 @@ class _SessionsPageState extends State<SessionsPage> {
                           ? context.trArgs('This device • {time}', {
                               'time': s.lastUsedAgo,
                             })
+                          // A token never used again has no time; it read
+                          // "Last used " with nothing after it.
+                          : s.lastUsedAgo.isEmpty
+                          ? context.tr('Not used yet')
                           : context.trArgs('Last used {time}', {
                               'time': s.lastUsedAgo,
                             }),

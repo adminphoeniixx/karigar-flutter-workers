@@ -8,11 +8,54 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'device_token_service.dart';
 
-/// The destinations supported by worker notification payloads.
+/// Where a notification takes the worker, from the system tray or from Alerts.
 ///
-/// Keep this mapping in one place so a notification opened from the system
-/// tray and the same item opened from Alerts always behave alike.
-enum WorkerPushDestination { applications }
+/// Keep this mapping in one place so both always behave alike.
+sealed class WorkerPushDestination {
+  const WorkerPushDestination();
+
+  static const applications = OpenApplications();
+  static const kyc = OpenKyc();
+}
+
+/// The Applied tab: status changes, interviews, offers. With
+/// [applicationId] that application is brought to the top and highlighted
+/// (a hire alert used to drop the karigar at the top of the whole list).
+final class OpenApplications extends WorkerPushDestination {
+  const OpenApplications({this.applicationId});
+  final int? applicationId;
+  @override
+  bool operator ==(Object other) =>
+      other is OpenApplications && other.applicationId == applicationId;
+  @override
+  int get hashCode => applicationId.hashCode;
+}
+
+/// The KYC screen, after a review.
+final class OpenKyc extends WorkerPushDestination {
+  const OpenKyc();
+}
+
+/// One job: a new job alert or an employer's invite.
+final class OpenJob extends WorkerPushDestination {
+  const OpenJob(this.jobId);
+  final int jobId;
+  @override
+  bool operator ==(Object other) => other is OpenJob && other.jobId == jobId;
+  @override
+  int get hashCode => jobId.hashCode;
+}
+
+/// One chat with an employer.
+final class OpenConversation extends WorkerPushDestination {
+  const OpenConversation(this.conversationId);
+  final int conversationId;
+  @override
+  bool operator ==(Object other) =>
+      other is OpenConversation && other.conversationId == conversationId;
+  @override
+  int get hashCode => conversationId.hashCode;
+}
 
 class WorkerPushRoute {
   static const interviewTypes = <String>{
@@ -20,10 +63,38 @@ class WorkerPushRoute {
     'application.interview_reminder',
   };
 
+  static final _jobUrl = RegExp(r'/jobs/(\d+)');
+  static final _chatUrl = RegExp(r'/messages/(\d+)');
+
+  static int? _id(Object? value) => int.tryParse('${value ?? ''}'.trim());
+
+  /// Reads a push payload or an Alerts row (the list keeps only `url`, so
+  /// ids are also read from it).
   static WorkerPushDestination? fromData(Map<String, dynamic> data) {
-    final type = data['type']?.toString();
-    if (interviewTypes.contains(type)) {
-      return WorkerPushDestination.applications;
+    final type = data['type']?.toString() ?? '';
+    final url = data['url']?.toString() ?? '';
+    switch (type) {
+      case 'chat.message':
+        final id =
+            _id(data['conversation_id']) ??
+            _id(_chatUrl.firstMatch(url)?.group(1));
+        return id == null ? null : OpenConversation(id);
+      case 'job.posted' || 'job.invite':
+        final id =
+            _id(data['job_listing_id']) ??
+            _id(data['job_id']) ??
+            _id(_jobUrl.firstMatch(url)?.group(1));
+        return id == null ? null : OpenJob(id);
+      case 'kyc.reviewed':
+        return WorkerPushDestination.kyc;
+    }
+    if (interviewTypes.contains(type) ||
+        type.startsWith('application.') ||
+        type == 'interview.reminder_call') {
+      final id = _id(data['application_id']);
+      return id == null
+          ? WorkerPushDestination.applications
+          : OpenApplications(applicationId: id);
     }
     return null;
   }
@@ -57,7 +128,6 @@ class PushNotificationService {
 
   Future<void> initialize() async {
     if (Firebase.apps.isEmpty) return;
-    await _messaging.requestPermission();
     _tokenRefreshSubscription ??= _messaging.onTokenRefresh.listen(
       (token) => _register(token),
       onError: (Object error) =>
@@ -80,6 +150,17 @@ class PushNotificationService {
       debugPrint('[FCM] Unable to read launch notification: $error');
     }
 
+    // The permission prompt waits for the worker, so it must not hold up the
+    // splash screen.
+    unawaited(_askPermissionThenSync());
+  }
+
+  Future<void> _askPermissionThenSync() async {
+    try {
+      await _messaging.requestPermission();
+    } catch (error) {
+      debugPrint('[FCM] Permission request failed: $error');
+    }
     if (ApiClient.instance.isAuthenticated) await syncToken();
   }
 

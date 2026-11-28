@@ -65,6 +65,13 @@ void main() {
   });
 
   testWidgets('worker onboarding opens mobile login', (tester) async {
+    // The app opens in Hindi by default; this test reads the English copy.
+    selectedLanguageCode.value = 'en';
+    appLocale.value = const Locale('en');
+    addTearDown(() {
+      selectedLanguageCode.value = 'hi';
+      appLocale.value = const Locale('hi');
+    });
     await tester.pumpWidget(const KarigarApp());
     await tester.pump(const Duration(milliseconds: 1500));
 
@@ -108,6 +115,10 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
     }
+    // Requests and location lookups have time limits; let them run out
+    // before the test ends instead of leaving their timers behind.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 30));
   });
 
   testWidgets('dark theme updates the complete app', (tester) async {

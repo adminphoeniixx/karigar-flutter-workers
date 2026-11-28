@@ -9,6 +9,7 @@ class ConversationsPage extends StatefulWidget {
 class _ConversationsPageState extends State<ConversationsPage> {
   List<ConversationModel> items = [];
   bool loading = true;
+  String? error;
   StreamSubscription<RemoteMessage>? push;
   @override
   void initState() {
@@ -27,15 +28,59 @@ class _ConversationsPageState extends State<ConversationsPage> {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  int _page = 1, _lastPage = 1;
+  bool _loadingMore = false;
+
+  /// The server sends 20 chats at a time; the rest load on scroll.
+  Future<void> _loadMore() async {
+    if (_loadingMore || loading || _page >= _lastPage) return;
+    setState(() => _loadingMore = true);
     try {
-      final v = await WorkerApiService().fetchConversations();
-      if (mounted) setState(() => items = v.conversations);
+      final v = await WorkerApiService().fetchConversations(page: _page + 1);
+      if (!mounted) return;
+      final known = {for (final c in items) c.id};
+      setState(() {
+        items = [
+          ...items,
+          ...v.conversations.where((c) => !known.contains(c.id)),
+        ];
+        _page = v.pagination.currentPage;
+        _lastPage = v.pagination.lastPage;
+      });
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  Future<void> _load() async {
+    try {
+      final v = await WorkerApiService().fetchConversations();
+      if (mounted) {
+        setState(() {
+          error = null;
+          items = v.conversations;
+          _page = v.pagination.currentPage;
+          _lastPage = v.pagination.lastPage;
+        });
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        // With nothing loaded, say why instead of "No conversations yet"
+        // (offline it looked like the chats were gone).
+        if (items.isEmpty) {
+          setState(() => error = e.message);
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: AppText(e.message)));
+        }
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -61,7 +106,27 @@ class _ConversationsPageState extends State<ConversationsPage> {
         ? const Center(child: CircularProgressIndicator())
         : RefreshIndicator(
             onRefresh: _load,
-            child: items.isEmpty
+            child: items.isEmpty && error != null
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(24, 110, 24, 24),
+                    children: [
+                      const Icon(LucideIcons.wifiOff, size: 40, color: muted),
+                      const SizedBox(height: 12),
+                      AppText(error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: TextButton(
+                          onPressed: () {
+                            setState(() => loading = true);
+                            _load();
+                          },
+                          child: const AppText('Try again'),
+                        ),
+                      ),
+                    ],
+                  )
+                : items.isEmpty
                 ? ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(24, 110, 24, 24),
@@ -69,8 +134,11 @@ class _ConversationsPageState extends State<ConversationsPage> {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                    itemCount: items.length + 1,
+                    itemCount: items.length + 1 + (_page < _lastPage ? 1 : 0),
                     itemBuilder: (context, index) {
+                      if (index == items.length + 1) {
+                        return PageEndLoader(onReached: _loadMore);
+                      }
                       if (index == 0) {
                         return const Padding(
                           padding: EdgeInsets.fromLTRB(4, 2, 4, 14),
@@ -199,6 +267,9 @@ class _ConversationsPageState extends State<ConversationsPage> {
 class ConversationPage extends StatefulWidget {
   const ConversationPage(this.id, {super.key});
   final int id;
+
+  /// How often an open chat checks for new messages, in case no push comes.
+  static const pollEvery = Duration(seconds: 10);
   @override
   State<ConversationPage> createState() => _ConversationPageState();
 }
@@ -209,9 +280,20 @@ class _ConversationPageState extends State<ConversationPage> {
   ConversationModel? conversation;
   bool loading = true, sending = false;
   StreamSubscription<RemoteMessage>? push;
+
+  Timer? _poll;
+  int _olderPage = 1, _lastPage = 1;
+  bool _loadingOlder = false;
+
   @override
   void initState() {
     super.initState();
+    _poll = Timer.periodic(ConversationPage.pollEvery, (_) {
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (lifecycle == null || lifecycle == AppLifecycleState.resumed) {
+        _load(quiet: true);
+      }
+    });
     push = PushNotificationService.instance.foregroundMessages
         .where(
           (m) =>
@@ -226,26 +308,67 @@ class _ConversationPageState extends State<ConversationPage> {
 
   @override
   void dispose() {
+    _poll?.cancel();
     push?.cancel();
     input.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
+  /// Merges by id, oldest first, so a refresh never drops older pages or
+  /// shows a message twice.
+  List<MessageModel> _merge(Iterable<MessageModel> incoming) {
+    final byId = <int, MessageModel>{for (final m in messages) m.id: m};
+    for (final m in incoming) {
+      byId[m.id] = m;
+    }
+    return byId.values.toList()..sort((a, b) => a.id.compareTo(b.id));
+  }
+
+  /// The newest page. [quiet] refreshes (the timer) don't show errors.
+  Future<void> _load({bool quiet = false}) async {
     try {
       final v = await WorkerApiService().fetchConversation(widget.id);
-      if (mounted)
+      if (mounted) {
         setState(() {
           conversation = v.conversation;
-          messages = v.messages;
+          messages = _merge(v.messages);
+          if (_olderPage == 1) _lastPage = v.pagination.lastPage;
         });
+      }
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted && !quiet) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted && loading) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _loadOlder() async {
+    if (_loadingOlder || _olderPage >= _lastPage) return;
+    setState(() => _loadingOlder = true);
+    try {
+      final v = await WorkerApiService().fetchConversation(
+        widget.id,
+        page: _olderPage + 1,
+      );
+      if (mounted) {
+        setState(() {
+          messages = _merge(v.messages);
+          _olderPage = v.pagination.currentPage;
+          _lastPage = v.pagination.lastPage;
+        });
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingOlder = false);
     }
   }
 
@@ -255,16 +378,18 @@ class _ConversationPageState extends State<ConversationPage> {
     setState(() => sending = true);
     try {
       final m = await WorkerApiService().sendMessage(widget.id, body);
-      if (mounted)
+      if (mounted) {
         setState(() {
-          messages.add(m);
+          messages = _merge([m]);
           input.clear();
         });
+      }
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
     } finally {
       if (mounted) setState(() => sending = false);
     }
@@ -303,45 +428,72 @@ class _ConversationPageState extends State<ConversationPage> {
                 child: ListView(
                   reverse: true,
                   padding: const EdgeInsets.all(16),
-                  children: messages.reversed
-                      .map(
-                        (m) => Align(
-                          alignment: m.mine
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.only(top: 10),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 9,
+                  children: [
+                    ...messages.reversed.map(
+                      (m) => Align(
+                        alignment: m.mine
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 9,
+                          ),
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.sizeOf(context).width * .76,
+                          ),
+                          decoration: BoxDecoration(
+                            color: m.mine ? brand : context.surfaceColor,
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(16),
+                              topRight: const Radius.circular(16),
+                              bottomLeft: Radius.circular(m.mine ? 16 : 4),
+                              bottomRight: Radius.circular(m.mine ? 4 : 16),
                             ),
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.sizeOf(context).width * .76,
-                            ),
-                            decoration: BoxDecoration(
-                              color: m.mine ? brand : context.surfaceColor,
-                              borderRadius: BorderRadius.only(
-                                topLeft: const Radius.circular(16),
-                                topRight: const Radius.circular(16),
-                                bottomLeft: Radius.circular(m.mine ? 16 : 4),
-                                bottomRight: Radius.circular(m.mine ? 4 : 16),
+                            border: m.mine
+                                ? null
+                                : Border.all(color: context.borderColor),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: m.mine
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                m.body,
+                                style: TextStyle(
+                                  color: m.mine
+                                      ? Colors.white
+                                      : context.foregroundColor,
+                                ),
                               ),
-                              border: m.mine
-                                  ? null
-                                  : Border.all(color: context.borderColor),
-                            ),
-                            child: Text(
-                              m.body,
-                              style: TextStyle(
-                                color: m.mine
-                                    ? Colors.white
-                                    : context.foregroundColor,
-                              ),
-                            ),
+                              // When it was sent, like the employer app.
+                              if (_sentAt(m.createdAt) case final sentAt?)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(
+                                    sentAt,
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      color: m.mine ? Colors.white70 : muted,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                      )
-                      .toList(),
+                      ),
+                    ),
+                    if (_olderPage < _lastPage)
+                      Center(
+                        child: TextButton(
+                          onPressed: _loadingOlder ? null : _loadOlder,
+                          child: const AppText('Older messages'),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               SafeArea(
@@ -360,6 +512,17 @@ class _ConversationPageState extends State<ConversationPage> {
                           controller: input,
                           minLines: 1,
                           maxLines: 4,
+                          // The server takes at most 2,000 characters.
+                          maxLength: 2000,
+                          buildCounter:
+                              (
+                                context, {
+                                required currentLength,
+                                required isFocused,
+                                maxLength,
+                              }) => currentLength > 1800
+                              ? Text('$currentLength/$maxLength')
+                              : null,
                           textInputAction: TextInputAction.newline,
                           onSubmitted: (_) => _send(),
                           decoration: InputDecoration(
@@ -417,4 +580,32 @@ class _MessagesEmptyState extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// "3:05 PM" today, "26 Nov, 3:05 PM" on older days.
+String? _sentAt(String value) {
+  final at = DateTime.tryParse(value)?.toLocal();
+  if (at == null) return null;
+  final hour = at.hour % 12 == 0 ? 12 : at.hour % 12;
+  final time =
+      '$hour:${at.minute.toString().padLeft(2, '0')} ${at.hour >= 12 ? 'PM' : 'AM'}';
+  final now = DateTime.now();
+  if (at.year == now.year && at.month == now.month && at.day == now.day) {
+    return time;
+  }
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${at.day} ${months[at.month - 1]}, $time';
 }

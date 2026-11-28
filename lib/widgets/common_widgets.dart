@@ -1,5 +1,17 @@
 part of '../main.dart';
 
+/// "923" for far jobs, "2.5" under 10 km: "923.0 km" read like a typo.
+String formatKm(double km) {
+  if (km < 10) {
+    final short = km.toStringAsFixed(1);
+    return short.endsWith('.0') ? short.substring(0, short.length - 2) : short;
+  }
+  final whole = km.round().toString();
+  return whole.length > 3
+      ? '${whole.substring(0, whole.length - 3)},${whole.substring(whole.length - 3)}'
+      : whole;
+}
+
 class SimpleFormPage extends StatelessWidget {
   const SimpleFormPage({
     super.key,
@@ -63,9 +75,13 @@ class _SearchableOptionFieldState extends State<SearchableOptionField> {
     _overlay = OverlayEntry(
       builder: (overlayContext) {
         final keyboardInset = MediaQuery.viewInsetsOf(overlayContext).bottom;
+        // A field low on the screen (State, City at the bottom of the
+        // filter sheet) left room for one row, or none: start the list no
+        // lower than 40% down, so most of the screen shows options.
+        final highestStart = MediaQuery.sizeOf(overlayContext).height * 0.4;
         final listTop = keyboardInset > 0
             ? MediaQuery.paddingOf(overlayContext).top + 8
-            : top;
+            : (top > highestStart ? highestStart : top);
         final results = widget.options
             .where((value) => value.toLowerCase().contains(query.toLowerCase()))
             .toList();
@@ -291,6 +307,25 @@ class _ApplySheetState extends State<ApplySheet> {
   late final note = TextEditingController(text: widget.initialNote);
   bool submitting = false;
 
+  /// The karigar's resume, if any: the link said "Add a resume" even to
+  /// karigars who had one.
+  ResumeModel? _resume;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadResume();
+  }
+
+  Future<void> _loadResume() async {
+    try {
+      final resume = await WorkerApiService().fetchResume();
+      if (mounted) setState(() => _resume = resume);
+    } catch (_) {
+      // The link still works; it just keeps its "Add" wording.
+    }
+  }
+
   void _saveDraft() => widget.onDraftChanged?.call(wage.text, note.text);
 
   @override
@@ -339,6 +374,11 @@ class _ApplySheetState extends State<ApplySheet> {
           controller: wage,
           onChanged: (_) => _saveDraft(),
           keyboardType: TextInputType.number,
+          // Digits only: pasted text used to land here ("00Test…").
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(7),
+          ],
           decoration: InputDecoration(
             prefixText: '₹ ',
             hintText: '18000',
@@ -364,9 +404,17 @@ class _ApplySheetState extends State<ApplySheet> {
                     context,
                     MaterialPageRoute<void>(builder: (_) => const ResumePage()),
                   );
+                  _loadResume();
                 },
-          icon: const Icon(LucideIcons.fileUp, size: 18),
-          label: const AppText('Add a resume to improve your match'),
+          icon: Icon(
+            _resume == null ? LucideIcons.fileUp : LucideIcons.fileCheck,
+            size: 18,
+          ),
+          label: AppText(
+            _resume == null
+                ? 'Add a resume to improve your match'
+                : 'Your resume is attached · Change',
+          ),
         ),
         const SizedBox(height: 16),
         Container(
@@ -387,7 +435,7 @@ class _ApplySheetState extends State<ApplySheet> {
               SizedBox(width: 9),
               Expanded(
                 child: AppText(
-                  'Karigar never charges you to work. Report any employer who asks for an advance fee.',
+                  'Super Karigar never charges you to work. Report any employer who asks for an advance fee.',
                   style: TextStyle(color: Color(0xFFB45309), fontSize: 12),
                 ),
               ),
@@ -599,15 +647,22 @@ class StatCard extends StatelessWidget {
             child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(height: 6),
-          AppText(
-            value,
-            style: TextStyle(
-              fontSize: compact ? 19 : 24,
-              fontWeight: FontWeight.w700,
+          // Narrow tiles (three in a row, large system font) used to break
+          // words in the middle: "Verifie/d", "Application/s".
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: AppText(
+              value,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: compact ? 19 : 24,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          AppText(
-            label,
+          _WholeWordsText(
+            context.tr(label),
             style: const TextStyle(
               color: muted,
               fontSize: 12.5,
@@ -628,6 +683,61 @@ class StatCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Wraps between words only: when the longest word is wider than the space,
+/// the font shrinks until it fits instead of breaking the word.
+class _WholeWordsText extends StatelessWidget {
+  const _WholeWordsText(this.text, {required this.style});
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final scaler = MediaQuery.textScalerOf(context);
+      final direction = Directionality.of(context);
+      // Measure in the font the Text will really use (the theme's Outfit).
+      final base = DefaultTextStyle.of(context).style.merge(style);
+      var widest = 0.0;
+      for (final word in text.split(RegExp(r'\s+'))) {
+        final painter = TextPainter(
+          text: TextSpan(text: word, style: base),
+          textDirection: direction,
+          textScaler: scaler,
+          maxLines: 1,
+        )..layout();
+        if (painter.width > widest) widest = painter.width;
+        painter.dispose();
+      }
+      var fitted = style;
+      if (box.maxWidth.isFinite && widest > box.maxWidth && widest > 0) {
+        fitted = style.copyWith(
+          fontSize: (style.fontSize ?? 14) * box.maxWidth / widest * .98,
+        );
+      }
+      // Always reserve two lines so tiles in a row come out the same height.
+      final full = base.merge(fitted);
+      final lines = TextPainter(
+        text: TextSpan(text: text, style: full),
+        textDirection: direction,
+        textScaler: scaler,
+        maxLines: 3,
+      )..layout(maxWidth: box.maxWidth.isFinite ? box.maxWidth : 1e6);
+      final two = TextPainter(
+        text: TextSpan(text: 'A\nA', style: full),
+        textDirection: direction,
+        textScaler: scaler,
+      )..layout();
+      final height = lines.height > two.height ? lines.height : two.height;
+      lines.dispose();
+      two.dispose();
+      return SizedBox(
+        height: height,
+        child: Text(text, maxLines: 3, style: fitted),
+      );
+    },
+  );
 }
 
 class SectionHeader extends StatelessWidget {
@@ -673,8 +783,9 @@ class SectionTitle extends StatelessWidget {
 }
 
 class MiniStat extends StatelessWidget {
-  const MiniStat(this.label, this.value, {super.key});
+  const MiniStat(this.label, this.value, {super.key, this.maxLines = 3});
   final String label, value;
+  final int maxLines;
   @override
   Widget build(BuildContext context) => AppCard(
     child: Column(
@@ -691,7 +802,7 @@ class MiniStat extends StatelessWidget {
         const SizedBox(height: 5),
         AppText(
           value,
-          maxLines: 3,
+          maxLines: maxLines,
           softWrap: true,
           style: const TextStyle(
             fontSize: 15,
@@ -729,6 +840,16 @@ class _MapBoxState extends State<MapBox> {
   late LatLng _position;
   final MapController _controller = MapController();
   double _zoom = 14;
+  // Drags are ignored until the map is tapped once: a page scroll that
+  // started on the map used to move the karigar's pin.
+  bool _unlocked = false;
+  Timer? _dragReport;
+
+  @override
+  void dispose() {
+    _dragReport?.cancel();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -778,7 +899,11 @@ class _MapBoxState extends State<MapBox> {
 
   void _select(LatLng position) {
     if (widget.onLocationChanged == null) return;
-    setState(() => _position = position);
+    _dragReport?.cancel();
+    setState(() {
+      _position = position;
+      _unlocked = true;
+    });
     _controller.move(position, _zoom);
     widget.onLocationChanged!(position);
   }
@@ -799,12 +924,25 @@ class _MapBoxState extends State<MapBox> {
                   : 14,
               minZoom: 3,
               maxZoom: 18,
+              interactionOptions: InteractionOptions(
+                flags: _unlocked || widget.onLocationChanged == null
+                    ? InteractiveFlag.all & ~InteractiveFlag.rotate
+                    : InteractiveFlag.none,
+              ),
               onPositionChanged: (camera, hasGesture) {
                 _zoom = camera.zoom;
-                if (hasGesture && widget.onLocationChanged != null) {
+                if (hasGesture &&
+                    _unlocked &&
+                    widget.onLocationChanged != null) {
                   _position = camera.center;
-                  widget.onLocationChanged!(camera.center);
                   setState(() {});
+                  // Report once the drag settles, not on every frame.
+                  _dragReport?.cancel();
+                  final center = camera.center;
+                  _dragReport = Timer(
+                    const Duration(milliseconds: 500),
+                    () => widget.onLocationChanged?.call(center),
+                  );
                 }
               },
               onTap: (_, point) => _select(point),
@@ -862,7 +1000,10 @@ class _MapBoxState extends State<MapBox> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: AppText(
-                  widget.label!,
+                  // Say how to move the pin while drags are switched off.
+                  widget.onLocationChanged != null && !_unlocked
+                      ? '${widget.label!} · ${context.tr('Tap the map to move the pin')}'
+                      : widget.label!,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 12,
@@ -1131,4 +1272,55 @@ class VerifiedEmployerBadge extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// The last row of a paged list: shows a small spinner and asks for the next
+/// page as soon as it is built (the worker has scrolled to the end).
+class PageEndLoader extends StatefulWidget {
+  const PageEndLoader({super.key, required this.onReached});
+  final VoidCallback onReached;
+  @override
+  State<PageEndLoader> createState() => _PageEndLoaderState();
+}
+
+class _PageEndLoaderState extends State<PageEndLoader> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onReached();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.symmetric(vertical: 18),
+    child: Center(
+      child: SizedBox(
+        width: 22,
+        height: 22,
+        child: CircularProgressIndicator(strokeWidth: 2.5),
+      ),
+    ),
+  );
+}
+
+/// Rupees the Indian way: ₹15,000, ₹1,50,000, ₹15,000.50.
+String formatRupees(num amount) {
+  final negative = amount < 0;
+  final fixed = amount.abs().toStringAsFixed(2);
+  var whole = fixed.split('.').first;
+  final paise = fixed.split('.').last;
+  if (whole.length > 3) {
+    final last3 = whole.substring(whole.length - 3);
+    var rest = whole.substring(0, whole.length - 3);
+    final groups = <String>[];
+    while (rest.length > 2) {
+      groups.insert(0, rest.substring(rest.length - 2));
+      rest = rest.substring(0, rest.length - 2);
+    }
+    if (rest.isNotEmpty) groups.insert(0, rest);
+    whole = '${groups.join(',')},$last3';
+  }
+  return '${negative ? '-' : ''}₹$whole${paise == '00' ? '' : '.$paise'}';
 }

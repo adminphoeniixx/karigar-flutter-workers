@@ -17,7 +17,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
   bool loading = true;
   bool markingAll = false;
 
-  bool get hasUnread => notes.any((note) => note['read'] != true);
+  bool get hasUnread =>
+      _unread > 0 || notes.any((note) => note['read'] != true);
 
   @override
   void initState() {
@@ -25,22 +26,13 @@ class _NotificationsTabState extends State<NotificationsTab> {
     _load();
   }
 
+  int _page = 1, _lastPage = 1, _unread = 0;
+  bool _loadingMore = false;
+
   Future<void> _load() async {
     try {
       final response = await WorkerApiService().notifications();
-      final page = Map<String, dynamic>.from(
-        response['notifications'] as Map? ?? {},
-      );
-      if (mounted) {
-        setState(() {
-          notes = (page['data'] as List? ?? [])
-              .map((e) => Map<String, dynamic>.from(e as Map))
-              .toList();
-        });
-        widget.onUnreadChanged?.call(
-          notes.where((note) => note['read'] != true).length,
-        );
-      }
+      if (mounted) setState(() => _apply(response, more: false));
     } on ApiException catch (error) {
       if (mounted) _error(error.message);
     } finally {
@@ -48,15 +40,57 @@ class _NotificationsTabState extends State<NotificationsTab> {
     }
   }
 
-  Future<void> _read(int index) async {
+  /// The next page of alerts once the list nears its end.
+  Future<void> _loadMore() async {
+    if (_loadingMore || loading || _page >= _lastPage) return;
+    setState(() => _loadingMore = true);
+    try {
+      final response = await WorkerApiService().notifications(page: _page + 1);
+      if (mounted) setState(() => _apply(response, more: true));
+    } on ApiException catch (error) {
+      if (mounted) _error(error.message);
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  void _apply(Map<String, dynamic> response, {required bool more}) {
+    final page = Map<String, dynamic>.from(
+      response['notifications'] as Map? ?? {},
+    );
+    final incoming = (page['data'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+    final known = {for (final note in notes) note['id']};
+    notes = more
+        ? [...notes, ...incoming.where((note) => !known.contains(note['id']))]
+        : incoming;
+    final pagination = page['meta'] is Map
+        ? Map<String, dynamic>.from(page['meta'] as Map)
+        : page;
+    _page = (pagination['current_page'] as num?)?.toInt() ?? 1;
+    _lastPage = (pagination['last_page'] as num?)?.toInt() ?? _page;
+    // The server counts every unread alert, not only this page's.
+    _unread =
+        (response['unread'] as num?)?.toInt() ??
+        notes.where((note) => note['read'] != true).length;
+    widget.onUnreadChanged?.call(_unread);
+  }
+
+  Future<void> _read(int index, {bool announce = true}) async {
     if (notes[index]['read'] == true) return;
     try {
-      await WorkerApiService().readNotification(notes[index]['id'].toString());
-      if (mounted) setState(() => notes[index]['read'] = true);
-      widget.onUnreadChanged?.call(
-        notes.where((note) => note['read'] != true).length,
+      final unread = await WorkerApiService().readNotification(
+        notes[index]['id'].toString(),
       );
       if (mounted) {
+        setState(() {
+          notes[index]['read'] = true;
+          _unread = unread;
+        });
+      }
+      widget.onUnreadChanged?.call(unread);
+      if (mounted && announce) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: AppText('Notification marked as read.')),
         );
@@ -69,13 +103,15 @@ class _NotificationsTabState extends State<NotificationsTab> {
   Future<void> _open(int index) async {
     final note = notes[index];
     final destination = WorkerPushRoute.fromData(note);
-    // A network issue should not prevent a worker from reaching a time-sensitive
-    // interview update. Marking it read is still attempted first.
-    await _read(index);
-    if (!mounted) return;
-    if (destination == WorkerPushDestination.applications) {
-      widget.onApplicationsRequested?.call();
-    }
+    // A network issue should not stop a worker reaching what the alert is
+    // about. Marking it read is still attempted first.
+    await _read(index, announce: destination == null);
+    if (!mounted || destination == null) return;
+    await openWorkerDestination(
+      context,
+      destination,
+      onApplications: () => widget.onApplicationsRequested?.call(),
+    );
   }
 
   Future<void> _readAll() async {
@@ -88,6 +124,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
           for (final note in notes) {
             note['read'] = true;
           }
+          _unread = 0;
         });
         widget.onUnreadChanged?.call(0);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -128,10 +165,23 @@ class _NotificationsTabState extends State<NotificationsTab> {
     return value;
   }
 
-  IconData _iconFor(Map<String, dynamic> note) =>
-      WorkerPushRoute.interviewTypes.contains(note['type']?.toString())
-      ? LucideIcons.calendarCheck
-      : LucideIcons.bell;
+  /// One icon per kind of alert, so a hire, a rejection and a chat no longer
+  /// all look the same.
+  IconData _iconFor(Map<String, dynamic> note) {
+    final type = note['type']?.toString() ?? '';
+    if (WorkerPushRoute.interviewTypes.contains(type)) {
+      return LucideIcons.calendarCheck;
+    }
+    return switch (type) {
+      'chat.message' => LucideIcons.messageSquare,
+      'application.accepted' => LucideIcons.partyPopper,
+      'application.rejected' => LucideIcons.circleX,
+      'application.shortlisted' => LucideIcons.star,
+      'job.posted' || 'job.invite' => LucideIcons.briefcaseBusiness,
+      'kyc.reviewed' => LucideIcons.shieldCheck,
+      _ => LucideIcons.bell,
+    };
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -207,8 +257,11 @@ class _NotificationsTabState extends State<NotificationsTab> {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                    itemCount: notes.length,
+                    itemCount: notes.length + (_page < _lastPage ? 1 : 0),
                     itemBuilder: (context, index) {
+                      if (index == notes.length) {
+                        return PageEndLoader(onReached: _loadMore);
+                      }
                       final note = notes[index];
                       final unread = note['read'] != true;
                       return Align(

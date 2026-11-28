@@ -1,5 +1,9 @@
 part of '../main.dart';
 
+/// The application an alert or push is about; the Applied tab brings it to
+/// the top and highlights it, then clears this.
+final applicationFocus = ValueNotifier<int?>(null);
+
 class ApplicationsTab extends StatefulWidget {
   const ApplicationsTab({super.key});
   @override
@@ -13,11 +17,37 @@ class _ApplicationsTabState extends State<ApplicationsTab>
   bool loading = true;
   String? error;
   StreamSubscription<RemoteMessage>? _pushSubscription;
+  int? _highlighted;
+  Timer? _highlightTimer;
+
+  void _onFocus() {
+    if (applicationFocus.value == null) return;
+    // It may be under another filter: show them all.
+    if (filter != 'All') setState(() => filter = 'All');
+    _load();
+  }
+
+  /// Puts the focused application first and highlights it for a moment.
+  void _applyFocus() {
+    final id = applicationFocus.value;
+    if (id == null) return;
+    final index = applications.indexWhere((a) => a.id == id);
+    if (index < 0) return;
+    applicationFocus.value = null;
+    final focused = applications.removeAt(index);
+    applications.insert(0, focused);
+    _highlighted = id;
+    _highlightTimer?.cancel();
+    _highlightTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _highlighted = null);
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    applicationFocus.addListener(_onFocus);
     _pushSubscription = PushNotificationService.instance.foregroundMessages
         .listen((message) {
           final type = message.data['type']?.toString() ?? '';
@@ -33,6 +63,8 @@ class _ApplicationsTabState extends State<ApplicationsTab>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    applicationFocus.removeListener(_onFocus);
+    _highlightTimer?.cancel();
     _pushSubscription?.cancel();
     super.dispose();
   }
@@ -42,6 +74,18 @@ class _ApplicationsTabState extends State<ApplicationsTab>
     if (state == AppLifecycleState.resumed) _load();
   }
 
+  static const filters = [
+    'All',
+    'Pending',
+    'Accepted',
+    'Rejected',
+    'Withdrawn',
+  ];
+  int _page = 1, _lastPage = 1;
+  bool _loadingMore = false;
+
+  String? get _status => filter == 'All' ? null : filter.toLowerCase();
+
   Future<void> _load() async {
     setState(() {
       loading = true;
@@ -49,13 +93,51 @@ class _ApplicationsTabState extends State<ApplicationsTab>
     });
     try {
       final response = await WorkerApiService().fetchApplications(
-        status: filter == 'All' ? null : filter.toLowerCase(),
+        status: _status,
       );
-      if (mounted) setState(() => applications = response.applications);
+      if (mounted) {
+        setState(() {
+          applications = response.applications;
+          _page = response.pagination.currentPage;
+          _lastPage = response.pagination.lastPage;
+          _applyFocus();
+        });
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => error = e.message);
     } finally {
       if (mounted) setState(() => loading = false);
+    }
+  }
+
+  /// The server sends 15 applications at a time; the rest load on scroll.
+  Future<void> _loadMore() async {
+    if (_loadingMore || loading || _page >= _lastPage) return;
+    final status = _status;
+    setState(() => _loadingMore = true);
+    try {
+      final response = await WorkerApiService().fetchApplications(
+        status: status,
+        page: _page + 1,
+      );
+      if (!mounted || status != _status) return;
+      final known = {for (final a in applications) a.id};
+      setState(() {
+        applications = [
+          ...applications,
+          ...response.applications.where((a) => !known.contains(a.id)),
+        ];
+        _page = response.pagination.currentPage;
+        _lastPage = response.pagination.lastPage;
+      });
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -83,15 +165,17 @@ class _ApplicationsTabState extends State<ApplicationsTab>
     try {
       await WorkerApiService().withdraw(application.id);
       await _load();
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: AppText('Application withdrawn.')),
         );
+      }
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
     }
   }
 
@@ -173,10 +257,11 @@ class _ApplicationsTabState extends State<ApplicationsTab>
           comment: comment.trim().isEmpty ? null : comment.trim(),
         );
         await _load();
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: AppText('Review submitted.')));
+        }
       } on ApiException catch (e) {
         final alreadyReviewed =
             e.statusCode == 422 &&
@@ -214,10 +299,11 @@ class _ApplicationsTabState extends State<ApplicationsTab>
         MaterialPageRoute(builder: (_) => ConversationPage(conversation.id)),
       );
     } on ApiException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(error.message)));
+      }
     }
   }
 
@@ -235,37 +321,44 @@ class _ApplicationsTabState extends State<ApplicationsTab>
               color: context.subduedColor,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
-              children: ['All', 'Pending', 'Accepted'].map((item) {
-                final active = item == filter;
-                return Expanded(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(9),
-                    onTap: () {
-                      setState(() => filter = item);
-                      _load();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: active
-                            ? context.surfaceColor
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: AppText(
-                        item,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: active ? context.foregroundColor : muted,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: filters.map((item) {
+                  final active = item == filter;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 2),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(9),
+                      onTap: () {
+                        setState(() => filter = item);
+                        _load();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: active
+                              ? context.surfaceColor
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: AppText(
+                          item,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: active ? context.foregroundColor : muted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
           ),
         ),
@@ -312,17 +405,23 @@ class _ApplicationsTabState extends State<ApplicationsTab>
                         )
                       : ListView(
                           padding: const EdgeInsets.all(16),
-                          children: applications
-                              .map(
-                                (application) => _ApiApplicationCard(
-                                  application: application,
-                                  canReview: application.canReview,
-                                  onWithdraw: () => _withdraw(application),
-                                  onReview: () => _review(application),
-                                  onContact: () => _contact(application),
-                                ),
-                              )
-                              .toList(),
+                          children: [
+                            ...applications.map(
+                              (application) => _ApiApplicationCard(
+                                application: application,
+                                highlighted: application.id == _highlighted,
+                                canReview: application.canReview,
+                                onWithdraw: () => _withdraw(application),
+                                onReview: () => _review(application),
+                                onContact: () => _contact(application),
+                              ),
+                            ),
+                            if (_page < _lastPage)
+                              PageEndLoader(
+                                key: ValueKey('applications-$filter-$_page'),
+                                onReached: _loadMore,
+                              ),
+                          ],
                         ),
                 ),
         ),
@@ -334,12 +433,14 @@ class _ApplicationsTabState extends State<ApplicationsTab>
 class _ApiApplicationCard extends StatelessWidget {
   const _ApiApplicationCard({
     required this.application,
+    this.highlighted = false,
     required this.canReview,
     required this.onWithdraw,
     required this.onReview,
     required this.onContact,
   });
   final ApplicationModel application;
+  final bool highlighted;
   final bool canReview;
   final VoidCallback onWithdraw, onReview, onContact;
 
@@ -349,12 +450,19 @@ class _ApiApplicationCard extends StatelessWidget {
     final status = application.status.toLowerCase();
     final accepted = status == 'accepted';
     final pending = status == 'pending';
-    final color = accepted
+    // A shortlisted application is still "pending" on the server; the pill
+    // said Pending next to "Shortlisted by employer".
+    final shortlisted =
+        pending &&
+        application.trackingSteps.any(
+          (step) => step.key == 'shortlisted' && step.state == 'done',
+        );
+    final color = accepted || shortlisted
         ? const Color(0xFF047857)
         : pending
         ? const Color(0xFFB45309)
         : const Color(0xFFE11D48);
-    final background = accepted
+    final background = accepted || shortlisted
         ? const Color(0xFFECFDF5)
         : pending
         ? const Color(0xFFFFF7ED)
@@ -365,145 +473,178 @@ class _ApiApplicationCard extends StatelessWidget {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: job == null
-                ? null
-                : () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => JobDetailPage(Job.fromApi(job)),
-                    ),
-                  ),
-            child: AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    job?.title ?? 'Job',
-                    style: const TextStyle(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  AppText(
-                    job?.employer.name ?? '',
-                    style: const TextStyle(color: muted, fontSize: 12),
-                  ),
-                  const SizedBox(height: 7),
-                  StatusPill(application.statusLabel, background, color),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 6,
-                    children: [
-                      Meta(LucideIcons.mapPin, job?.locationLabel ?? ''),
-                      Meta(
-                        LucideIcons.indianRupee,
-                        job?.wageLabel ?? '',
-                        bold: true,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: highlighted ? brand : Colors.transparent,
+                width: 2,
+              ),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: job == null
+                  ? null
+                  : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => JobDetailPage(Job.fromApi(job)),
                       ),
-                      Meta(
-                        LucideIcons.calendarDays,
-                        context.trArgs('Applied {time}', {
-                          'time': context.tr(application.createdAgo),
-                        }),
+                    ),
+              child: AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      job?.title ?? 'Job',
+                      style: const TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    AppText(
+                      job?.employer.name ?? '',
+                      style: const TextStyle(color: muted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 7),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        StatusPill(
+                          shortlisted ? 'Shortlisted' : application.statusLabel,
+                          background,
+                          color,
+                        ),
+                        if (application.jobClosed)
+                          const StatusPill(
+                            'Job closed',
+                            Color(0xFFF1F5F9),
+                            Color(0xFF475569),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 6,
+                      children: [
+                        Meta(LucideIcons.mapPin, job?.locationLabel ?? ''),
+                        Meta(
+                          LucideIcons.indianRupee,
+                          job?.wageLabel ?? '',
+                          bold: true,
+                        ),
+                        Meta(
+                          LucideIcons.calendarDays,
+                          context.trArgs('Applied {time}', {
+                            'time': context.tr(application.createdAgo),
+                          }),
+                        ),
+                      ],
+                    ),
+                    if (application.trackingSteps.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      _ApplicationTracker(
+                        steps: application.trackingSteps,
+                        applicationStatus: status,
                       ),
                     ],
-                  ),
-                  if (accepted ||
-                      application.trackingSteps.any(
-                        (step) =>
-                            step.key == 'shortlisted' && step.state == 'done',
-                      )) ...[
-                    const SizedBox(height: 9),
-                    const AppText(
-                      '★ Shortlisted by employer',
-                      style: TextStyle(
-                        color: Color(0xFF047857),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                    if (application.interview case final interview?) ...[
+                      const SizedBox(height: 12),
+                      _ApplicationInfo(
+                        icon: LucideIcons.calendarCheck,
+                        title:
+                            '${context.tr('Interview')} • ${context.tr(interview.mode)}',
+                        lines: [
+                          interview.atLabel,
+                          if (interview.note.isNotEmpty) interview.note,
+                        ],
                       ),
-                    ),
-                  ],
-                  if (application.trackingSteps.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    _ApplicationTracker(
-                      steps: application.trackingSteps,
-                      applicationStatus: status,
-                    ),
-                  ],
-                  if (application.interview case final interview?) ...[
-                    const SizedBox(height: 12),
-                    _ApplicationInfo(
-                      icon: LucideIcons.calendarCheck,
-                      title:
-                          '${context.tr('Interview')} • ${context.tr(interview.mode)}',
-                      lines: [
-                        interview.atLabel,
-                        if (interview.note.isNotEmpty) interview.note,
-                      ],
-                    ),
-                  ],
-                  if (application.offer case final offer?) ...[
-                    const SizedBox(height: 12),
-                    _ApplicationInfo(
-                      icon: LucideIcons.partyPopper,
-                      title: 'Job offer',
-                      lines: [
-                        '₹${offer.wage.toStringAsFixed(2)} ${context.tr('/month')} • ${offer.startDate}',
-                        if (offer.message.isNotEmpty) offer.message,
-                      ],
-                    ),
-                  ],
-                  if (pending) ...[
-                    const SizedBox(height: 12),
-                    _ResponsiveApplicationActions(
-                      first: OutlinedButton(
-                        onPressed: onWithdraw,
-                        child: const AppText(
-                          'Withdraw',
-                          textAlign: TextAlign.center,
+                    ],
+                    if (application.offer case final offer?) ...[
+                      const SizedBox(height: 12),
+                      _ApplicationInfo(
+                        icon: LucideIcons.partyPopper,
+                        title: 'Job offer',
+                        lines: [
+                          // Only the parts the employer gave: an older hire
+                          // has no pay or date and showed "₹0 /month •".
+                          if ([
+                                offer.wageLabel.isNotEmpty
+                                    ? offer.wageLabel
+                                    : offer.wage > 0
+                                    ? '${formatRupees(offer.wage)} ${context.tr('/month')}'
+                                    : '',
+                                offer.startDateLabel.isNotEmpty
+                                    ? context.trArgs('Joining {date}', {
+                                        'date': offer.startDateLabel,
+                                      })
+                                    : '',
+                              ].where((part) => part.isNotEmpty).join(' • ')
+                              case final terms when terms.isNotEmpty)
+                            terms,
+                          if (offer.message.isNotEmpty) offer.message,
+                          if (offer.address.isNotEmpty) offer.address,
+                          if (offer.contactName.isNotEmpty ||
+                              offer.contactPhone.isNotEmpty)
+                            [
+                              offer.contactName,
+                              offer.contactPhone,
+                            ].where((part) => part.isNotEmpty).join(' · '),
+                        ],
+                      ),
+                    ],
+                    if (pending) ...[
+                      const SizedBox(height: 12),
+                      _ResponsiveApplicationActions(
+                        first: OutlinedButton(
+                          onPressed: onWithdraw,
+                          child: const AppText(
+                            'Withdraw',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        second: FilledButton(
+                          onPressed: onContact,
+                          child: const AppText(
+                            'Message employer',
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                      second: FilledButton(
-                        onPressed: onContact,
-                        child: const AppText(
-                          'Message employer',
-                          textAlign: TextAlign.center,
+                    ] else if (accepted) ...[
+                      const SizedBox(height: 12),
+                      _ResponsiveApplicationActions(
+                        first: FilledButton(
+                          style: FilledButton.styleFrom(backgroundColor: brand),
+                          onPressed: onContact,
+                          child: const AppText(
+                            'Contact employer',
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                      ),
-                    ),
-                  ] else if (accepted) ...[
-                    const SizedBox(height: 12),
-                    _ResponsiveApplicationActions(
-                      first: FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: brand),
-                        onPressed: onContact,
-                        child: const AppText(
-                          'Contact employer',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      second: canReview
-                          ? OutlinedButton(
-                              onPressed: onReview,
-                              child: const AppText(
-                                'Rate employer',
-                                textAlign: TextAlign.center,
+                        second: canReview
+                            ? OutlinedButton(
+                                onPressed: onReview,
+                                child: const AppText(
+                                  'Rate employer',
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : const Center(
+                                child: StatusPill(
+                                  'Review submitted',
+                                  Color(0xFFECFDF5),
+                                  Color(0xFF047857),
+                                ),
                               ),
-                            )
-                          : const Center(
-                              child: StatusPill(
-                                'Review submitted',
-                                Color(0xFFECFDF5),
-                                Color(0xFF047857),
-                              ),
-                            ),
-                    ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

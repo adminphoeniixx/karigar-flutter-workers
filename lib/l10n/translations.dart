@@ -42,6 +42,137 @@ const hinglishAppTextTranslations = <String, String>{
 
 const appTextTranslations = <String, Map<String, String>>{
   'hi': {
+    "Available": "उपलब्ध",
+    "KYC": "केवाईसी",
+    "Find work near you": "पास में काम खोजें",
+    "{count} jobs match your skills": "आपके कौशल से {count} नौकरियां मिलती हैं",
+    "Find jobs": "नौकरी खोजें",
+    "Tap the map to move the pin": "पिन हटाने के लिए मैप पर टैप करें",
+    "Jobs near": "इसके पास की नौकरियां:",
+    "No job alerts or jobs while off":
+        "बंद रहने पर नौकरी की सूचना या नौकरियां नहीं मिलेंगी",
+    "Change ›": "बदलें ›",
+    "Current location": "मौजूदा जगह",
+    "{count} opening": "{count} पद",
+    "Your profile location": "आपकी प्रोफ़ाइल की जगह",
+    "Your city": "आपका शहर",
+    "Contact": "संपर्क",
+    "Not used yet": "अभी इस्तेमाल नहीं हुआ",
+    "Job closed": "नौकरी बंद",
+    "Aadhaar verified": "आधार सत्यापित",
+    "{count} saved job": "{count} सेव की गई नौकरी",
+    // AI resume builder (26 Nov).
+    "Your resume is attached · Change": "आपका रिज़्यूमे जुड़ा है · बदलें",
+    "Joining {date}": "ज्वाइनिंग {date}",
+    "Leave without saving?": "बिना सेव किए बाहर जाएं?",
+    "Your resume changes are not saved yet. Save them first so employers see them.":
+        "रिज़्यूमे के बदलाव अभी सेव नहीं हुए हैं। पहले सेव करें ताकि नियोक्ता उन्हें देख सकें।",
+    "Leave": "बाहर जाएं",
+    "Keep editing": "बदलाव जारी रखें",
+    "A clear photo makes your resume stand out.":
+        "साफ़ फ़ोटो से आपका रिज़्यूमे अलग दिखता है।",
+    "AI Resume": "AI रिज़्यूमे",
+    "AI is writing your resume": "AI आपका रिज़्यूमे लिख रहा है",
+    "About you": "आपके बारे में",
+    "Achievements": "उपलब्धियां",
+    "Add another job": "एक और काम जोड़ें",
+    "Add photo": "फ़ोटो जोड़ें",
+    "Answer a few questions. AI writes a professional resume, you pick a design, and employers can download it.":
+        "कुछ सवालों के जवाब दें। AI आपका प्रोफ़ेशनल रिज़्यूमे लिखेगा, आप डिज़ाइन चुनें, और नियोक्ता इसे डाउनलोड कर सकेंगे।",
+    "Back": "पीछे",
+    "Basic — add more details": "साधारण — और जानकारी जोड़ें",
+    "Change any line you like. The preview updates as you type.":
+        "कोई भी लाइन बदलें। लिखते ही प्रीव्यू बदल जाता है।",
+    "Choose a design": "डिज़ाइन चुनें",
+    "Colour": "रंग",
+    "Could not update": "अपडेट नहीं हो सका",
+    "Could not write the resume right now. Please try again.":
+        "अभी रिज़्यूमे नहीं लिखा जा सका। फिर कोशिश करें।",
+    "Design & save": "डिज़ाइन और सेव",
+    "Download PDF": "PDF डाउनलोड करें",
+    "Education & languages": "पढ़ाई और भाषाएं",
+    "Education & more": "पढ़ाई और अन्य",
+    "Education (one per line)": "पढ़ाई (हर लाइन में एक)",
+    "Expected monthly salary (₹)": "अपेक्षित मासिक वेतन (₹)",
+    "Experience (years)": "अनुभव (साल)",
+    "From (year)": "से (साल)",
+    "Full name *": "पूरा नाम *",
+    "Good — a few more details will help": "अच्छा — थोड़ी और जानकारी मदद करेगी",
+    "Headline": "हेडलाइन",
+    "I still work here": "मैं अभी भी यहां काम करता/करती हूं",
+    "Keep my current resume and go to design →":
+        "मेरा मौजूदा रिज़्यूमे रखें और डिज़ाइन पर जाएं →",
+    "Languages (one per line)": "भाषाएं (हर लाइन में एक)",
+    "Languages (separate with commas)": "भाषाएं (कॉमा से अलग करें)",
+    "Laying out your resume…": "आपका रिज़्यूमे सजाया जा रहा है…",
+    "Live preview": "लाइव प्रीव्यू",
+    "More about you": "आपके बारे में और",
+    "More about you (one per line)": "आपके बारे में और (हर लाइन में एक)",
+    "Next": "आगे",
+    "No PDF viewer is available on this device.":
+        "इस फ़ोन में PDF खोलने वाला ऐप नहीं है।",
+    "No photo yet. Resumes with a photo get more calls.":
+        "अभी फ़ोटो नहीं है। फ़ोटो वाले रिज़्यूमे को ज़्यादा कॉल आते हैं।",
+    "Open PDF": "PDF खोलें",
+    "Open preview": "प्रीव्यू खोलें",
+    "PDF preview is ready": "PDF प्रीव्यू तैयार है",
+    "Period (e.g. 2019 – 2023)": "समय (जैसे 2019 – 2023)",
+    "Phone": "फ़ोन",
+    "Pick a layout and a colour. The preview updates as you go.":
+        "लेआउट और रंग चुनें। प्रीव्यू साथ-साथ बदलता है।",
+    "Place": "जगह",
+    "Please choose an image smaller than 2 MB.": "2 MB से छोटी फ़ोटो चुनें।",
+    "Please fill in the box marked in red.": "लाल निशान वाला खाना भरें।",
+    "Please fill this in.": "यह भरें।",
+    "Please fix the fields marked in red.": "लाल निशान वाले खाने ठीक करें।",
+    "Profile": "प्रोफ़ाइल",
+    "Reading your work history…": "आपके काम का इतिहास पढ़ा जा रहा है…",
+    "Ready to travel or move for work":
+        "काम के लिए सफ़र करने या शहर बदलने को तैयार",
+    "Refresh": "रिफ़्रेश",
+    "Resume saved": "रिज़्यूमे सेव हो गया",
+    "Role": "काम",
+    "Save as my resume": "मेरे रिज़्यूमे के रूप में सेव करें",
+    "Schooling, any course or training, and languages you speak.":
+        "पढ़ाई, कोई कोर्स या ट्रेनिंग, और आपकी भाषाएं।",
+    "See the preview": "प्रीव्यू देखें",
+    "Show photo on resume": "रिज़्यूमे पर फ़ोटो दिखाएं",
+    "Skills (one per line)": "हुनर (हर लाइन में एक)",
+    "Skills (separate with commas)": "हुनर (कॉमा से अलग करें)",
+    "Strong — employers will like this": "बढ़िया — नियोक्ताओं को यह पसंद आएगा",
+    "This goes at the top of your resume. We filled in what your profile already has.":
+        "यह आपके रिज़्यूमे में सबसे ऊपर आएगा। आपकी प्रोफ़ाइल से जानकारी भर दी गई है।",
+    "This takes about 10 seconds.": "इसमें लगभग 10 सेकंड लगते हैं।",
+    "To (year)": "तक (साल)",
+    "Too many tries. Please wait a minute and try again.":
+        "बहुत बार कोशिश हुई। एक मिनट रुककर फिर कोशिश करें।",
+    "Tools / machines you use": "आप कौन से औज़ार / मशीनें चलाते हैं",
+    "Training / certificates": "ट्रेनिंग / सर्टिफ़िकेट",
+    "Turning your work into clear points…":
+        "आपके काम को साफ़ पॉइंट्स में लिखा जा रहा है…",
+    "Up to date": "अपडेटेड",
+    "Waiting for your resume": "आपके रिज़्यूमे का इंतज़ार",
+    "What did you do there?": "वहां आपने क्या काम किया?",
+    "What work do you do? *": "आप क्या काम करते हैं? *",
+    "What you do and what you are good at.":
+        "आप क्या करते हैं और किसमें माहिर हैं।",
+    "Where have you worked? Add your latest job first.":
+        "आपने कहां काम किया है? सबसे नया काम पहले लिखें।",
+    "Work experience": "काम का अनुभव",
+    "Work points (one per line)": "काम के पॉइंट (हर लाइन में एक)",
+    "Workshop / company": "वर्कशॉप / कंपनी",
+    "Write again with AI": "AI से फिर लिखवाएं",
+    "Write my resume with AI": "AI से मेरा रिज़्यूमे लिखवाएं",
+    "Writing your profile…": "आपकी प्रोफ़ाइल लिखी जा रही है…",
+    "Your PDF preview will appear here": "आपका PDF प्रीव्यू यहां दिखेगा",
+    "Your resume": "आपका रिज़्यूमे",
+    "Your resume is ready": "आपका रिज़्यूमे तैयार है",
+    "Your work": "आपका काम",
+    "Your work there *": "वहां आपका काम *",
+    "← Edit answers": "← जवाब बदलें",
+    "✓  \"Verified\" badge on your resume": "✓  रिज़्यूमे पर \"सत्यापित\" बैज",
+    "💡 AI writes only from your answers. You can type in Hindi or Hinglish too.":
+        "💡 AI सिर्फ़ आपके जवाबों से लिखता है। आप हिंदी या हिंग्लिश में भी लिख सकते हैं।",
     "Expected salary per month": "अपेक्षित मासिक वेतन",
     "Expected salary per month (optional)": "अपेक्षित मासिक वेतन (वैकल्पिक)",
     "/month": "/माह",
@@ -194,6 +325,8 @@ const appTextTranslations = <String, Map<String, String>>{
     "Job description": "काम का विवरण",
     "Skills required": "जरूरी कौशल",
     "Perks & benefits": "सुविधाएं और लाभ",
+    "Distance": "दूरी",
+    "Any distance": "कोई भी दूरी",
     "Food": "भोजन",
     "Accommodation": "रहने की सुविधा",
     "Payout": "भुगतान",
@@ -312,7 +445,7 @@ const appTextTranslations = <String, Map<String, String>>{
         "केवल PDF • अधिकतम 4 MB • बिना पढ़ने योग्य टेक्स्ट वाले स्कैन/फ़ोटो PDF स्वीकार नहीं हैं।",
     "Never pay an advance fee for work. Report anything that seems suspicious.":
         "काम के लिए अग्रिम शुल्क कभी न दें। संदिग्ध बात की शिकायत करें।",
-    "Karigar never charges you to work. Report any employer who asks for an advance fee.":
+    "Super Karigar never charges you to work. Report any employer who asks for an advance fee.":
         "कारीगर काम के लिए शुल्क नहीं लेता। अग्रिम शुल्क मांगने वाले नियोक्ता की शिकायत करें।",
     "Reload skills and categories": "कौशल और श्रेणियां फिर लोड करें",
     "Could not load cities. Tap to retry": "शहर लोड नहीं हुए। फिर कोशिश करें",
@@ -473,6 +606,10 @@ const appTextTranslations = <String, Map<String, String>>{
         "इस खाते को कामगार डैशबोर्ड का एक्सेस नहीं है। कामगार खाते से लॉगिन करें। यदि यह कामगार खाता है तो सहायता से संपर्क करें।",
     "You are now available for work.": "अब आप काम के लिए उपलब्ध हैं।",
     "Availability turned off.": "उपलब्धता बंद की गई।",
+    "You're not available for work": "आप अभी काम के लिए उपलब्ध नहीं हैं",
+    "I'm available for work": "मैं काम के लिए उपलब्ध हूं",
+    "While \"Available for work\" is off you get no job alerts and see no jobs. Switch it on whenever you’re ready.":
+        "\"काम के लिए उपलब्ध\" बंद रहने तक आपको न जॉब अलर्ट मिलेंगे, न जॉब दिखेंगी। जब तैयार हों, इसे चालू करें।",
     "Your resume must be smaller than 4 MB.":
         "बायोडाटा 4 MB से छोटा होना चाहिए।",
     "Resume uploaded successfully.": "बायोडाटा अपलोड हुआ।",
@@ -500,6 +637,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "{count} needed": "{count} की जरूरत",
     "Based on {count} reviews": "{count} समीक्षाओं पर आधारित",
     "{count} reviews": "{count} समीक्षाएं",
+    "{count} review": "{count} समीक्षा",
     "Updated {date}": "अपडेट: {date}",
     "{count} characters read from your resume • Uploaded {time}":
         "बायोडाटा से {count} अक्षर पढ़े • अपलोड {time}",
@@ -522,8 +660,168 @@ const appTextTranslations = <String, Map<String, String>>{
     "Mark all read": "सभी पढ़ा हुआ करें",
     "Review submitted.": "समीक्षा जमा हुई",
     "/ day": "/दिन",
+
+    'Area / Mohalla': 'इलाका / मोहल्ला',
+    'Employers can message you after you apply for a job.':
+        'किसी नौकरी पर आवेदन करने के बाद नियोक्ता आपको मैसेज कर सकते हैं।',
+    'Log out?': 'लॉग आउट करें?',
+    'Messages from employers about your applications':
+        'आपके आवेदनों के बारे में नियोक्ताओं के मैसेज',
+    'Older messages': 'पुराने मैसेज',
+    'Or enter Aadhaar number instead': 'या इसकी जगह आधार नंबर डालें',
+    'Resume language': 'रिज़्यूमे की भाषा',
+    'Sign in and tap Allow in DigiLocker. We will bring you back automatically.':
+        'DigiLocker में साइन इन करके Allow दबाएँ। हम आपको अपने आप वापस ले आएँगे।',
+    'This is what will happen:': 'ये होगा:',
+    'Verify with DigiLocker': 'DigiLocker से वेरिफ़ाई करें',
+    'You will need an OTP to log in again.':
+        'फिर से लॉग इन करने के लिए OTP चाहिए होगा।',
+    'No internet connection. Check your internet and try again.':
+        'इंटरनेट नहीं है। अपना इंटरनेट देखकर फिर कोशिश करें।',
+    'The server is taking too long. Please try again.':
+        'सर्वर बहुत समय ले रहा है। फिर कोशिश करें।',
   },
   'ta': {
+    "Available": "கிடைக்கிறேன்",
+    "KYC": "KYC",
+    "Find work near you": "அருகில் வேலை தேடுங்கள்",
+    "{count} jobs match your skills": "உங்கள் திறமைக்கு {count} வேலைகள்",
+    "Find jobs": "வேலை தேடு",
+    "Tap the map to move the pin": "பின்னை நகர்த்த வரைபடத்தைத் தட்டவும்",
+    "Jobs near": "அருகிலுள்ள வேலைகள்:",
+    "No job alerts or jobs while off":
+        "அணைத்திருக்கும் போது வேலை அறிவிப்புகள் இல்லை",
+    "Change ›": "மாற்று ›",
+    "Current location": "தற்போதைய இடம்",
+    "{count} opening": "{count} காலியிடம்",
+    "Your profile location": "உங்கள் சுயவிவர இடம்",
+    "Your city": "உங்கள் நகரம்",
+    "Contact": "தொடர்பு",
+    "Not used yet": "இன்னும் பயன்படுத்தப்படவில்லை",
+    "Job closed": "வேலை மூடப்பட்டது",
+    "Aadhaar verified": "ஆதார் சரிபார்க்கப்பட்டது",
+    "{count} saved job": "{count} சேமித்த வேலை",
+    // AI resume builder (26 Nov).
+    "Your resume is attached · Change":
+        "உங்கள் ரெஸ்யூம் இணைக்கப்பட்டுள்ளது · மாற்று",
+    "Joining {date}": "சேரும் தேதி {date}",
+    "Leave without saving?": "சேமிக்காமல் வெளியேறவா?",
+    "Your resume changes are not saved yet. Save them first so employers see them.":
+        "ரெஸ்யூம் மாற்றங்கள் இன்னும் சேமிக்கப்படவில்லை. முதலாளிகள் பார்க்க முதலில் சேமிக்கவும்.",
+    "Leave": "வெளியேறு",
+    "Keep editing": "திருத்தத்தைத் தொடர்",
+    "A clear photo makes your resume stand out.":
+        "தெளிவான புகைப்படம் உங்கள் ரெஸ்யூமை தனித்துக் காட்டும்.",
+    "Achievements": "சாதனைகள்",
+    "Basic — add more details": "அடிப்படை — மேலும் விவரங்கள் சேர்க்கவும்",
+    "Could not update": "புதுப்பிக்க முடியவில்லை",
+    "Could not write the resume right now. Please try again.":
+        "இப்போது ரெஸ்யூம் எழுத முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
+    "Design & save": "வடிவமைப்பு & சேமி",
+    "Education & more": "கல்வி & மேலும்",
+    "Education (one per line)": "கல்வி (ஒரு வரிக்கு ஒன்று)",
+    "Expected monthly salary (₹)": "எதிர்பார்க்கும் மாத சம்பளம் (₹)",
+    "Experience (years)": "அனுபவம் (ஆண்டுகள்)",
+    "From (year)": "முதல் (ஆண்டு)",
+    "Full name *": "முழுப் பெயர் *",
+    "Good — a few more details will help":
+        "நல்லது — இன்னும் சில விவரங்கள் உதவும்",
+    "Headline": "தலைப்பு",
+    "Languages (one per line)": "மொழிகள் (ஒரு வரிக்கு ஒன்று)",
+    "Languages (separate with commas)": "மொழிகள் (காற்புள்ளியால் பிரிக்கவும்)",
+    "Laying out your resume…": "உங்கள் ரெஸ்யூம் அமைக்கப்படுகிறது…",
+    "More about you (one per line)":
+        "உங்களைப் பற்றி மேலும் (ஒரு வரிக்கு ஒன்று)",
+    "No PDF viewer is available on this device.":
+        "இந்த சாதனத்தில் PDF பார்க்கும் செயலி இல்லை.",
+    "No photo yet. Resumes with a photo get more calls.":
+        "இன்னும் புகைப்படம் இல்லை. புகைப்படம் உள்ள ரெஸ்யூம்களுக்கு அதிக அழைப்புகள் வரும்.",
+    "PDF preview is ready": "PDF முன்னோட்டம் தயார்",
+    "Period (e.g. 2019 – 2023)": "காலம் (எ.கா. 2019 – 2023)",
+    "Phone": "தொலைபேசி",
+    "Place": "இடம்",
+    "Please choose an image smaller than 2 MB.":
+        "2 MB-க்கு குறைவான படத்தைத் தேர்ந்தெடுக்கவும்.",
+    "Please fill in the box marked in red.":
+        "சிவப்பில் குறிக்கப்பட்ட பெட்டியை நிரப்பவும்.",
+    "Please fill this in.": "இதை நிரப்பவும்.",
+    "Please fix the fields marked in red.":
+        "சிவப்பில் குறிக்கப்பட்ட புலங்களைச் சரிசெய்யவும்.",
+    "Profile": "சுயவிவரம்",
+    "Reading your work history…": "உங்கள் வேலை வரலாறு படிக்கப்படுகிறது…",
+    "Resume saved": "ரெஸ்யூம் சேமிக்கப்பட்டது",
+    "Role": "பணி",
+    "Skills (one per line)": "திறன்கள் (ஒரு வரிக்கு ஒன்று)",
+    "Skills (separate with commas)": "திறன்கள் (காற்புள்ளியால் பிரிக்கவும்)",
+    "Strong — employers will like this":
+        "சிறப்பு — முதலாளிகளுக்கு இது பிடிக்கும்",
+    "To (year)": "வரை (ஆண்டு)",
+    "Too many tries. Please wait a minute and try again.":
+        "பல முறை முயற்சி. ஒரு நிமிடம் காத்திருந்து மீண்டும் முயற்சிக்கவும்.",
+    "Tools / machines you use": "நீங்கள் பயன்படுத்தும் கருவிகள் / இயந்திரங்கள்",
+    "Training / certificates": "பயிற்சி / சான்றிதழ்கள்",
+    "Turning your work into clear points…":
+        "உங்கள் வேலை தெளிவான புள்ளிகளாக எழுதப்படுகிறது…",
+    "Up to date": "புதுப்பிக்கப்பட்டது",
+    "Waiting for your resume": "உங்கள் ரெஸ்யூமுக்காக காத்திருக்கிறது",
+    "What did you do there?": "அங்கே என்ன வேலை செய்தீர்கள்?",
+    "What work do you do? *": "நீங்கள் என்ன வேலை செய்கிறீர்கள்? *",
+    "Work points (one per line)": "வேலை புள்ளிகள் (ஒரு வரிக்கு ஒன்று)",
+    "Workshop / company": "பணிமனை / நிறுவனம்",
+    "Write my resume with AI": "AI மூலம் என் ரெஸ்யூமை எழுது",
+    "Writing your profile…": "உங்கள் சுயவிவரம் எழுதப்படுகிறது…",
+    "Your PDF preview will appear here":
+        "உங்கள் PDF முன்னோட்டம் இங்கே தோன்றும்",
+    "Your work there *": "அங்கே உங்கள் வேலை *",
+    "💡 AI writes only from your answers. You can type in Hindi or Hinglish too.":
+        "💡 AI உங்கள் பதில்களில் இருந்து மட்டுமே எழுதும். ஹிந்தி அல்லது ஹிங்லிஷிலும் எழுதலாம்.",
+    "About you": "உங்களைப் பற்றி",
+    "This goes at the top of your resume. We filled in what your profile already has.":
+        "இது உங்கள் ரெஸ்யூமின் மேலே வரும். உங்கள் சுயவிவரத்தில் உள்ளதை நிரப்பியுள்ளோம்.",
+    "Add photo": "புகைப்படம் சேர்",
+    "Show photo on resume": "ரெஸ்யூமில் புகைப்படம் காட்டு",
+    "Your work": "உங்கள் வேலை",
+    "What you do and what you are good at.":
+        "நீங்கள் என்ன செய்கிறீர்கள், எதில் திறமையானவர்.",
+    "Work experience": "வேலை அனுபவம்",
+    "Where have you worked? Add your latest job first.":
+        "எங்கே வேலை செய்தீர்கள்? சமீபத்திய வேலையை முதலில் சேர்க்கவும்.",
+    "Add another job": "இன்னொரு வேலையைச் சேர்",
+    "I still work here": "நான் இன்னும் இங்கே வேலை செய்கிறேன்",
+    "Education & languages": "கல்வி மற்றும் மொழிகள்",
+    "Schooling, any course or training, and languages you speak.":
+        "பள்ளிப்படிப்பு, ஏதேனும் பயிற்சி, நீங்கள் பேசும் மொழிகள்.",
+    "More about you": "உங்களைப் பற்றி மேலும்",
+    "Ready to travel or move for work":
+        "வேலைக்காக பயணம் செய்ய அல்லது இடம் மாற தயார்",
+    "Choose a design": "வடிவமைப்பைத் தேர்ந்தெடு",
+    "Pick a layout and a colour. The preview updates as you go.":
+        "அமைப்பையும் நிறத்தையும் தேர்ந்தெடுங்கள். முன்னோட்டம் உடனே மாறும்.",
+    "Colour": "நிறம்",
+    "✓  \"Verified\" badge on your resume":
+        "✓  ரெஸ்யூமில் \"சரிபார்க்கப்பட்டது\" பேட்ஜ்",
+    "Your resume": "உங்கள் ரெஸ்யூம்",
+    "Change any line you like. The preview updates as you type.":
+        "எந்த வரியையும் மாற்றுங்கள். தட்டச்சு செய்யும்போதே முன்னோட்டம் மாறும்.",
+    "Write again with AI": "AI மூலம் மீண்டும் எழுது",
+    "Live preview": "நேரடி முன்னோட்டம்",
+    "Open preview": "முன்னோட்டத்தைத் திற",
+    "Refresh": "புதுப்பி",
+    "Open PDF": "PDF திற",
+    "Your resume is ready": "உங்கள் ரெஸ்யூம் தயார்",
+    "Download PDF": "PDF பதிவிறக்கு",
+    "← Edit answers": "← பதில்களை மாற்று",
+    "Save as my resume": "என் ரெஸ்யூமாக சேமி",
+    "Keep my current resume and go to design →":
+        "தற்போதைய ரெஸ்யூமை வைத்துக்கொண்டு வடிவமைப்புக்கு செல் →",
+    "Back": "பின்செல்",
+    "Next": "அடுத்து",
+    "See the preview": "முன்னோட்டத்தைப் பார்",
+    "AI Resume": "AI ரெஸ்யூம்",
+    "Answer a few questions. AI writes a professional resume, you pick a design, and employers can download it.":
+        "சில கேள்விகளுக்கு பதில் சொல்லுங்கள். AI தொழில்முறை ரெஸ்யூம் எழுதும், நீங்கள் வடிவமைப்பைத் தேர்ந்தெடுங்கள், முதலாளிகள் பதிவிறக்கலாம்.",
+    "AI is writing your resume": "AI உங்கள் ரெஸ்யூமை எழுதுகிறது",
+    "This takes about 10 seconds.": "இதற்கு சுமார் 10 வினாடிகள் ஆகும்.",
     "Expected salary per month": "எதிர்பார்க்கும் மாத ஊதியம்",
     "Expected salary per month (optional)":
         "எதிர்பார்க்கும் மாத ஊதியம் (விருப்பம்)",
@@ -665,6 +963,8 @@ const appTextTranslations = <String, Map<String, String>>{
     "Job description": "வேலை விளக்கம்",
     "Skills required": "தேவையான திறன்கள்",
     "Perks & benefits": "சலுகைகள் மற்றும் நன்மைகள்",
+    "Distance": "தூரம்",
+    "Any distance": "எந்த தூரமும்",
     "Food": "உணவு",
     "Accommodation": "தங்குமிடம்",
     "Payout": "பணம் வழங்கல்",
@@ -789,7 +1089,7 @@ const appTextTranslations = <String, Map<String, String>>{
         "PDF மட்டும் • அதிகபட்சம் 4 MB • படிக்கக்கூடிய உரையில்லாத ஸ்கேன்/பட PDF பயன்படுத்த முடியாது.",
     "Never pay an advance fee for work. Report anything that seems suspicious.":
         "வேலைக்கு முன்பணம் செலுத்தாதீர்கள். சந்தேகமானவற்றைப் புகாரளிக்கவும்.",
-    "Karigar never charges you to work. Report any employer who asks for an advance fee.":
+    "Super Karigar never charges you to work. Report any employer who asks for an advance fee.":
         "வேலைக்காக காரிகர் கட்டணம் வசூலிப்பதில்லை. முன்பணம் கேட்கும் முதலாளியைப் புகாரளிக்கவும்.",
     "Reload skills and categories": "திறன்கள் மற்றும் வகைகளை மீண்டும் ஏற்று",
     "Could not load cities. Tap to retry":
@@ -955,6 +1255,10 @@ const appTextTranslations = <String, Map<String, String>>{
         "இந்தக் கணக்கில் தொழிலாளர் முகப்பை அணுக முடியாது. தொழிலாளர் கணக்கில் உள்நுழையவும். இது தொழிலாளர் கணக்கெனில் உதவியைத் தொடர்புகொள்ளவும்.",
     "You are now available for work.": "இப்போது வேலைக்குத் தயாராக உள்ளீர்கள்.",
     "Availability turned off.": "கிடைக்கும் நிலை அணைக்கப்பட்டது.",
+    "You're not available for work": "நீங்கள் வேலைக்கு கிடைக்கவில்லை",
+    "I'm available for work": "நான் வேலைக்கு தயார்",
+    "While \"Available for work\" is off you get no job alerts and see no jobs. Switch it on whenever you’re ready.":
+        "\"வேலைக்கு கிடைக்கும்\" அணைந்திருக்கும் வரை வேலை அறிவிப்புகளும் வேலைகளும் வராது. தயாரானதும் இயக்குங்கள்.",
     "Your resume must be smaller than 4 MB.":
         "சுயவிவர ஆவணம் 4 MB விடச் சிறியதாக இருக்க வேண்டும்.",
     "Resume uploaded successfully.": "சுயவிவர ஆவணம் பதிவேற்றப்பட்டது.",
@@ -982,6 +1286,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "{count} needed": "{count} பேர் தேவை",
     "Based on {count} reviews": "{count} விமர்சனங்களின் அடிப்படையில்",
     "{count} reviews": "{count} விமர்சனங்கள்",
+    "{count} review": "{count} விமர்சனங்கள்",
     "Updated {date}": "புதுப்பித்தது {date}",
     "{count} characters read from your resume • Uploaded {time}":
         "ஆவணத்திலிருந்து {count} எழுத்துகள் படிக்கப்பட்டன • பதிவேற்றம் {time}",
@@ -1004,8 +1309,182 @@ const appTextTranslations = <String, Map<String, String>>{
     "Mark all read": "அனைத்தையும் படித்ததாகக் குறி",
     "Review submitted.": "விமர்சனம் சமர்ப்பிக்கப்பட்டது",
     "/ day": "/நாள்",
+
+    'Age': 'வயது',
+    'At workplace / Site': 'பணியிடம் / தளத்தில்',
+    'Bonus / incentive': 'போனஸ் / ஊக்கத்தொகை',
+    'Both (Site & Home)': 'இரண்டும் (தளம் & வீடு)',
+    'Job type': 'வேலை வகை',
+    'Karigars from': 'கைவினைஞர்கள் எங்கிருந்து',
+    'Karigars from other cities who will move here can apply':
+        'இங்கு வரத் தயாராக உள்ள பிற நகர கைவினைஞர்களும் விண்ணப்பிக்கலாம்',
+    'Languages': 'மொழிகள்',
+    'Must have': 'கட்டாயம் இருக்க வேண்டும்',
+    'Other requirements': 'பிற தேவைகள்',
+    'Part time': 'பகுதி நேரம்',
+    'Requirements': 'தேவைகள்',
+    'Urgent hiring': 'அவசர பணியமர்த்தல்',
+    'Work from home': 'வீட்டிலிருந்து வேலை',
+    'Working days': 'வேலை நாட்கள்',
+    'Area / Mohalla': 'பகுதி / தெரு',
+    'Employers can message you after you apply for a job.':
+        'நீங்கள் ஒரு வேலைக்கு விண்ணப்பித்த பிறகு முதலாளிகள் உங்களுக்குச் செய்தி அனுப்பலாம்.',
+    'Log out?': 'வெளியேற வேண்டுமா?',
+    'Messages from employers about your applications':
+        'உங்கள் விண்ணப்பங்கள் குறித்து முதலாளிகளின் செய்திகள்',
+    'Older messages': 'பழைய செய்திகள்',
+    'Or enter Aadhaar number instead':
+        'அல்லது அதற்குப் பதிலாக ஆதார் எண்ணை உள்ளிடவும்',
+    'Resume language': 'சுயவிவரக் குறிப்பு மொழி',
+    'Sign in and tap Allow in DigiLocker. We will bring you back automatically.':
+        'DigiLocker-இல் உள்நுழைந்து Allow தட்டவும். நாங்கள் உங்களைத் தானாகத் திரும்ப அழைத்து வருவோம்.',
+    'This is what will happen:': 'இது நடக்கும்:',
+    'Verify with DigiLocker': 'DigiLocker மூலம் சரிபார்க்கவும்',
+    'You will need an OTP to log in again.':
+        'மீண்டும் உள்நுழைய OTP தேவைப்படும்.',
+    'No internet connection. Check your internet and try again.':
+        'இணைய இணைப்பு இல்லை. இணையத்தைச் சரிபார்த்து மீண்டும் முயலவும்.',
+    'The server is taking too long. Please try again.':
+        'சர்வர் அதிக நேரம் எடுக்கிறது. மீண்டும் முயலவும்.',
   },
   'te': {
+    "Available": "అందుబాటులో",
+    "KYC": "KYC",
+    "Find work near you": "దగ్గరలో పని వెతకండి",
+    "{count} jobs match your skills": "మీ నైపుణ్యాలకు {count} ఉద్యోగాలు",
+    "Find jobs": "ఉద్యోగాలు వెతకండి",
+    "Tap the map to move the pin": "పిన్ మార్చడానికి మ్యాప్‌ను తాకండి",
+    "Jobs near": "సమీప ఉద్యోగాలు:",
+    "No job alerts or jobs while off":
+        "ఆఫ్‌లో ఉన్నప్పుడు ఉద్యోగ హెచ్చరికలు ఉండవు",
+    "Change ›": "మార్చు ›",
+    "Current location": "ప్రస్తుత స్థానం",
+    "{count} opening": "{count} ఖాళీ",
+    "Your profile location": "మీ ప్రొఫైల్ స్థలం",
+    "Your city": "మీ నగరం",
+    "Contact": "సంప్రదింపు",
+    "Not used yet": "ఇంకా ఉపయోగించలేదు",
+    "Job closed": "ఉద్యోగం మూసివేయబడింది",
+    "Aadhaar verified": "ఆధార్ ధృవీకరించబడింది",
+    "{count} saved job": "{count} సేవ్ చేసిన ఉద్యోగం",
+    // AI resume builder (26 Nov).
+    "Your resume is attached · Change": "మీ రెజ్యూమ్ జోడించబడింది · మార్చండి",
+    "Joining {date}": "చేరే తేదీ {date}",
+    "Leave without saving?": "సేవ్ చేయకుండా వెళ్లాలా?",
+    "Your resume changes are not saved yet. Save them first so employers see them.":
+        "రెజ్యూమ్ మార్పులు ఇంకా సేవ్ కాలేదు. యజమానులు చూడాలంటే ముందు సేవ్ చేయండి.",
+    "Leave": "వెళ్లండి",
+    "Keep editing": "ఎడిట్ కొనసాగించండి",
+    "A clear photo makes your resume stand out.":
+        "స్పష్టమైన ఫోటో మీ రెజ్యూమ్‌ను ప్రత్యేకంగా చూపిస్తుంది.",
+    "Achievements": "సాధనలు",
+    "Basic — add more details": "సాధారణం — మరిన్ని వివరాలు జోడించండి",
+    "Could not update": "అప్‌డేట్ కాలేదు",
+    "Could not write the resume right now. Please try again.":
+        "ఇప్పుడు రెజ్యూమ్ రాయలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+    "Design & save": "డిజైన్ & సేవ్",
+    "Education & more": "చదువు & మరిన్ని",
+    "Education (one per line)": "చదువు (లైన్‌కు ఒకటి)",
+    "Expected monthly salary (₹)": "ఆశించే నెల జీతం (₹)",
+    "Experience (years)": "అనుభవం (సంవత్సరాలు)",
+    "From (year)": "నుంచి (సంవత్సరం)",
+    "Full name *": "పూర్తి పేరు *",
+    "Good — a few more details will help":
+        "బాగుంది — మరికొన్ని వివరాలు సహాయపడతాయి",
+    "Headline": "హెడ్‌లైన్",
+    "Languages (one per line)": "భాషలు (లైన్‌కు ఒకటి)",
+    "Languages (separate with commas)": "భాషలు (కామాతో వేరు చేయండి)",
+    "Laying out your resume…": "మీ రెజ్యూమ్ సిద్ధమవుతోంది…",
+    "More about you (one per line)": "మీ గురించి మరింత (లైన్‌కు ఒకటి)",
+    "No PDF viewer is available on this device.":
+        "ఈ పరికరంలో PDF చూసే యాప్ లేదు.",
+    "No photo yet. Resumes with a photo get more calls.":
+        "ఇంకా ఫోటో లేదు. ఫోటో ఉన్న రెజ్యూమ్‌లకు ఎక్కువ కాల్స్ వస్తాయి.",
+    "PDF preview is ready": "PDF ప్రివ్యూ సిద్ధం",
+    "Period (e.g. 2019 – 2023)": "కాలం (ఉదా. 2019 – 2023)",
+    "Phone": "ఫోన్",
+    "Place": "ప్రదేశం",
+    "Please choose an image smaller than 2 MB.":
+        "2 MB కంటే చిన్న ఫోటో ఎంచుకోండి.",
+    "Please fill in the box marked in red.":
+        "ఎరుపుతో గుర్తించిన బాక్స్ నింపండి.",
+    "Please fill this in.": "దీన్ని నింపండి.",
+    "Please fix the fields marked in red.":
+        "ఎరుపుతో గుర్తించిన ఫీల్డ్‌లు సరిచేయండి.",
+    "Profile": "ప్రొఫైల్",
+    "Reading your work history…": "మీ పని చరిత్ర చదువుతోంది…",
+    "Resume saved": "రెజ్యూమ్ సేవ్ అయింది",
+    "Role": "పాత్ర",
+    "Skills (one per line)": "నైపుణ్యాలు (లైన్‌కు ఒకటి)",
+    "Skills (separate with commas)": "నైపుణ్యాలు (కామాతో వేరు చేయండి)",
+    "Strong — employers will like this":
+        "చాలా బాగుంది — యజమానులకు ఇది నచ్చుతుంది",
+    "To (year)": "వరకు (సంవత్సరం)",
+    "Too many tries. Please wait a minute and try again.":
+        "చాలా ప్రయత్నాలు. ఒక నిమిషం ఆగి మళ్లీ ప్రయత్నించండి.",
+    "Tools / machines you use": "మీరు వాడే పనిముట్లు / యంత్రాలు",
+    "Training / certificates": "శిక్షణ / సర్టిఫికెట్లు",
+    "Turning your work into clear points…":
+        "మీ పనిని స్పష్టమైన పాయింట్లుగా రాస్తోంది…",
+    "Up to date": "అప్‌డేట్ అయింది",
+    "Waiting for your resume": "మీ రెజ్యూమ్ కోసం వేచి ఉంది",
+    "What did you do there?": "అక్కడ మీరు ఏం పని చేశారు?",
+    "What work do you do? *": "మీరు ఏ పని చేస్తారు? *",
+    "Work points (one per line)": "పని పాయింట్లు (లైన్‌కు ఒకటి)",
+    "Workshop / company": "వర్క్‌షాప్ / కంపెనీ",
+    "Write my resume with AI": "AIతో నా రెజ్యూమ్ రాయించండి",
+    "Writing your profile…": "మీ ప్రొఫైల్ రాస్తోంది…",
+    "Your PDF preview will appear here": "మీ PDF ప్రివ్యూ ఇక్కడ కనిపిస్తుంది",
+    "Your work there *": "అక్కడ మీ పని *",
+    "💡 AI writes only from your answers. You can type in Hindi or Hinglish too.":
+        "💡 AI మీ సమాధానాల నుంచే రాస్తుంది. హిందీ లేదా హింగ్లిష్‌లో కూడా రాయవచ్చు.",
+    "About you": "మీ గురించి",
+    "This goes at the top of your resume. We filled in what your profile already has.":
+        "ఇది మీ రెజ్యూమ్ పైభాగంలో వస్తుంది. మీ ప్రొఫైల్‌లో ఉన్నది నింపాము.",
+    "Add photo": "ఫోటో జోడించండి",
+    "Show photo on resume": "రెజ్యూమ్‌లో ఫోటో చూపించు",
+    "Your work": "మీ పని",
+    "What you do and what you are good at.":
+        "మీరు ఏం చేస్తారు, దేనిలో నైపుణ్యం ఉంది.",
+    "Work experience": "పని అనుభవం",
+    "Where have you worked? Add your latest job first.":
+        "మీరు ఎక్కడ పని చేశారు? తాజా పనిని ముందు జోడించండి.",
+    "Add another job": "మరో పని జోడించండి",
+    "I still work here": "నేను ఇంకా ఇక్కడే పని చేస్తున్నాను",
+    "Education & languages": "చదువు మరియు భాషలు",
+    "Schooling, any course or training, and languages you speak.":
+        "చదువు, ఏదైనా కోర్సు లేదా శిక్షణ, మీరు మాట్లాడే భాషలు.",
+    "More about you": "మీ గురించి మరింత",
+    "Ready to travel or move for work":
+        "పని కోసం ప్రయాణించడానికి లేదా మారడానికి సిద్ధం",
+    "Choose a design": "డిజైన్ ఎంచుకోండి",
+    "Pick a layout and a colour. The preview updates as you go.":
+        "లేఅవుట్ మరియు రంగు ఎంచుకోండి. ప్రివ్యూ వెంటనే మారుతుంది.",
+    "Colour": "రంగు",
+    "✓  \"Verified\" badge on your resume":
+        "✓  రెజ్యూమ్‌పై \"ధృవీకరించబడింది\" బ్యాడ్జ్",
+    "Your resume": "మీ రెజ్యూమ్",
+    "Change any line you like. The preview updates as you type.":
+        "ఏ లైన్ అయినా మార్చండి. టైప్ చేస్తుంటే ప్రివ్యూ మారుతుంది.",
+    "Write again with AI": "AIతో మళ్లీ రాయించండి",
+    "Live preview": "లైవ్ ప్రివ్యూ",
+    "Open preview": "ప్రివ్యూ తెరవండి",
+    "Refresh": "రిఫ్రెష్",
+    "Open PDF": "PDF తెరవండి",
+    "Your resume is ready": "మీ రెజ్యూమ్ సిద్ధం",
+    "Download PDF": "PDF డౌన్‌లోడ్",
+    "← Edit answers": "← సమాధానాలు మార్చండి",
+    "Save as my resume": "నా రెజ్యూమ్‌గా సేవ్ చేయండి",
+    "Keep my current resume and go to design →":
+        "ప్రస్తుత రెజ్యూమ్ ఉంచి డిజైన్‌కు వెళ్లండి →",
+    "Back": "వెనక్కి",
+    "Next": "తర్వాత",
+    "See the preview": "ప్రివ్యూ చూడండి",
+    "AI Resume": "AI రెజ్యూమ్",
+    "Answer a few questions. AI writes a professional resume, you pick a design, and employers can download it.":
+        "కొన్ని ప్రశ్నలకు సమాధానం ఇవ్వండి. AI ప్రొఫెషనల్ రెజ్యూమ్ రాస్తుంది, మీరు డిజైన్ ఎంచుకోండి, యజమానులు డౌన్‌లోడ్ చేసుకోవచ్చు.",
+    "AI is writing your resume": "AI మీ రెజ్యూమ్ రాస్తోంది",
+    "This takes about 10 seconds.": "దీనికి సుమారు 10 సెకన్లు పడుతుంది.",
     "Expected salary per month": "ఆశించే నెలవారీ జీతం",
     "Expected salary per month (optional)": "ఆశించే నెలవారీ జీతం (ఐచ్ఛికం)",
     "/month": "/నెల",
@@ -1143,6 +1622,8 @@ const appTextTranslations = <String, Map<String, String>>{
     "Job description": "ఉద్యోగ వివరణ",
     "Skills required": "కావలసిన నైపుణ్యాలు",
     "Perks & benefits": "సౌకర్యాలు మరియు ప్రయోజనాలు",
+    "Distance": "దూరం",
+    "Any distance": "ఏ దూరమైనా",
     "Food": "ఆహారం",
     "Accommodation": "వసతి",
     "Payout": "చెల్లింపు",
@@ -1262,7 +1743,7 @@ const appTextTranslations = <String, Map<String, String>>{
         "PDF మాత్రమే • గరిష్ఠం 4 MB • చదవగల టెక్స్ట్ లేని స్కాన్/ఫోటో PDF వాడలేరు.",
     "Never pay an advance fee for work. Report anything that seems suspicious.":
         "పని కోసం ముందస్తు రుసుము చెల్లించవద్దు. అనుమానాస్పద విషయాన్ని నివేదించండి.",
-    "Karigar never charges you to work. Report any employer who asks for an advance fee.":
+    "Super Karigar never charges you to work. Report any employer who asks for an advance fee.":
         "కరిగర్ పని కోసం రుసుము వసూలు చేయదు. ముందస్తు రుసుము అడిగే యజమానిని నివేదించండి.",
     "Reload skills and categories":
         "నైపుణ్యాలు మరియు వర్గాలు మళ్లీ లోడ్ చేయండి",
@@ -1427,6 +1908,10 @@ const appTextTranslations = <String, Map<String, String>>{
         "ఈ ఖాతాకు కార్మిక డ్యాష్‌బోర్డ్ అనుమతి లేదు. కార్మిక ఖాతాతో లాగిన్ చేయండి. ఇది కార్మిక ఖాతా అయితే సహాయాన్ని సంప్రదించండి.",
     "You are now available for work.": "ఇప్పుడు మీరు పనికి అందుబాటులో ఉన్నారు.",
     "Availability turned off.": "అందుబాటు ఆఫ్ చేయబడింది.",
+    "You're not available for work": "మీరు పనికి అందుబాటులో లేరు",
+    "I'm available for work": "నేను పనికి సిద్ధంగా ఉన్నాను",
+    "While \"Available for work\" is off you get no job alerts and see no jobs. Switch it on whenever you’re ready.":
+        "\"పనికి అందుబాటులో\" ఆఫ్‌లో ఉన్నంతవరకు జాబ్ అలర్ట్‌లు, జాబ్‌లు కనిపించవు. సిద్ధమైనప్పుడు ఆన్ చేయండి.",
     "Your resume must be smaller than 4 MB.":
         "రెజ్యూమే 4 MB కంటే తక్కువ ఉండాలి.",
     "Resume uploaded successfully.": "రెజ్యూమే అప్‌లోడ్ అయింది.",
@@ -1454,6 +1939,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "{count} needed": "{count} మంది అవసరం",
     "Based on {count} reviews": "{count} సమీక్షల ఆధారంగా",
     "{count} reviews": "{count} సమీక్షలు",
+    "{count} review": "{count} సమీక్షలు",
     "Updated {date}": "నవీకరణ {date}",
     "{count} characters read from your resume • Uploaded {time}":
         "రెజ్యూమే నుండి {count} అక్షరాలు చదివాం • అప్‌లోడ్ {time}",
@@ -1476,8 +1962,174 @@ const appTextTranslations = <String, Map<String, String>>{
     "Mark all read": "అన్నీ చదివినట్లు గుర్తించండి",
     "Review submitted.": "సమీక్ష సమర్పించబడింది",
     "/ day": "/రోజు",
+
+    'Age': 'వయస్సు',
+    'At workplace / Site': 'పని ప్రదేశం / సైట్‌లో',
+    'Bonus / incentive': 'బోనస్ / ప్రోత్సాహకం',
+    'Both (Site & Home)': 'రెండూ (సైట్ & ఇల్లు)',
+    'Job type': 'ఉద్యోగ రకం',
+    'Karigars from': 'కారీగర్లు ఎక్కడి నుండి',
+    'Karigars from other cities who will move here can apply':
+        'ఇక్కడికి రాగల ఇతర నగరాల కారీగర్లు కూడా దరఖాస్తు చేయవచ్చు',
+    'Languages': 'భాషలు',
+    'Must have': 'తప్పనిసరిగా ఉండాలి',
+    'Other requirements': 'ఇతర అవసరాలు',
+    'Part time': 'పార్ట్ టైమ్',
+    'Requirements': 'అవసరాలు',
+    'Urgent hiring': 'అత్యవసర నియామకం',
+    'Work from home': 'ఇంటి నుండి పని',
+    'Working days': 'పని దినాలు',
+    'Area / Mohalla': 'ప్రాంతం / మొహల్లా',
+    'Employers can message you after you apply for a job.':
+        'మీరు ఉద్యోగానికి దరఖాస్తు చేసిన తర్వాత యజమానులు మీకు సందేశం పంపగలరు.',
+    'Log out?': 'లాగ్ అవుట్ చేయాలా?',
+    'Messages from employers about your applications':
+        'మీ దరఖాస్తుల గురించి యజమానుల సందేశాలు',
+    'Older messages': 'పాత సందేశాలు',
+    'Or enter Aadhaar number instead': 'లేదా బదులుగా ఆధార్ నంబర్ నమోదు చేయండి',
+    'Resume language': 'రెజ్యూమ్ భాష',
+    'Sign in and tap Allow in DigiLocker. We will bring you back automatically.':
+        'DigiLockerలో సైన్ ఇన్ చేసి Allow నొక్కండి. మేము మిమ్మల్ని ఆటోమేటిక్‌గా తిరిగి తీసుకువస్తాము.',
+    'This is what will happen:': 'ఇది జరుగుతుంది:',
+    'Verify with DigiLocker': 'DigiLocker తో ధృవీకరించండి',
+    'You will need an OTP to log in again.':
+        'మళ్లీ లాగిన్ అవ్వడానికి OTP అవసరం.',
+    'No internet connection. Check your internet and try again.':
+        'ఇంటర్నెట్ కనెక్షన్ లేదు. ఇంటర్నెట్ చూసి మళ్లీ ప్రయత్నించండి.',
+    'The server is taking too long. Please try again.':
+        'సర్వర్ చాలా సమయం తీసుకుంటోంది. మళ్లీ ప్రయత్నించండి.',
   },
   'bn': {
+    "Available": "উপলব্ধ",
+    "KYC": "KYC",
+    "Find work near you": "কাছাকাছি কাজ খুঁজুন",
+    "{count} jobs match your skills": "আপনার দক্ষতায় {count}টি কাজ",
+    "Find jobs": "কাজ খুঁজুন",
+    "Tap the map to move the pin": "পিন সরাতে ম্যাপে ট্যাপ করুন",
+    "Jobs near": "কাছাকাছি কাজ:",
+    "No job alerts or jobs while off": "বন্ধ থাকলে কাজের খবর আসবে না",
+    "Change ›": "বদলান ›",
+    "Current location": "বর্তমান অবস্থান",
+    "{count} opening": "{count}টি পদ",
+    "Your profile location": "আপনার প্রোফাইলের জায়গা",
+    "Your city": "আপনার শহর",
+    "Contact": "যোগাযোগ",
+    "Not used yet": "এখনও ব্যবহার হয়নি",
+    "Job closed": "কাজ বন্ধ",
+    "Aadhaar verified": "আধার যাচাই হয়েছে",
+    "{count} saved job": "{count}টি সেভ করা কাজ",
+    // AI resume builder (26 Nov).
+    "Your resume is attached · Change": "আপনার রেজিউমে যুক্ত আছে · বদলান",
+    "Joining {date}": "যোগদান {date}",
+    "Leave without saving?": "সেভ না করে বেরোবেন?",
+    "Your resume changes are not saved yet. Save them first so employers see them.":
+        "রেজিউমের পরিবর্তন এখনও সেভ হয়নি। নিয়োগকর্তারা দেখতে পান, তাই আগে সেভ করুন।",
+    "Leave": "বেরিয়ে যান",
+    "Keep editing": "সম্পাদনা চালিয়ে যান",
+    "A clear photo makes your resume stand out.":
+        "পরিষ্কার ছবি আপনার রেজিউমেকে আলাদা করে তোলে।",
+    "Achievements": "সাফল্য",
+    "Basic — add more details": "সাধারণ — আরও তথ্য যোগ করুন",
+    "Could not update": "আপডেট হয়নি",
+    "Could not write the resume right now. Please try again.":
+        "এখন রেজিউমে লেখা গেল না। আবার চেষ্টা করুন।",
+    "Design & save": "ডিজাইন ও সেভ",
+    "Education & more": "পড়াশোনা ও আরও",
+    "Education (one per line)": "পড়াশোনা (প্রতি লাইনে একটি)",
+    "Expected monthly salary (₹)": "প্রত্যাশিত মাসিক বেতন (₹)",
+    "Experience (years)": "অভিজ্ঞতা (বছর)",
+    "From (year)": "থেকে (বছর)",
+    "Full name *": "পুরো নাম *",
+    "Good — a few more details will help": "ভালো — আরও কিছু তথ্য সাহায্য করবে",
+    "Headline": "শিরোনাম",
+    "Languages (one per line)": "ভাষা (প্রতি লাইনে একটি)",
+    "Languages (separate with commas)": "ভাষা (কমা দিয়ে আলাদা করুন)",
+    "Laying out your resume…": "আপনার রেজিউমে সাজানো হচ্ছে…",
+    "More about you (one per line)": "আপনার সম্পর্কে আরও (প্রতি লাইনে একটি)",
+    "No PDF viewer is available on this device.":
+        "এই ডিভাইসে PDF দেখার অ্যাপ নেই।",
+    "No photo yet. Resumes with a photo get more calls.":
+        "এখনও ছবি নেই। ছবিসহ রেজিউমে বেশি কল পায়।",
+    "PDF preview is ready": "PDF প্রিভিউ তৈরি",
+    "Period (e.g. 2019 – 2023)": "সময়কাল (যেমন 2019 – 2023)",
+    "Phone": "ফোন",
+    "Place": "জায়গা",
+    "Please choose an image smaller than 2 MB.": "2 MB-এর ছোট ছবি বেছে নিন।",
+    "Please fill in the box marked in red.": "লাল চিহ্নিত ঘরটি পূরণ করুন।",
+    "Please fill this in.": "এটি পূরণ করুন।",
+    "Please fix the fields marked in red.": "লাল চিহ্নিত ঘরগুলি ঠিক করুন।",
+    "Profile": "প্রোফাইল",
+    "Reading your work history…": "আপনার কাজের ইতিহাস পড়া হচ্ছে…",
+    "Resume saved": "রেজিউমে সেভ হয়েছে",
+    "Role": "পদ",
+    "Skills (one per line)": "দক্ষতা (প্রতি লাইনে একটি)",
+    "Skills (separate with commas)": "দক্ষতা (কমা দিয়ে আলাদা করুন)",
+    "Strong — employers will like this":
+        "দারুণ — নিয়োগকর্তারা এটি পছন্দ করবেন",
+    "To (year)": "পর্যন্ত (বছর)",
+    "Too many tries. Please wait a minute and try again.":
+        "অনেকবার চেষ্টা হয়েছে। এক মিনিট অপেক্ষা করে আবার চেষ্টা করুন।",
+    "Tools / machines you use": "আপনি যে যন্ত্র / মেশিন চালান",
+    "Training / certificates": "প্রশিক্ষণ / সার্টিফিকেট",
+    "Turning your work into clear points…":
+        "আপনার কাজ পরিষ্কার পয়েন্টে লেখা হচ্ছে…",
+    "Up to date": "আপডেটেড",
+    "Waiting for your resume": "আপনার রেজিউমের অপেক্ষায়",
+    "What did you do there?": "সেখানে আপনি কী কাজ করেছেন?",
+    "What work do you do? *": "আপনি কী কাজ করেন? *",
+    "Work points (one per line)": "কাজের পয়েন্ট (প্রতি লাইনে একটি)",
+    "Workshop / company": "ওয়ার্কশপ / কোম্পানি",
+    "Write my resume with AI": "AI দিয়ে আমার রেজিউমে লেখান",
+    "Writing your profile…": "আপনার প্রোফাইল লেখা হচ্ছে…",
+    "Your PDF preview will appear here": "আপনার PDF প্রিভিউ এখানে দেখা যাবে",
+    "Your work there *": "সেখানে আপনার কাজ *",
+    "💡 AI writes only from your answers. You can type in Hindi or Hinglish too.":
+        "💡 AI শুধু আপনার উত্তর থেকেই লেখে। হিন্দি বা হিংলিশেও লিখতে পারেন।",
+    "About you": "আপনার সম্পর্কে",
+    "This goes at the top of your resume. We filled in what your profile already has.":
+        "এটি আপনার রেজিউমের উপরে থাকবে। আপনার প্রোফাইলে যা আছে তা ভরে দিয়েছি।",
+    "Add photo": "ছবি যোগ করুন",
+    "Show photo on resume": "রেজিউমে ছবি দেখান",
+    "Your work": "আপনার কাজ",
+    "What you do and what you are good at.": "আপনি কী করেন আর কীসে দক্ষ।",
+    "Work experience": "কাজের অভিজ্ঞতা",
+    "Where have you worked? Add your latest job first.":
+        "কোথায় কাজ করেছেন? সবচেয়ে নতুন কাজটি আগে দিন।",
+    "Add another job": "আরেকটি কাজ যোগ করুন",
+    "I still work here": "আমি এখনও এখানে কাজ করি",
+    "Education & languages": "পড়াশোনা ও ভাষা",
+    "Schooling, any course or training, and languages you speak.":
+        "পড়াশোনা, কোনো কোর্স বা প্রশিক্ষণ, আর যে ভাষা বলেন।",
+    "More about you": "আপনার সম্পর্কে আরও",
+    "Ready to travel or move for work":
+        "কাজের জন্য যাতায়াত বা অন্য শহরে যেতে প্রস্তুত",
+    "Choose a design": "ডিজাইন বেছে নিন",
+    "Pick a layout and a colour. The preview updates as you go.":
+        "লেআউট আর রং বেছে নিন। প্রিভিউ সাথে সাথে বদলায়।",
+    "Colour": "রং",
+    "✓  \"Verified\" badge on your resume": "✓  রেজিউমে \"যাচাইকৃত\" ব্যাজ",
+    "Your resume": "আপনার রেজিউমে",
+    "Change any line you like. The preview updates as you type.":
+        "যেকোনো লাইন বদলান। লেখার সাথে সাথে প্রিভিউ বদলায়।",
+    "Write again with AI": "AI দিয়ে আবার লেখান",
+    "Live preview": "লাইভ প্রিভিউ",
+    "Open preview": "প্রিভিউ খুলুন",
+    "Refresh": "রিফ্রেশ",
+    "Open PDF": "PDF খুলুন",
+    "Your resume is ready": "আপনার রেজিউমে তৈরি",
+    "Download PDF": "PDF ডাউনলোড",
+    "← Edit answers": "← উত্তর বদলান",
+    "Save as my resume": "আমার রেজিউমে হিসেবে সেভ করুন",
+    "Keep my current resume and go to design →":
+        "বর্তমান রেজিউমে রেখে ডিজাইনে যান →",
+    "Back": "পিছনে",
+    "Next": "পরবর্তী",
+    "See the preview": "প্রিভিউ দেখুন",
+    "AI Resume": "AI রেজিউমে",
+    "Answer a few questions. AI writes a professional resume, you pick a design, and employers can download it.":
+        "কয়েকটি প্রশ্নের উত্তর দিন। AI পেশাদার রেজিউমে লিখবে, আপনি ডিজাইন বেছে নেবেন, নিয়োগকর্তারা ডাউনলোড করতে পারবেন।",
+    "AI is writing your resume": "AI আপনার রেজিউমে লিখছে",
+    "This takes about 10 seconds.": "এতে প্রায় ১০ সেকেন্ড লাগে।",
     "Expected salary per month": "প্রত্যাশিত মাসিক বেতন",
     "Expected salary per month (optional)": "প্রত্যাশিত মাসিক বেতন (ঐচ্ছিক)",
     "/month": "/মাস",
@@ -1615,6 +2267,8 @@ const appTextTranslations = <String, Map<String, String>>{
     "Job description": "কাজের বিবরণ",
     "Skills required": "প্রয়োজনীয় দক্ষতা",
     "Perks & benefits": "সুবিধা ও সুযোগ",
+    "Distance": "দূরত্ব",
+    "Any distance": "যেকোনো দূরত্ব",
     "Food": "খাবার",
     "Accommodation": "থাকার ব্যবস্থা",
     "Payout": "পেমেন্ট",
@@ -1735,7 +2389,7 @@ const appTextTranslations = <String, Map<String, String>>{
         "শুধু PDF • সর্বোচ্চ ৪ MB • পাঠযোগ্য লেখা ছাড়া স্ক্যান/ছবির PDF চলবে না।",
     "Never pay an advance fee for work. Report anything that seems suspicious.":
         "কাজের জন্য অগ্রিম টাকা দেবেন না। সন্দেহজনক বিষয় জানান।",
-    "Karigar never charges you to work. Report any employer who asks for an advance fee.":
+    "Super Karigar never charges you to work. Report any employer who asks for an advance fee.":
         "কারিগর কাজের জন্য টাকা নেয় না। অগ্রিম টাকা চাওয়া নিয়োগকর্তার অভিযোগ করুন।",
     "Reload skills and categories": "দক্ষতা ও বিভাগ আবার লোড করুন",
     "Could not load cities. Tap to retry": "শহর লোড হয়নি। আবার চেষ্টা করুন",
@@ -1896,6 +2550,10 @@ const appTextTranslations = <String, Map<String, String>>{
         "এই অ্যাকাউন্টে কর্মীর ড্যাশবোর্ডের অনুমতি নেই। কর্মীর অ্যাকাউন্টে লগইন করুন। এটি কর্মীর অ্যাকাউন্ট হলে সহায়তায় যোগাযোগ করুন।",
     "You are now available for work.": "এখন আপনি কাজের জন্য উপলব্ধ।",
     "Availability turned off.": "উপলব্ধতা বন্ধ হয়েছে।",
+    "You're not available for work": "আপনি এখন কাজের জন্য উপলব্ধ নন",
+    "I'm available for work": "আমি কাজের জন্য প্রস্তুত",
+    "While \"Available for work\" is off you get no job alerts and see no jobs. Switch it on whenever you’re ready.":
+        "\"কাজের জন্য উপলব্ধ\" বন্ধ থাকলে কোনো চাকরির অ্যালার্ট বা চাকরি দেখা যাবে না। প্রস্তুত হলে চালু করুন।",
     "Your resume must be smaller than 4 MB.":
         "জীবনবৃত্তান্ত ৪ MB-এর কম হতে হবে।",
     "Resume uploaded successfully.": "জীবনবৃত্তান্ত আপলোড হয়েছে।",
@@ -1922,6 +2580,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "{count} needed": "{count} জন প্রয়োজন",
     "Based on {count} reviews": "{count} পর্যালোচনার ভিত্তিতে",
     "{count} reviews": "{count} পর্যালোচনা",
+    "{count} review": "{count} পর্যালোচনা",
     "Updated {date}": "আপডেট {date}",
     "{count} characters read from your resume • Uploaded {time}":
         "জীবনবৃত্তান্ত থেকে {count} অক্ষর পড়া হয়েছে • আপলোড {time}",
@@ -1944,8 +2603,175 @@ const appTextTranslations = <String, Map<String, String>>{
     "Mark all read": "সব পঠিত চিহ্নিত করুন",
     "Review submitted.": "পর্যালোচনা জমা হয়েছে",
     "/ day": "/দিন",
+
+    'Age': 'বয়স',
+    'At workplace / Site': 'কর্মস্থল / সাইটে',
+    'Bonus / incentive': 'বোনাস / ইনসেনটিভ',
+    'Both (Site & Home)': 'দুটোই (সাইট ও বাড়ি)',
+    'Job type': 'কাজের ধরন',
+    'Karigars from': 'কারিগর কোথা থেকে',
+    'Karigars from other cities who will move here can apply':
+        'এখানে আসতে রাজি অন্য শহরের কারিগররাও আবেদন করতে পারেন',
+    'Languages': 'ভাষা',
+    'Must have': 'অবশ্যই থাকতে হবে',
+    'Other requirements': 'অন্যান্য প্রয়োজন',
+    'Part time': 'পার্ট টাইম',
+    'Requirements': 'প্রয়োজনীয়তা',
+    'Urgent hiring': 'জরুরি নিয়োগ',
+    'Work from home': 'বাড়ি থেকে কাজ',
+    'Working days': 'কাজের দিন',
+    'Area / Mohalla': 'এলাকা / মহল্লা',
+    'Employers can message you after you apply for a job.':
+        'কোনো কাজে আবেদন করার পর নিয়োগকর্তারা আপনাকে মেসেজ করতে পারবেন।',
+    'Log out?': 'লগ আউট করবেন?',
+    'Messages from employers about your applications':
+        'আপনার আবেদন নিয়ে নিয়োগকর্তাদের মেসেজ',
+    'Older messages': 'পুরনো মেসেজ',
+    'Or enter Aadhaar number instead': 'অথবা এর বদলে আধার নম্বর দিন',
+    'Resume language': 'রিজিউমের ভাষা',
+    'Sign in and tap Allow in DigiLocker. We will bring you back automatically.':
+        'DigiLocker-এ সাইন ইন করে Allow চাপুন। আমরা আপনাকে নিজে থেকেই ফিরিয়ে আনব।',
+    'This is what will happen:': 'যা হবে:',
+    'Verify with DigiLocker': 'DigiLocker দিয়ে যাচাই করুন',
+    'You will need an OTP to log in again.': 'আবার লগ ইন করতে OTP লাগবে।',
+    'No internet connection. Check your internet and try again.':
+        'ইন্টারনেট নেই। ইন্টারনেট দেখে আবার চেষ্টা করুন।',
+    'The server is taking too long. Please try again.':
+        'সার্ভার খুব সময় নিচ্ছে। আবার চেষ্টা করুন।',
   },
   'mr': {
+    "Available": "उपलब्ध",
+    "KYC": "केवायसी",
+    "Find work near you": "जवळ काम शोधा",
+    "{count} jobs match your skills":
+        "तुमच्या कौशल्याशी {count} नोकऱ्या जुळतात",
+    "Find jobs": "नोकरी शोधा",
+    "Tap the map to move the pin": "पिन हलवण्यासाठी नकाशावर टॅप करा",
+    "Jobs near": "जवळच्या नोकऱ्या:",
+    "No job alerts or jobs while off":
+        "बंद असताना नोकरीच्या सूचना मिळणार नाहीत",
+    "Change ›": "बदला ›",
+    "Current location": "सध्याचे ठिकाण",
+    "{count} opening": "{count} जागा",
+    "Your profile location": "तुमच्या प्रोफाइलचे ठिकाण",
+    "Your city": "तुमचे शहर",
+    "Contact": "संपर्क",
+    "Not used yet": "अजून वापरले नाही",
+    "Job closed": "नोकरी बंद",
+    "Aadhaar verified": "आधार पडताळले",
+    "{count} saved job": "{count} सेव्ह केलेली नोकरी",
+    // AI resume builder (26 Nov).
+    "Your resume is attached · Change": "तुमचा रेझ्युमे जोडलेला आहे · बदला",
+    "Joining {date}": "रुजू {date}",
+    "Leave without saving?": "सेव्ह न करता बाहेर जायचे?",
+    "Your resume changes are not saved yet. Save them first so employers see them.":
+        "रेझ्युमेतील बदल अजून सेव्ह झालेले नाहीत. नियोक्त्यांना दिसावेत म्हणून आधी सेव्ह करा.",
+    "Leave": "बाहेर जा",
+    "Keep editing": "संपादन सुरू ठेवा",
+    "A clear photo makes your resume stand out.":
+        "स्पष्ट फोटोमुळे तुमचा रेझ्युमे उठून दिसतो.",
+    "Achievements": "कामगिरी",
+    "Basic — add more details": "साधारण — आणखी माहिती जोडा",
+    "Could not update": "अपडेट झाले नाही",
+    "Could not write the resume right now. Please try again.":
+        "आत्ता रेझ्युमे लिहिता आला नाही. पुन्हा प्रयत्न करा.",
+    "Design & save": "डिझाइन आणि सेव्ह",
+    "Education & more": "शिक्षण आणि अधिक",
+    "Education (one per line)": "शिक्षण (प्रत्येक ओळीत एक)",
+    "Expected monthly salary (₹)": "अपेक्षित मासिक पगार (₹)",
+    "Experience (years)": "अनुभव (वर्षे)",
+    "From (year)": "पासून (वर्ष)",
+    "Full name *": "पूर्ण नाव *",
+    "Good — a few more details will help": "छान — आणखी थोडी माहिती मदत करेल",
+    "Headline": "हेडलाइन",
+    "Languages (one per line)": "भाषा (प्रत्येक ओळीत एक)",
+    "Languages (separate with commas)": "भाषा (स्वल्पविरामाने वेगळ्या करा)",
+    "Laying out your resume…": "तुमचा रेझ्युमे मांडला जात आहे…",
+    "More about you (one per line)": "तुमच्याबद्दल अधिक (प्रत्येक ओळीत एक)",
+    "No PDF viewer is available on this device.":
+        "या फोनवर PDF पाहण्याचे अॅप नाही.",
+    "No photo yet. Resumes with a photo get more calls.":
+        "अजून फोटो नाही. फोटो असलेल्या रेझ्युमेला जास्त कॉल येतात.",
+    "PDF preview is ready": "PDF प्रिव्ह्यू तयार आहे",
+    "Period (e.g. 2019 – 2023)": "कालावधी (उदा. 2019 – 2023)",
+    "Phone": "फोन",
+    "Place": "ठिकाण",
+    "Please choose an image smaller than 2 MB.": "2 MB पेक्षा लहान फोटो निवडा.",
+    "Please fill in the box marked in red.": "लाल खूण असलेले रकाने भरा.",
+    "Please fill this in.": "हे भरा.",
+    "Please fix the fields marked in red.": "लाल खूण असलेले रकाने दुरुस्त करा.",
+    "Profile": "प्रोफाइल",
+    "Reading your work history…": "तुमचा कामाचा इतिहास वाचला जात आहे…",
+    "Resume saved": "रेझ्युमे सेव्ह झाला",
+    "Role": "भूमिका",
+    "Skills (one per line)": "कौशल्ये (प्रत्येक ओळीत एक)",
+    "Skills (separate with commas)": "कौशल्ये (स्वल्पविरामाने वेगळी करा)",
+    "Strong — employers will like this": "उत्तम — नियोक्त्यांना हे आवडेल",
+    "To (year)": "पर्यंत (वर्ष)",
+    "Too many tries. Please wait a minute and try again.":
+        "खूप प्रयत्न झाले. एक मिनिट थांबून पुन्हा प्रयत्न करा.",
+    "Tools / machines you use": "तुम्ही वापरता ती अवजारे / यंत्रे",
+    "Training / certificates": "प्रशिक्षण / प्रमाणपत्रे",
+    "Turning your work into clear points…":
+        "तुमचे काम स्पष्ट मुद्द्यांत लिहिले जात आहे…",
+    "Up to date": "अपडेटेड",
+    "Waiting for your resume": "तुमच्या रेझ्युमेची वाट पाहत आहे",
+    "What did you do there?": "तिथे तुम्ही काय काम केले?",
+    "What work do you do? *": "तुम्ही कोणते काम करता? *",
+    "Work points (one per line)": "कामाचे मुद्दे (प्रत्येक ओळीत एक)",
+    "Workshop / company": "वर्कशॉप / कंपनी",
+    "Write my resume with AI": "AI कडून माझा रेझ्युमे लिहून घ्या",
+    "Writing your profile…": "तुमचे प्रोफाइल लिहिले जात आहे…",
+    "Your PDF preview will appear here": "तुमचा PDF प्रिव्ह्यू इथे दिसेल",
+    "Your work there *": "तिथे तुमचे काम *",
+    "💡 AI writes only from your answers. You can type in Hindi or Hinglish too.":
+        "💡 AI फक्त तुमच्या उत्तरांवरून लिहितो. तुम्ही हिंदी किंवा हिंग्लिशमध्येही लिहू शकता.",
+    "About you": "तुमच्याबद्दल",
+    "This goes at the top of your resume. We filled in what your profile already has.":
+        "हे तुमच्या रेझ्युमेच्या सर्वात वर येईल. तुमच्या प्रोफाइलमधील माहिती भरली आहे.",
+    "Add photo": "फोटो जोडा",
+    "Show photo on resume": "रेझ्युमेवर फोटो दाखवा",
+    "Your work": "तुमचे काम",
+    "What you do and what you are good at.":
+        "तुम्ही काय करता आणि कशात कुशल आहात.",
+    "Work experience": "कामाचा अनुभव",
+    "Where have you worked? Add your latest job first.":
+        "तुम्ही कुठे काम केले? सर्वात नवीन काम आधी लिहा.",
+    "Add another job": "आणखी एक काम जोडा",
+    "I still work here": "मी अजून इथे काम करतो/करते",
+    "Education & languages": "शिक्षण आणि भाषा",
+    "Schooling, any course or training, and languages you speak.":
+        "शिक्षण, कोणताही कोर्स किंवा प्रशिक्षण, आणि तुम्ही बोलता त्या भाषा.",
+    "More about you": "तुमच्याबद्दल अधिक",
+    "Ready to travel or move for work":
+        "कामासाठी प्रवास किंवा स्थलांतर करण्यास तयार",
+    "Choose a design": "डिझाइन निवडा",
+    "Pick a layout and a colour. The preview updates as you go.":
+        "लेआउट आणि रंग निवडा. प्रिव्ह्यू लगेच बदलतो.",
+    "Colour": "रंग",
+    "✓  \"Verified\" badge on your resume": "✓  रेझ्युमेवर \"पडताळलेले\" बॅज",
+    "Your resume": "तुमचा रेझ्युमे",
+    "Change any line you like. The preview updates as you type.":
+        "कोणतीही ओळ बदला. टाइप करताच प्रिव्ह्यू बदलतो.",
+    "Write again with AI": "AI कडून पुन्हा लिहून घ्या",
+    "Live preview": "लाइव्ह प्रिव्ह्यू",
+    "Open preview": "प्रिव्ह्यू उघडा",
+    "Refresh": "रिफ्रेश",
+    "Open PDF": "PDF उघडा",
+    "Your resume is ready": "तुमचा रेझ्युमे तयार आहे",
+    "Download PDF": "PDF डाउनलोड करा",
+    "← Edit answers": "← उत्तरे बदला",
+    "Save as my resume": "माझा रेझ्युमे म्हणून सेव्ह करा",
+    "Keep my current resume and go to design →":
+        "सध्याचा रेझ्युमे ठेवा आणि डिझाइनवर जा →",
+    "Back": "मागे",
+    "Next": "पुढे",
+    "See the preview": "प्रिव्ह्यू पाहा",
+    "AI Resume": "AI रेझ्युमे",
+    "Answer a few questions. AI writes a professional resume, you pick a design, and employers can download it.":
+        "काही प्रश्नांची उत्तरे द्या. AI व्यावसायिक रेझ्युमे लिहील, तुम्ही डिझाइन निवडा, आणि नियोक्ते तो डाउनलोड करू शकतील.",
+    "AI is writing your resume": "AI तुमचा रेझ्युमे लिहित आहे",
+    "This takes about 10 seconds.": "याला सुमारे 10 सेकंद लागतात.",
     "Expected salary per month": "अपेक्षित मासिक वेतन",
     "Expected salary per month (optional)": "अपेक्षित मासिक वेतन (ऐच्छिक)",
     "/month": "/महिना",
@@ -2082,6 +2908,8 @@ const appTextTranslations = <String, Map<String, String>>{
     "Job description": "कामाचे वर्णन",
     "Skills required": "आवश्यक कौशल्ये",
     "Perks & benefits": "सुविधा आणि फायदे",
+    "Distance": "अंतर",
+    "Any distance": "कोणतेही अंतर",
     "Food": "जेवण",
     "Accommodation": "राहण्याची सोय",
     "Payout": "देयक",
@@ -2200,7 +3028,7 @@ const appTextTranslations = <String, Map<String, String>>{
         "फक्त PDF • कमाल 4 MB • वाचता येणाऱ्या मजकुराशिवाय स्कॅन/फोटो PDF वापरता येणार नाही.",
     "Never pay an advance fee for work. Report anything that seems suspicious.":
         "कामासाठी आगाऊ शुल्क देऊ नका. संशयास्पद गोष्टीची तक्रार करा.",
-    "Karigar never charges you to work. Report any employer who asks for an advance fee.":
+    "Super Karigar never charges you to work. Report any employer who asks for an advance fee.":
         "कारिगर कामासाठी शुल्क घेत नाही. आगाऊ शुल्क मागणाऱ्या नियोक्त्याची तक्रार करा.",
     "Reload skills and categories": "कौशल्ये आणि श्रेणी पुन्हा लोड करा",
     "Could not load cities. Tap to retry":
@@ -2363,6 +3191,10 @@ const appTextTranslations = <String, Map<String, String>>{
         "या खात्याला कामगार डॅशबोर्डचा प्रवेश नाही. कामगार खात्याने लॉगिन करा. हे कामगार खाते असल्यास मदतीशी संपर्क करा.",
     "You are now available for work.": "आता तुम्ही कामासाठी उपलब्ध आहात.",
     "Availability turned off.": "उपलब्धता बंद केली.",
+    "You're not available for work": "तुम्ही सध्या कामासाठी उपलब्ध नाही",
+    "I'm available for work": "मी कामासाठी उपलब्ध आहे",
+    "While \"Available for work\" is off you get no job alerts and see no jobs. Switch it on whenever you’re ready.":
+        "\"कामासाठी उपलब्ध\" बंद असेपर्यंत जॉब अलर्ट किंवा जॉब दिसणार नाहीत. तयार झाल्यावर चालू करा.",
     "Your resume must be smaller than 4 MB.": "बायोडाटा 4 MB पेक्षा लहान हवा.",
     "Resume uploaded successfully.": "बायोडाटा अपलोड झाला.",
     "Unable to open the PDF picker.": "PDF निवड उघडता आली नाही.",
@@ -2389,6 +3221,7 @@ const appTextTranslations = <String, Map<String, String>>{
     "{count} needed": "{count} आवश्यक",
     "Based on {count} reviews": "{count} पुनरावलोकनांवर आधारित",
     "{count} reviews": "{count} पुनरावलोकने",
+    "{count} review": "{count} पुनरावलोकने",
     "Updated {date}": "अद्यतन {date}",
     "{count} characters read from your resume • Uploaded {time}":
         "बायोडाटातून {count} अक्षरे वाचली • अपलोड {time}",
@@ -2411,6 +3244,42 @@ const appTextTranslations = <String, Map<String, String>>{
     "Mark all read": "सर्व वाचले असे चिन्हांकित करा",
     "Review submitted.": "पुनरावलोकन सादर झाले",
     "/ day": "/दिवस",
+
+    'Age': 'वय',
+    'At workplace / Site': 'कामाच्या ठिकाणी / साइटवर',
+    'Bonus / incentive': 'बोनस / प्रोत्साहन',
+    'Both (Site & Home)': 'दोन्ही (साइट आणि घर)',
+    'Job type': 'नोकरीचा प्रकार',
+    'Karigars from': 'कारागीर कुठून',
+    'Karigars from other cities who will move here can apply':
+        'इथे येऊ शकणारे इतर शहरांतील कारागीरही अर्ज करू शकतात',
+    'Languages': 'भाषा',
+    'Must have': 'असणे आवश्यक',
+    'Other requirements': 'इतर गरजा',
+    'Part time': 'अर्धवेळ',
+    'Requirements': 'गरजा',
+    'Urgent hiring': 'तातडीची भरती',
+    'Work from home': 'घरून काम',
+    'Working days': 'कामाचे दिवस',
+    'Area / Mohalla': 'परिसर / मोहल्ला',
+    'Employers can message you after you apply for a job.':
+        'नोकरीसाठी अर्ज केल्यानंतर नियोक्ते तुम्हाला संदेश पाठवू शकतात.',
+    'Log out?': 'लॉग आउट करायचे?',
+    'Messages from employers about your applications':
+        'तुमच्या अर्जांबद्दल नियोक्त्यांचे संदेश',
+    'Older messages': 'जुने संदेश',
+    'Or enter Aadhaar number instead': 'किंवा त्याऐवजी आधार क्रमांक टाका',
+    'Resume language': 'रिझ्युमेची भाषा',
+    'Sign in and tap Allow in DigiLocker. We will bring you back automatically.':
+        'DigiLocker मध्ये साइन इन करून Allow दाबा. आम्ही तुम्हाला आपोआप परत आणू.',
+    'This is what will happen:': 'हे होईल:',
+    'Verify with DigiLocker': 'DigiLocker ने पडताळणी करा',
+    'You will need an OTP to log in again.':
+        'पुन्हा लॉग इन करण्यासाठी OTP लागेल.',
+    'No internet connection. Check your internet and try again.':
+        'इंटरनेट नाही. इंटरनेट तपासून पुन्हा प्रयत्न करा.',
+    'The server is taking too long. Please try again.':
+        'सर्व्हरला खूप वेळ लागत आहे. पुन्हा प्रयत्न करा.',
   },
 };
 

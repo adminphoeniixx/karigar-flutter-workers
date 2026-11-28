@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -18,6 +19,38 @@ class ApiException implements Exception {
   final String? code;
   @override
   String toString() => message;
+}
+
+/// Shown whenever the phone cannot reach the server at all.
+const noInternetMessage =
+    'No internet connection. Check your internet and try again.';
+const slowServerMessage = 'The server is taking too long. Please try again.';
+
+/// How long one request may take before the worker is told to try again.
+const requestTimeout = Duration(seconds: 25);
+
+/// Uploads (photos, PDFs) get longer on slow mobile data.
+const uploadTimeout = Duration(seconds: 90);
+
+/// Turns a transport failure into the message a worker should see. Android
+/// reports a missing connection as a ClientException that wraps the
+/// SocketException, so both read as "no internet".
+ApiException transportError(Object error) {
+  if (error is TimeoutException) {
+    return ApiException(slowServerMessage, statusCode: 0, code: 'timeout');
+  }
+  final text = error.toString();
+  final offline =
+      error is SocketException ||
+      text.contains('SocketException') ||
+      text.contains('Failed host lookup') ||
+      text.contains('Network is unreachable') ||
+      text.contains('Connection refused');
+  return ApiException(
+    offline ? noInternetMessage : 'Unable to connect to the server.',
+    statusCode: 0,
+    code: offline ? 'offline' : 'connection',
+  );
 }
 
 class ApiClient {
@@ -74,7 +107,9 @@ class ApiClient {
     final uri = _uri(path);
     _logRequest('GET', uri, null);
     try {
-      final response = await http.get(uri, headers: _headersFor(uri));
+      final response = await http
+          .get(uri, headers: _headersFor(uri))
+          .timeout(requestTimeout);
       _logResponse('GET', uri, response);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         String message = 'Unable to open the resume PDF.';
@@ -95,13 +130,10 @@ class ApiClient {
         );
       }
       return response.bodyBytes;
-    } on SocketException {
-      throw ApiException(
-        'Please check your internet connection.',
-        statusCode: 0,
-      );
-    } on http.ClientException {
-      throw ApiException('Unable to connect to the server.', statusCode: 0);
+    } on ApiException {
+      rethrow;
+    } on Exception catch (error) {
+      throw transportError(error);
     }
   }
 
@@ -110,11 +142,9 @@ class ApiClient {
     final uri = _uri(path);
     _logRequest('POST', uri, body);
     try {
-      final response = await http.post(
-        uri,
-        headers: _headersFor(uri),
-        body: jsonEncode(body),
-      );
+      final response = await http
+          .post(uri, headers: _headersFor(uri), body: jsonEncode(body))
+          .timeout(requestTimeout);
       _logResponse('POST', uri, response);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         Map<String, dynamic> decoded = {};
@@ -128,13 +158,10 @@ class ApiClient {
         );
       }
       return response.bodyBytes;
-    } on SocketException {
-      throw ApiException(
-        'Please check your internet connection.',
-        statusCode: 0,
-      );
-    } on http.ClientException {
-      throw ApiException('Unable to connect to the server.', statusCode: 0);
+    } on ApiException {
+      rethrow;
+    } on Exception catch (error) {
+      throw transportError(error);
     }
   }
 
@@ -205,7 +232,15 @@ class ApiClient {
         await http.MultipartFile.fromPath(entry.key, entry.value.path),
       );
     }
-    final response = await http.Response.fromStream(await request.send());
+    final http.Response response;
+    try {
+      response = await http.Response.fromStream(
+        await request.send().timeout(uploadTimeout),
+      ).timeout(uploadTimeout);
+    } on Exception catch (error) {
+      debugPrint('[API] POST MULTIPART $uri -> $error');
+      throw transportError(error);
+    }
     _logResponse('POST MULTIPART', uri, response);
     return _decode(response);
   }
@@ -217,33 +252,29 @@ class ApiClient {
     Map<String, dynamic>? body,
   }) async {
     _logRequest(method, uri, body);
+    final http.Response response;
     try {
-      final response = await request();
-      _logResponse(method, uri, response);
-      return _decode(response);
-    } on SocketException {
-      debugPrint('[API] $method $uri -> NO INTERNET');
-      throw ApiException(
-        'Please check your internet connection.',
-        statusCode: 0,
-      );
-    } on http.ClientException catch (error) {
-      debugPrint('[API] $method $uri -> CLIENT ERROR: $error');
-      throw ApiException('Unable to connect to the server.', statusCode: 0);
+      response = await request().timeout(requestTimeout);
+    } on Exception catch (error) {
+      debugPrint('[API] $method $uri -> $error');
+      throw transportError(error);
     }
+    _logResponse(method, uri, response);
+    return _decode(response);
   }
 
   void _logRequest(String method, Uri uri, Object? body) {
     if (!kDebugMode) return;
     debugPrint('[API REQUEST] $method $uri');
-    final authorization = _headersFor(uri)['Authorization'];
-    if (authorization == null) {
-      debugPrint('[API AUTH] No token attached');
-    } else {
-      debugPrint('[API AUTH] $authorization');
-    }
-    if (body != null)
+    // Never print the token itself: anyone with the phone's log could use it.
+    debugPrint(
+      _headersFor(uri).containsKey('Authorization')
+          ? '[API AUTH] Bearer token sent'
+          : '[API AUTH] No token attached',
+    );
+    if (body != null) {
       debugPrint('[API REQUEST BODY] ${jsonEncode(_redact(body))}');
+    }
   }
 
   void _logResponse(String method, Uri uri, http.Response response) {
@@ -280,11 +311,12 @@ class ApiClient {
       try {
         body = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
       } catch (_) {
-        if (response.statusCode >= 400)
+        if (response.statusCode >= 400) {
           throw ApiException(
             'Server returned an invalid response.',
             statusCode: response.statusCode,
           );
+        }
       }
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {

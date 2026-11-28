@@ -194,8 +194,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
     } on ApiException catch (error) {
       if (mounted && request == cityRequest) _error(error.message);
     } finally {
-      if (mounted && request == cityRequest)
+      if (mounted && request == cityRequest) {
         setState(() => loadingCities = false);
+      }
     }
   }
 
@@ -509,6 +510,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 icon: const Icon(LucideIcons.pencil),
                 label: const AppText('Edit skills'),
               ),
+              const SizedBox(height: 14),
               const FieldLabel('Experience'),
               TextField(
                 controller: experience,
@@ -544,6 +546,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 icon: const Icon(LucideIcons.pencil),
                 label: const AppText('Edit languages'),
               ),
+              const SizedBox(height: 14),
               const FieldLabel('Education'),
               DropdownButtonFormField<String>(
                 isExpanded: true,

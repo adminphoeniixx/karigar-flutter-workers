@@ -74,29 +74,53 @@ Future<void> _initializeApp() async {
   // Hindi is the default until a worker chooses a different app language.
   final savedLanguage = preferences.getString('app_locale') ?? 'hi';
   selectedLanguageCode.value = savedLanguage;
+  // The theme used to live only on the server and was applied only when
+  // Settings opened, so every app start came up light.
+  if (preferences.getString(appThemeKey) == 'dark') {
+    appThemeMode.value = ThemeMode.dark;
+  }
   appLocale.value = _localeForLanguage(savedLanguage);
   await ApiClient.instance.initialize();
-  try {
-    final launch = AppLaunchService();
-    final maintenance = await launch.maintenance();
-    if (maintenance['maintenance'] == true)
-      AppAvailability.maintenance.value = maintenance;
-    final update = await launch.update();
-    if (update['update_available'] == true)
-      AppLaunchState.update.value = update;
-  } on ApiException catch (error) {
-    debugPrint('[APP LAUNCH] ${error.message}');
-  }
   unawaited(MetaEventsService.instance.initialize());
+  // The splash waits for these, so they run side by side and each one has a
+  // time limit: a slow server or a stuck Firebase never keeps a worker out.
+  final launch = AppLaunchService();
+  await Future.wait([
+    _quietly('maintenance', () async {
+      final maintenance = await launch.maintenance();
+      if (maintenance['maintenance'] == true) {
+        AppAvailability.maintenance.value = maintenance;
+      }
+    }),
+    _quietly('update', () async {
+      final update = await launch.update();
+      if (update['update_available'] == true) {
+        AppLaunchState.update.value = update;
+      }
+    }),
+    _quietly('firebase', () async {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      await PushNotificationService.instance.initialize();
+    }),
+  ]);
+}
+
+/// Runs one start-up step for at most [startupStepLimit]; a failure is logged
+/// and the app carries on.
+Future<void> _quietly(String step, Future<void> Function() action) async {
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    await PushNotificationService.instance.initialize();
+    await action().timeout(startupStepLimit);
   } catch (error) {
-    debugPrint('[FCM] Firebase initialization failed: $error');
+    debugPrint('[APP LAUNCH] $step: $error');
   }
 }
+
+const startupStepLimit = Duration(seconds: 8);
+
+/// The largest phone text size the app follows.
+const maxTextScale = 1.25;
 
 // Warm "Paper & Ink" palette shared with the approved worker-app HTML.
 const brand = Color(0xFFBF3A16);
@@ -106,6 +130,17 @@ const line = Color(0xFFE3DBD0);
 const ink = Color(0xFF1E1712);
 const muted = Color(0xFF6B5F55);
 final appThemeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+const appThemeKey = 'app_theme';
+
+/// Keeps the chosen theme on the phone too, for the next app start.
+Future<void> rememberAppTheme(ThemeMode mode) async {
+  final preferences = await SharedPreferences.getInstance();
+  await preferences.setString(
+    appThemeKey,
+    mode == ThemeMode.dark ? 'dark' : 'light',
+  );
+}
+
 final appLocale = ValueNotifier<Locale>(const Locale('hi'));
 final selectedLanguageCode = ValueNotifier<String>('hi');
 final profileAvatarUrl = ValueNotifier<String?>(null);
@@ -363,10 +398,24 @@ class KarigarApp extends StatelessWidget {
             Locale('kn'),
           ],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          builder: (context, child) => MediaQuery.withClampedTextScaling(
-            minScaleFactor: 1,
-            maxScaleFactor: 1,
-            child: child!,
+          // Follow the phone's text size (many karigars need larger text),
+          // up to a size the layouts still fit.
+          // The app draws edge to edge, and screens that set their own list
+          // padding put their last button (Save Profile, Log out, Submit
+          // Application) under the phone's navigation bar. Keep every
+          // screen and sheet above it.
+          builder: (context, child) => ColoredBox(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: SafeArea(
+              top: false,
+              left: false,
+              right: false,
+              child: MediaQuery.withClampedTextScaling(
+                minScaleFactor: 1,
+                maxScaleFactor: maxTextScale,
+                child: child!,
+              ),
+            ),
           ),
           home: initialization != null || onInitialize == null
               ? AuthGate(
@@ -547,10 +596,11 @@ class _AppLaunchGateState extends State<AppLaunchGate> {
     if (AppAvailability.maintenance.value == null) return;
     try {
       final value = await AppLaunchService().maintenance();
-      if (mounted)
+      if (mounted) {
         AppAvailability.maintenance.value = value['maintenance'] == true
             ? value
             : null;
+      }
     } catch (_) {}
   }
 
@@ -565,11 +615,12 @@ class _AppLaunchGateState extends State<AppLaunchGate> {
       ValueListenableBuilder<Map<String, dynamic>?>(
         valueListenable: AppAvailability.maintenance,
         builder: (context, maintenance, _) {
-          if (maintenance?['maintenance'] == true)
+          if (maintenance?['maintenance'] == true) {
             return _MaintenancePage(
               data: maintenance!,
               onRetry: _pollMaintenance,
             );
+          }
           return _UpdateGate(child: widget.child);
         },
       );
@@ -707,11 +758,12 @@ class _UpdateGateState extends State<_UpdateGate> {
                         FilledButton(
                           onPressed: () async {
                             final url = update['store_url']?.toString();
-                            if (url != null)
+                            if (url != null) {
                               await launchUrl(
                                 Uri.parse(url),
                                 mode: LaunchMode.externalApplication,
                               );
+                            }
                           },
                           child: const Text('Update'),
                         ),
@@ -756,7 +808,7 @@ class _OptionalWorkerUpdateDialogState
     if (shown) return;
     shown = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted)
+      if (mounted) {
         showDialog<void>(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -770,8 +822,9 @@ class _OptionalWorkerUpdateDialogState
               FilledButton(
                 onPressed: () async {
                   final url = Uri.tryParse(widget.storeUrl ?? '');
-                  if (url?.hasScheme == true)
+                  if (url?.hasScheme == true) {
                     await launchUrl(url!, mode: LaunchMode.externalApplication);
+                  }
                   if (dialogContext.mounted) Navigator.pop(dialogContext);
                 },
                 child: const Text('Update'),
@@ -779,6 +832,7 @@ class _OptionalWorkerUpdateDialogState
             ],
           ),
         );
+      }
     });
   }
 

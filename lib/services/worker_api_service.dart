@@ -36,8 +36,9 @@ class WorkerApiService {
       );
     } on ApiException catch (error) {
       // Authentication failures must not be hidden by the offline fallback.
-      if (bundled.isEmpty || error.statusCode == 401 || error.statusCode == 403)
+      if (bundled.isEmpty || error.statusCode == 401 || error.statusCode == 403) {
         rethrow;
+      }
       return bundled;
     }
   }
@@ -91,7 +92,7 @@ class WorkerApiService {
     int? page,
   }) => _api.get(
     ApiConstants.jobs,
-    query: {...?filters, if (page != null) 'page': page},
+    query: {...?filters, 'page': ?page},
   );
   Future<JobPageModel> fetchJobs({
     Map<String, dynamic>? filters,
@@ -106,8 +107,8 @@ class WorkerApiService {
     num? expectedWage,
   }) async {
     final response = await _api.post(ApiConstants.applyToJob(jobId), {
-      if (coverNote != null) 'cover_note': coverNote,
-      if (expectedWage != null) 'expected_wage': expectedWage,
+      'cover_note': ?coverNote,
+      'expected_wage': ?expectedWage,
     });
     unawaited(MetaEventsService.instance.applicationSubmitted(jobId));
     return response;
@@ -118,7 +119,7 @@ class WorkerApiService {
         ApiConstants.applications,
         query: {
           if (status != null && status.isNotEmpty) 'status': status,
-          if (page != null) 'page': page,
+          'page': ?page,
         },
       );
   Future<ApplicationPageModel> fetchApplications({
@@ -133,7 +134,7 @@ class WorkerApiService {
   }
 
   Future<Map<String, dynamic>> savedJobs({int? page}) =>
-      _api.get(ApiConstants.saved, query: {if (page != null) 'page': page});
+      _api.get(ApiConstants.saved, query: {'page': ?page});
   Future<List<SavedJobModel>> fetchSavedJobs({int? page}) async => jsonList(
     (await savedJobs(page: page))['data'],
   ).map((e) => SavedJobModel.fromJson(jsonMap(e))).toList();
@@ -171,7 +172,7 @@ class WorkerApiService {
   }) => _api.multipart(
     ApiConstants.kyc,
     {'aadhaar_number': aadhaar},
-    {if (aadhaarDoc != null) 'aadhaar_doc': aadhaarDoc},
+    {'aadhaar_doc': ?aadhaarDoc},
   );
   Future<Map<String, dynamic>> submitKycDocuments(
     Map<String, String> fields,
@@ -183,7 +184,7 @@ class WorkerApiService {
       _api.get(ApiConstants.kycDigilockerStatus(reference));
   Future<Map<String, dynamic>> notifications({int? page}) => _api.get(
     ApiConstants.notifications,
-    query: {if (page != null) 'page': page},
+    query: {'page': ?page},
   );
   Future<List<NotificationModel>> fetchNotifications({int? page}) async {
     final response = await notifications(page: page);
@@ -204,7 +205,7 @@ class WorkerApiService {
           ?.toInt() ??
       0;
   Future<Map<String, dynamic>> reviews({int? page}) =>
-      _api.get(ApiConstants.reviews, query: {if (page != null) 'page': page});
+      _api.get(ApiConstants.reviews, query: {'page': ?page});
   Future<List<ReviewModel>> fetchReviews({int? page}) async {
     final response = await reviews(page: page);
     final paginated = response['reviews'] is Map
@@ -224,7 +225,7 @@ class WorkerApiService {
   }) async {
     await _api.post(ApiConstants.reviewApplication(applicationId), {
       'rating': rating,
-      if (comment != null) 'comment': comment,
+      'comment': ?comment,
     });
     unawaited(MetaEventsService.instance.employerReviewSubmitted());
   }
@@ -289,9 +290,12 @@ class WorkerApiService {
   Future<Map<String, dynamic>> legal() => _api.get(ApiConstants.legal);
   Future<Map<String, dynamic>> legalDocument(String key) =>
       _api.get(ApiConstants.legalDocument(key));
-  Future<ConversationPageModel> fetchConversations() async =>
+  Future<ConversationPageModel> fetchConversations({int? page}) async =>
       ConversationPageModel.fromJson(
-        await _api.get(ApiConstants.conversations),
+        await _api.get(
+          ApiConstants.conversations,
+          query: {'page': ?page},
+        ),
       );
   Future<ConversationModel> openConversation({
     required int employerId,
@@ -306,14 +310,23 @@ class WorkerApiService {
       }))['conversation'],
     ),
   );
-  Future<ConversationDetailModel> fetchConversation(int id) async {
+  /// The signed-in worker's id, to tell their own messages apart. Asked for
+  /// once per sign-in rather than on every chat refresh.
+  static int? _currentUserId;
+  static void forgetCurrentUser() => _currentUserId = null;
+
+  Future<ConversationDetailModel> fetchConversation(int id, {int? page}) async {
     final results = await Future.wait<dynamic>([
-      _api.get(ApiConstants.conversation(id)),
-      AuthService(_api).me(),
+      _api.get(
+        ApiConstants.conversation(id),
+        query: {'page': ?page},
+      ),
+      if (_currentUserId == null) AuthService(_api).me(),
     ]);
+    if (results.length > 1) _currentUserId = (results[1] as UserModel).id;
     return ConversationDetailModel.fromJson(
       results[0] as Map<String, dynamic>,
-      currentUserId: (results[1] as UserModel).id,
+      currentUserId: _currentUserId,
     );
   }
 
@@ -325,10 +338,6 @@ class WorkerApiService {
           }))['message'],
         ),
       ).asMine();
-  Future<void> markConversationRead(int id) async {
-    await _api.post(ApiConstants.conversationRead(id));
-  }
-
   Future<List<SessionModel>> fetchSessions() async => jsonList(
     (await _api.get(ApiConstants.sessions))['sessions'],
   ).map((e) => SessionModel.fromJson(jsonMap(e))).toList();

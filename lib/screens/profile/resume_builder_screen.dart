@@ -11,6 +11,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
   final _jobs = <Map<String, TextEditingController>>[];
   final _current = <bool>[];
   final _previewKey = GlobalKey();
+  final _scroll = ScrollController();
   Timer? _previewTimer, _loaderTimer;
   Map<String, dynamic>? _resume, _record;
   Map<String, dynamic> _errors = {};
@@ -22,6 +23,12 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
   bool _loading = true, _writing = false, _saving = false, _previewing = false;
   int _step = 0, _request = 0, _loaderLine = 0;
   List<int>? _preview;
+
+  /// The preview PDF's pages as PNGs, drawn on the phone (MainActivity /
+  /// AppDelegate `superkarigar/pdf_pages`). Empty until drawn, or where the
+  /// platform can't: the card then offers to open the PDF instead.
+  List<Uint8List> _pages = const [];
+  static const _pdfPages = MethodChannel('superkarigar/pdf_pages');
   String _previewStatus = 'Waiting for your resume';
 
   static const _labels = <String, String>{
@@ -116,12 +123,46 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
         _resume = Map<String, dynamic>.from(data['saved']);
         _step = 3;
       }
-      if (data['resume'] is Map)
+      if (data['resume'] is Map) {
         _record = Map<String, dynamic>.from(data['resume']);
+      }
     } on ApiException catch (e) {
       _message(e.message);
     }
+    _baseline = _snapshot();
     if (mounted) setState(() => _loading = false);
+  }
+
+  /// The answers and the draft as last loaded or saved. Back compares
+  /// against it: leaving used to drop a whole unsaved AI draft silently.
+  String _baseline = '';
+  String _snapshot() => '${_answers()}|$_resume';
+
+  Future<void> _confirmLeave() async {
+    if (_loading || _saving || _snapshot() == _baseline) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const AppText('Leave without saving?'),
+        content: const AppText(
+          'Your resume changes are not saved yet. Save them first so employers see them.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const AppText('Leave'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const AppText('Keep editing'),
+          ),
+        ],
+      ),
+    );
+    if (leave == true && mounted) Navigator.of(context).pop();
   }
 
   Map<String, dynamic> _answers() => {
@@ -175,8 +216,24 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
   }
 
   void _next() {
-    if (_step < 2 && !_valid(_step)) return;
+    if (_step < 2 && !_valid(_step)) {
+      // The required box is at the top of the step; from the Next button at
+      // the bottom nothing seemed to happen.
+      _scrollToTop();
+      _message('Please fill in the box marked in red.');
+      return;
+    }
     setState(() => _step++);
+    _scrollToTop();
+  }
+
+  void _scrollToTop() {
+    if (!_scroll.hasClients) return;
+    _scroll.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   Future<void> _photo() async {
@@ -199,7 +256,16 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
   }
 
   Future<void> _draft() async {
-    if (!_valid(0) || !_valid(1)) return;
+    // A missing name or trade sits on an earlier step: go there and say so,
+    // instead of the button silently doing nothing.
+    for (final step in [0, 1]) {
+      if (!_valid(step)) {
+        setState(() => _step = step);
+        _scrollToTop();
+        _message('Please fill in the box marked in red.');
+        return;
+      }
+    }
     setState(() {
       _writing = true;
       _errors = {};
@@ -209,11 +275,13 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
     });
     try {
       final value = await WorkerApiService().draftResume(_answers());
-      if (mounted)
+      if (mounted) {
         setState(() {
           _resume = Map<String, dynamic>.from(value['resume'] as Map);
           _step = 3;
         });
+        _scrollToTop();
+      }
       _debouncePreview(const Duration(milliseconds: 50));
     } on ApiException catch (e) {
       if (mounted) setState(() => _errors = e.errors);
@@ -258,16 +326,48 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
     if (mounted) setState(() => _previewing = true);
     try {
       final bytes = await WorkerApiService().previewBuiltResume(_saveBody());
-      if (mounted && request == _request)
+      if (!mounted || request != _request) return;
+      final pages = await _drawPages(bytes);
+      if (mounted && request == _request) {
         setState(() {
           _preview = bytes;
+          _pages = pages;
           _previewStatus = 'Up to date';
         });
+      }
     } on ApiException {
-      if (mounted && request == _request)
+      if (mounted && request == _request) {
         setState(() => _previewStatus = 'Could not update');
+      }
     } finally {
       if (mounted && request == _request) setState(() => _previewing = false);
+    }
+  }
+
+  /// Draws up to three pages at the phone's own width; an empty list when
+  /// the platform has no renderer (the card falls back to "Open").
+  Future<List<Uint8List>> _drawPages(List<int> pdf) async {
+    try {
+      final file = File(
+        '${Directory.systemTemp.path}/super-karigar-resume-pages.pdf',
+      );
+      await file.writeAsBytes(pdf, flush: true);
+      if (!mounted) return const [];
+      final view = MediaQuery.of(context);
+      final width = (view.size.width * view.devicePixelRatio).round().clamp(
+        600,
+        1440,
+      );
+      final pages = await _pdfPages.invokeListMethod<Uint8List>('render', {
+        'path': file.path,
+        'width': width,
+        'maxPages': 3,
+      });
+      return pages ?? const [];
+    } on PlatformException {
+      return const [];
+    } on MissingPluginException {
+      return const [];
     }
   }
 
@@ -281,12 +381,13 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
     );
     await file.writeAsBytes(_preview!, flush: true);
     final result = await OpenFilex.open(file.path, type: 'application/pdf');
-    if (result.type != ResultType.done)
+    if (result.type != ResultType.done) {
       _message(
         result.message.isEmpty
             ? 'No PDF viewer is available on this device.'
             : result.message,
       );
+    }
   }
 
   Future<void> _save() async {
@@ -301,6 +402,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
             : _record;
         _saving = false;
       });
+      _baseline = _snapshot();
       _message(result['message']?.toString() ?? 'Resume saved');
       // Return to Profile → Resume so its card reloads the newly saved file.
       if (mounted) Navigator.of(context).pop();
@@ -324,9 +426,12 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
         if (_errors.containsKey(key)) setState(() => _errors.remove(key));
       },
       decoration: InputDecoration(
-        labelText: _labels[key],
-        hintText: hint,
+        labelText: _labels[key] == null ? null : context.tr(_labels[key]!),
+        hintText: hint == null ? null : context.tr(hint),
         errorText: _error(key),
+        // The limit still holds; the "0/100" under every box was clutter
+        // the website doesn't show.
+        counterText: '',
         border: const OutlineInputBorder(),
       ),
     ),
@@ -361,7 +466,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
+              AppText(
                 labels[i],
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 10, color: enabled ? ink : muted),
@@ -399,13 +504,13 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
     return AppCard(
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
-        title: Text(
+        title: AppText(
           'Resume strength  $pct%',
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         subtitle: LinearProgressIndicator(value: pct / 100, color: clr),
         children: [
-          Text(
+          AppText(
             pct >= 80
                 ? 'Strong — employers will like this'
                 : pct >= 50
@@ -414,7 +519,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
             style: TextStyle(color: clr),
           ),
           const SizedBox(height: 8),
-          const Text(
+          const AppText(
             '💡 AI writes only from your answers. You can type in Hindi or Hinglish too.',
             style: TextStyle(color: muted, fontSize: 12),
           ),
@@ -426,11 +531,11 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
   Widget _about() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
+      const AppText(
         'About you',
         style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
       ),
-      const Text(
+      const AppText(
         'This goes at the top of your resume. We filled in what your profile already has.',
         style: TextStyle(color: muted),
       ),
@@ -444,7 +549,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
                   ? null
                   : NetworkImage(_photoUrl!),
               child: _photoUrl == null
-                  ? Text(
+                  ? AppText(
                       _c('name').text.isEmpty
                           ? '?'
                           : _c('name').text[0].toUpperCase(),
@@ -453,21 +558,21 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
+              child: AppText(
                 _photoUrl == null
                     ? 'No photo yet. Resumes with a photo get more calls.'
                     : 'A clear photo makes your resume stand out.',
               ),
             ),
             if (_photoUrl == null)
-              TextButton(onPressed: _photo, child: const Text('Add photo')),
+              TextButton(onPressed: _photo, child: const AppText('Add photo')),
           ],
         ),
       ),
       if (_photoUrl != null)
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Show photo on resume'),
+          title: const AppText('Show photo on resume'),
           value: _showPhoto,
           onChanged: (v) {
             setState(() => _showPhoto = v);
@@ -495,16 +600,16 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
     style: OutlinedButton.styleFrom(
       backgroundColor: _language == id ? brand.withValues(alpha: .1) : null,
     ),
-    child: Text('${_language == id ? '✓ ' : ''}$label'),
+    child: AppText('${_language == id ? '✓ ' : ''}$label'),
   );
   Widget _work() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
+      const AppText(
         'Your work',
         style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
       ),
-      const Text(
+      const AppText(
         'What you do and what you are good at.',
         style: TextStyle(color: muted),
       ),
@@ -513,11 +618,11 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
       _field('experience_years'),
       _field('skills', hint: 'e.g. Aari work — type or pick'),
       _field('tools', lines: 2),
-      const Text(
+      const AppText(
         'Work experience',
         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
       ),
-      const Text(
+      const AppText(
         'Where have you worked? Add your latest job first.',
         style: TextStyle(color: muted),
       ),
@@ -530,7 +635,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
             _current.add(false);
           }),
           icon: const Icon(Icons.add),
-          label: const Text('Add another job'),
+          label: const AppText('Add another job'),
         ),
     ],
   );
@@ -542,7 +647,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
         children: [
           Row(
             children: [
-              Text(
+              AppText(
                 'Job ${i + 1}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
@@ -579,7 +684,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('I still work here'),
+            title: const AppText('I still work here'),
             value: _current[i],
             onChanged: (v) => setState(() => _current[i] = v),
           ),
@@ -610,8 +715,9 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
         'details': 600,
       }[key],
       decoration: InputDecoration(
-        labelText: label,
+        labelText: context.tr(label),
         errorText: _error('work.$i.$key'),
+        counterText: '',
         border: const OutlineInputBorder(),
       ),
     ),
@@ -619,11 +725,11 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
   Widget _more() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
+      const AppText(
         'Education & languages',
         style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
       ),
-      const Text(
+      const AppText(
         'Schooling, any course or training, and languages you speak.',
         style: TextStyle(color: muted),
       ),
@@ -631,7 +737,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
       _field('education'),
       _field('training', lines: 2),
       _field('languages', hint: 'Hindi, English, Urdu'),
-      const Text(
+      const AppText(
         'More about you',
         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
       ),
@@ -640,7 +746,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
       _field('expected_wage', hint: '15000'),
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
-        title: const Text('Ready to travel or move for work'),
+        title: const AppText('Ready to travel or move for work'),
         value: _relocate,
         onChanged: (v) => setState(() => _relocate = v),
       ),
@@ -651,11 +757,11 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
   Widget _designs() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
+      const AppText(
         'Choose a design',
         style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
       ),
-      const Text(
+      const AppText(
         'Pick a layout and a colour. The preview updates as you go.',
         style: TextStyle(color: muted),
       ),
@@ -684,7 +790,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
                       child: Column(
                         children: [
                           Expanded(child: _miniature(t)),
-                          Text(
+                          AppText(
                             '${_template == t ? '✓ ' : ''}${t[0].toUpperCase()}${t.substring(1)}',
                             style: const TextStyle(fontSize: 11),
                           ),
@@ -699,7 +805,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
             .toList(),
       ),
       const SizedBox(height: 14),
-      const Text('Colour', style: TextStyle(fontWeight: FontWeight.w700)),
+      const AppText('Colour', style: TextStyle(fontWeight: FontWeight.w700)),
       const SizedBox(height: 8),
       Wrap(
         spacing: 12,
@@ -735,7 +841,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
       if (_photoUrl != null)
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Show photo on resume'),
+          title: const AppText('Show photo on resume'),
           value: _showPhoto,
           onChanged: (v) {
             setState(() => _showPhoto = v);
@@ -749,16 +855,11 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
             color: Colors.green.withValues(alpha: .1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Text(
+          child: const AppText(
             '✓  "Verified" badge on your resume',
             style: TextStyle(color: Colors.green),
           ),
         ),
-      TextButton.icon(
-        onPressed: () => Scrollable.ensureVisible(_previewKey.currentContext!),
-        icon: const Icon(Icons.visibility_outlined),
-        label: const Text('See the preview'),
-      ),
     ],
   );
   Widget _miniature(String type) {
@@ -797,7 +898,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
                 ...List.generate(
                   4,
                   (_) => Padding(
-                          padding: const EdgeInsets.only(bottom: 3),
+                    padding: const EdgeInsets.only(bottom: 3),
                     child: Container(height: 4, color: line),
                   ),
                 ),
@@ -817,11 +918,11 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  AppText(
                     'Your resume',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                   ),
-                  Text(
+                  AppText(
                     'Change any line you like. The preview updates as you type.',
                     style: TextStyle(color: muted),
                   ),
@@ -830,7 +931,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
             ),
             TextButton(
               onPressed: _writing ? null : _draft,
-              child: const Text('Write again with AI'),
+              child: const AppText('Write again with AI'),
             ),
           ],
         ),
@@ -877,7 +978,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
         _debouncePreview(const Duration(milliseconds: 900));
       },
       decoration: InputDecoration(
-        labelText: label,
+        labelText: context.tr(label),
         border: const OutlineInputBorder(),
       ),
     ),
@@ -902,7 +1003,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
             _debouncePreview(const Duration(milliseconds: 900));
           },
           decoration: InputDecoration(
-            labelText: label,
+            labelText: context.tr(label),
             border: const OutlineInputBorder(),
           ),
         ),
@@ -913,13 +1014,13 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              AppText(
                 'Work experience ${i + 1}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               f('role', 'Role'),
               f('period', 'Period (e.g. 2019 – 2023)'),
-              Text(
+              AppText(
                 '${item['employer'] ?? ''} ${item['place'] ?? ''}',
                 style: const TextStyle(color: muted),
               ),
@@ -941,7 +1042,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
           Row(
             children: [
               const Expanded(
-                child: Text(
+                child: AppText(
                   'Live preview',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
@@ -956,58 +1057,96 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
                     : Colors.amber,
               ),
               const SizedBox(width: 5),
-              Text(_previewStatus, style: const TextStyle(fontSize: 12)),
+              AppText(_previewStatus, style: const TextStyle(fontSize: 12)),
             ],
           ),
           const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            height: 150,
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: line),
-            ),
-            child: Center(
-              child: _previewing
-                  ? const CircularProgressIndicator()
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.picture_as_pdf_outlined,
-                          size: 40,
-                          color: _preview == null ? muted : brand,
+          if (_pages.isNotEmpty)
+            // The real pages, like the website's preview. Tap for the PDF.
+            GestureDetector(
+              onTap: _openPreview,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: _previewing ? .55 : 1,
+                child: Column(
+                  children: [
+                    for (final page in _pages)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: line),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x14000000),
+                              blurRadius: 10,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
                         ),
-                        Text(
-                          _preview == null
-                              ? 'Your PDF preview will appear here'
-                              : 'PDF preview is ready',
+                        clipBehavior: Clip.antiAlias,
+                        child: Image.memory(
+                          page,
+                          width: double.infinity,
+                          fit: BoxFit.fitWidth,
+                          gaplessPlayback: true,
                         ),
-                        if (_preview != null)
-                          const SizedBox(height: 6),
-                        if (_preview != null)
-                          TextButton(
-                            onPressed: _openPreview,
-                            child: const Text('Open preview'),
+                      ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              // A blank A4 sheet while the first preview is made.
+              height: _preview == null || _previewing ? 260 : 150,
+              decoration: BoxDecoration(
+                color: _preview == null || _previewing ? Colors.white : bg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: line),
+              ),
+              child: Center(
+                child: _previewing
+                    ? const CircularProgressIndicator()
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.picture_as_pdf_outlined,
+                            size: 40,
+                            color: _preview == null ? muted : brand,
                           ),
-                      ],
-                    ),
+                          AppText(
+                            _preview == null
+                                ? 'Your PDF preview will appear here'
+                                : 'PDF preview is ready',
+                          ),
+                          if (_preview != null) ...[
+                            const SizedBox(height: 6),
+                            TextButton(
+                              onPressed: _openPreview,
+                              child: const AppText('Open preview'),
+                            ),
+                          ],
+                        ],
+                      ),
+              ),
             ),
-          ),
           const SizedBox(height: 6),
           Row(
             children: [
               TextButton.icon(
                 onPressed: _previewing ? null : _refreshPreview,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Refresh'),
+                label: const AppText('Refresh'),
               ),
               const Spacer(),
               OutlinedButton.icon(
                 onPressed: _preview == null ? null : _openPreview,
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('Open'),
+                label: const AppText('Open PDF'),
               ),
             ],
           ),
@@ -1027,11 +1166,11 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      const AppText(
                         'Your resume is ready',
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      Text(
+                      AppText(
                         'Saved ${_record?['uploaded_ago'] ?? ''}. Employers download it when you apply.',
                         style: const TextStyle(color: muted, fontSize: 12),
                       ),
@@ -1047,7 +1186,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
                       _message(e.message);
                     }
                   },
-                  child: const Text('Download PDF'),
+                  child: const AppText('Download PDF'),
                 ),
               ],
             ),
@@ -1055,13 +1194,13 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
         )
       : const SizedBox();
   Widget _actions() {
-    if (_step == 3)
+    if (_step == 3) {
       return Row(
         children: [
           Expanded(
             child: OutlinedButton(
               onPressed: () => setState(() => _step = 2),
-              child: const Text('← Edit answers'),
+              child: const AppText('← Edit answers'),
             ),
           ),
           const SizedBox(width: 10),
@@ -1073,12 +1212,13 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
                       dimension: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save as my resume'),
+                  : const AppText('Save as my resume'),
             ),
           ),
         ],
       );
-    if (_step == 2)
+    }
+    if (_step == 2) {
       return Column(
         children: [
           SizedBox(
@@ -1086,7 +1226,7 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
             child: FilledButton.icon(
               onPressed: _writing ? null : _draft,
               icon: const Icon(Icons.auto_awesome),
-              label: Text(
+              label: AppText(
                 _resume == null
                     ? 'Write my resume with AI'
                     : 'Write again with AI',
@@ -1099,27 +1239,28 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
                 setState(() => _step = 3);
                 _debouncePreview(const Duration(milliseconds: 50));
               },
-              child: const Text('Keep my current resume and go to design →'),
+              child: const AppText('Keep my current resume and go to design →'),
             ),
           if (_step > 0)
             TextButton(
               onPressed: () => setState(() => _step--),
-              child: const Text('Back'),
+              child: const AppText('Back'),
             ),
         ],
       );
+    }
     return Row(
       children: [
         if (_step > 0)
           Expanded(
             child: OutlinedButton(
               onPressed: () => setState(() => _step--),
-              child: const Text('Back'),
+              child: const AppText('Back'),
             ),
           ),
         if (_step > 0) const SizedBox(width: 10),
         Expanded(
-          child: FilledButton(onPressed: _next, child: const Text('Next')),
+          child: FilledButton(onPressed: _next, child: const AppText('Next')),
         ),
       ],
     );
@@ -1136,20 +1277,33 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _designs(),
+              // Right under the design choices, so a new layout or colour
+              // shows straight away (it used to sit below the whole editor).
+              _previewCard(),
               const SizedBox(height: 20),
               _editor(),
-              _previewCard(),
+              Align(
+                child: TextButton.icon(
+                  onPressed: () => Scrollable.ensureVisible(
+                    _previewKey.currentContext!,
+                    duration: const Duration(milliseconds: 300),
+                  ),
+                  icon: const Icon(Icons.arrow_upward, size: 18),
+                  label: const AppText('See the preview'),
+                ),
+              ),
             ],
           );
     return ListView(
+      controller: _scroll,
       padding: const EdgeInsets.all(16),
       children: [
         _ready(),
-        const Text(
+        const AppText(
           'AI Resume',
           style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
         ),
-        const Text(
+        const AppText(
           'Answer a few questions. AI writes a professional resume, you pick a design, and employers can download it.',
           style: TextStyle(color: muted),
         ),
@@ -1185,16 +1339,16 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
                 children: [
                   const Icon(Icons.auto_awesome, color: brand, size: 38),
                   const SizedBox(height: 12),
-                  const Text(
+                  const AppText(
                     'AI is writing your resume',
                     style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
-                  Text(lines[_loaderLine]),
+                  AppText(lines[_loaderLine]),
                   const SizedBox(height: 12),
                   const LinearProgressIndicator(),
                   const SizedBox(height: 8),
-                  const Text(
+                  const AppText(
                     'This takes about 10 seconds.',
                     style: TextStyle(color: muted, fontSize: 12),
                   ),
@@ -1208,14 +1362,21 @@ class _ResumeBuilderPageState extends State<ResumeBuilderPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('AI Resume')),
-    body: _loading
-        ? const Center(child: CircularProgressIndicator())
-        : Stack(children: [_content(), if (_writing) _overlay()]),
+  Widget build(BuildContext context) => PopScope(
+    canPop: false,
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop) _confirmLeave();
+    },
+    child: Scaffold(
+      appBar: AppBar(title: const AppText('AI Resume')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(children: [_content(), if (_writing) _overlay()]),
+    ),
   );
   @override
   void dispose() {
+    _scroll.dispose();
     _previewTimer?.cancel();
     _loaderTimer?.cancel();
     for (final c in _fields.values) {

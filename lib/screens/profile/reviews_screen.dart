@@ -31,17 +31,9 @@ class _ReviewsPageState extends State<ReviewsPage> {
           'average': response.summary.average,
           'count': response.summary.count,
         };
-        reviews = response.reviews
-            .map(
-              (review) => {
-                'rating': review.rating,
-                'comment': review.comment,
-                'created_ago': review.createdAgo,
-                'reviewer': {'name': review.reviewer.name},
-                'job_title': review.jobTitle,
-              },
-            )
-            .toList();
+        reviews = response.reviews.map(_row).toList();
+        _page = response.pagination.currentPage;
+        _lastPage = response.pagination.lastPage;
       });
     } on ApiException catch (error) {
       if (mounted) {
@@ -51,6 +43,42 @@ class _ReviewsPageState extends State<ReviewsPage> {
       }
     } finally {
       if (mounted) setState(() => loading = false);
+    }
+  }
+
+  int _page = 1, _lastPage = 1;
+  bool _loadingMore = false;
+
+  Map<String, dynamic> _row(ReviewModel review) => {
+    'rating': review.rating,
+    'comment': review.comment,
+    'created_ago': review.createdAgo,
+    'reviewer': {'name': review.reviewer.name},
+    'job_title': review.jobTitle,
+  };
+
+  /// The server sends 15 ratings at a time; the rest load on scroll.
+  Future<void> _loadMore() async {
+    if (_loadingMore || loading || _page >= _lastPage) return;
+    setState(() => _loadingMore = true);
+    try {
+      final response = await WorkerApiService().fetchReviewPage(
+        page: _page + 1,
+      );
+      if (!mounted) return;
+      setState(() {
+        reviews = [...reviews, ...response.reviews.map(_row)];
+        _page = response.pagination.currentPage;
+        _lastPage = response.pagination.lastPage;
+      });
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -133,6 +161,11 @@ class _ReviewsPageState extends State<ReviewsPage> {
                     jobTitle: review['job_title']?.toString(),
                   );
                 }),
+                if (_page < _lastPage)
+                  PageEndLoader(
+                    key: ValueKey('reviews-$_page'),
+                    onReached: _loadMore,
+                  ),
               ],
             ),
           ),

@@ -32,8 +32,9 @@ class IndiaLocations {
   static Future<List<String>> cities(String state) async {
     final data = await _load();
     for (final entry in data.entries) {
-      if (entry.key.toLowerCase() == state.trim().toLowerCase())
+      if (entry.key.toLowerCase() == state.trim().toLowerCase()) {
         return entry.value;
+      }
     }
     return [];
   }
@@ -45,8 +46,9 @@ class IndiaLocations {
     final result = <String, String>{};
     for (final item in [...preferred, ...fallback]) {
       final value = item.trim();
-      if (value.isNotEmpty)
+      if (value.isNotEmpty) {
         result.putIfAbsent(value.toLowerCase(), () => value);
+      }
     }
     return result.values.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));

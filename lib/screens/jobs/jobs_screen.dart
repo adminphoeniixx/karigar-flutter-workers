@@ -6,10 +6,14 @@ class JobsTab extends StatefulWidget {
     this.refreshToken = 0,
     this.api,
     this.locationService,
+    this.onAvailabilityChanged,
   });
   final int refreshToken;
   final WorkerApiService? api;
   final FeedLocationService? locationService;
+
+  /// Tells the shell, so Home reloads the next time it is shown.
+  final VoidCallback? onAvailabilityChanged;
   @override
   State<JobsTab> createState() => _JobsTabState();
 }
@@ -19,12 +23,16 @@ class _JobsTabState extends State<JobsTab> {
   late final locationService = widget.locationService ?? FeedLocationService();
   FeedPosition? position;
   JobFeedModel? feed;
+  Map<String, dynamic>? feedPlace;
   bool showAll = false;
   bool loadingMore = false;
   PaginationModel? pagination;
   String query = '';
   String cat = 'All';
   String? filterState, filterCity, filterSkill;
+
+  /// Only jobs this close, in km (server `radius`); null for any distance.
+  int? radiusKm;
   List<Job> apiJobs = [];
   List<String> categories = ['All'];
   List<String> states = [], skills = [];
@@ -47,8 +55,9 @@ class _JobsTabState extends State<JobsTab> {
   @override
   void didUpdateWidget(covariant JobsTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.refreshToken != widget.refreshToken)
+    if (oldWidget.refreshToken != widget.refreshToken) {
       _load(refreshLocation: true);
+    }
   }
 
   Map<String, dynamic> get requestFilters => {
@@ -58,6 +67,9 @@ class _JobsTabState extends State<JobsTab> {
     if (filterCity != null) 'city': filterCity,
     if (filterSkill != null) 'skill': filterSkill,
     if (showAll) 'all': 1,
+    // Only "near me": a picked state or city searches that place instead.
+    if (radiusKm != null && filterState == null && filterCity == null)
+      'radius': radiusKm,
     ...?position?.query,
   };
 
@@ -65,8 +77,9 @@ class _JobsTabState extends State<JobsTab> {
     if (loading ||
         loadingMore ||
         pagination == null ||
-        pagination!.currentPage >= pagination!.lastPage)
+        pagination!.currentPage >= pagination!.lastPage) {
       return;
+    }
     final sequence = _loadSequence;
     setState(() => loadingMore = true);
     try {
@@ -83,13 +96,15 @@ class _JobsTabState extends State<JobsTab> {
         pagination = response.pagination;
       });
     } on ApiException catch (e) {
-      if (mounted && sequence == _loadSequence)
+      if (mounted && sequence == _loadSequence) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
     } finally {
-      if (mounted && sequence == _loadSequence)
+      if (mounted && sequence == _loadSequence) {
         setState(() => loadingMore = false);
+      }
     }
   }
 
@@ -133,6 +148,7 @@ class _JobsTabState extends State<JobsTab> {
         selectedCity: filterCity,
         selectedCategory: cat == 'All' ? null : cat,
         selectedSkill: filterSkill,
+        selectedRadius: radiusKm,
       ),
     );
     if (result == null || !mounted) return;
@@ -141,6 +157,7 @@ class _JobsTabState extends State<JobsTab> {
       filterCity = result['city'];
       filterSkill = result['skill'];
       cat = result['category'] ?? 'All';
+      radiusKm = int.tryParse(result['radius'] ?? '');
     });
     await _load();
     if (mounted) {
@@ -202,6 +219,12 @@ class _JobsTabState extends State<JobsTab> {
       setState(() {
         apiJobs = response.jobs.map(Job.fromApi).toList();
         feed = response.feed;
+        if (response.feed != null) {
+          feedPlace = {
+            'mode': response.feed!.location,
+            'label': response.feed!.locationLabel,
+          };
+        }
         pagination = response.pagination;
         unavailable = response.unavailable;
         unavailableMessage = response.message;
@@ -234,6 +257,12 @@ class _JobsTabState extends State<JobsTab> {
       setState(() {
         apiJobs = response.jobs.map(Job.fromApi).toList();
         feed = response.feed;
+        if (response.feed != null) {
+          feedPlace = {
+            'mode': response.feed!.location,
+            'label': response.feed!.locationLabel,
+          };
+        }
         pagination = response.pagination;
         unavailable = response.unavailable;
         unavailableMessage = response.message;
@@ -260,7 +289,17 @@ class _JobsTabState extends State<JobsTab> {
           if (!unavailable)
             IconButton(
               onPressed: _openFilter,
-              icon: const Icon(LucideIcons.slidersHorizontal),
+              // A dot while a filter from the sheet is on, so a short list
+              // doesn't look like there are no jobs.
+              icon: Badge(
+                isLabelVisible:
+                    radiusKm != null ||
+                    filterState != null ||
+                    filterCity != null ||
+                    filterSkill != null,
+                smallSize: 8,
+                child: const Icon(LucideIcons.slidersHorizontal),
+              ),
             ),
         ],
       ),
@@ -271,13 +310,24 @@ class _JobsTabState extends State<JobsTab> {
                 child: UnavailableJobsCard(
                   message: unavailableMessage,
                   onEnable: () async {
-                    await service.setAvailability(true);
-                    if (mounted)
+                    try {
+                      await service.setAvailability(true);
+                      widget.onAvailabilityChanged?.call();
+                    } on ApiException catch (error) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: AppText(error.message)),
+                        );
+                      }
+                      return;
+                    }
+                    if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: AppText('You are now available for work.'),
                         ),
                       );
+                    }
                     await _load(refreshLocation: true);
                   },
                 ),
@@ -310,12 +360,9 @@ class _JobsTabState extends State<JobsTab> {
                         ),
                       const SizedBox(height: 10),
                       FeedLocationBar(
-                        location: feed == null
-                            ? null
-                            : {
-                                'mode': feed!.location,
-                                'label': feed!.locationLabel,
-                              },
+                        // A search reply has no feed; keep saying what the
+                        // last feed was near, not "Current location".
+                        location: feedPlace,
                         onChanged: () => _load(refreshLocation: true),
                       ),
                       const SizedBox(height: 10),
@@ -416,7 +463,9 @@ class _JobsTabState extends State<JobsTab> {
                               if (mounted) await _load(refreshLocation: true);
                             },
                           ),
-                        if (feed == null)
+                        // Not while the list failed to load: offline it said
+                        // "0 jobs matched" above the error.
+                        if (feed == null && error == null)
                           AppText(
                             context.trArgs(
                                   '{count} jobs matched to your filters',
@@ -511,7 +560,14 @@ class FeedLocationBar extends StatelessWidget {
     final label =
         location?['label']?.toString() ??
         location?['location_label']?.toString();
-    return chosen && label?.isNotEmpty == true ? label! : 'Current location';
+    if (chosen && label?.isNotEmpty == true) return label!;
+    // Said "Current location" even with location off, while the server
+    // measured from the profile pin or the city.
+    return switch ((location?['mode'] ?? location?['location'])?.toString()) {
+      'profile' => 'Your profile location',
+      'city' => 'Your city',
+      _ => 'Current location',
+    };
   }
 
   @override
@@ -539,16 +595,16 @@ class FeedLocationBar extends StatelessWidget {
                   context,
                 ).style.copyWith(fontSize: 13),
                 children: [
-                  const TextSpan(text: 'Jobs near '),
+                  TextSpan(text: '${context.tr('Jobs near')} '),
                   TextSpan(
-                    text: _label,
+                    text: context.tr(_label),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
             ),
           ),
-          const Text(
+          const AppText(
             'Change ›',
             style: TextStyle(color: brand, fontWeight: FontWeight.w600),
           ),
@@ -579,10 +635,11 @@ class _FeedLocationSheetState extends State<FeedLocationSheet> {
       final response = await service.searchPlaces(q);
       if (mounted) setState(() => places = jsonList(response['places']));
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -641,8 +698,18 @@ class _FeedLocationSheetState extends State<FeedLocationSheet> {
                 ? const Icon(LucideIcons.check, color: brand)
                 : null,
             onTap: () async {
-              final response = await service.clearFeedLocation();
-              if (mounted) {
+              final Map<String, dynamic> response;
+              try {
+                response = await service.clearFeedLocation();
+              } on ApiException catch (error) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: AppText(error.message)));
+                }
+                return;
+              }
+              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: AppText(
@@ -674,11 +741,12 @@ class _FeedLocationSheetState extends State<FeedLocationSheet> {
                   ),
                 ),
               );
-              if (pin != null)
+              if (pin != null) {
                 await _pick({
                   'latitude': pin.latitude,
                   'longitude': pin.longitude,
                 });
+              }
             },
           ),
           TextField(
@@ -795,15 +863,18 @@ class JobsApiFilterSheet extends StatefulWidget {
     this.selectedCity,
     this.selectedCategory,
     this.selectedSkill,
+    this.selectedRadius,
   });
   final List<String> states, skills, categories;
   final String? selectedState, selectedCity, selectedCategory, selectedSkill;
+  final int? selectedRadius;
   @override
   State<JobsApiFilterSheet> createState() => _JobsApiFilterSheetState();
 }
 
 class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
   String? state, city, category, skill;
+  int? radius;
   List<String> cities = [];
   bool loading = false;
 
@@ -814,6 +885,7 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
     city = widget.selectedCity;
     category = widget.selectedCategory;
     skill = widget.selectedSkill;
+    radius = widget.selectedRadius;
     if (state != null) _loadCities(state!, keepCity: true);
   }
 
@@ -827,10 +899,11 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
       final result = await WorkerApiService().cities(value);
       if (mounted && state == value) setState(() => cities = result);
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: AppText(e.message)));
+      }
     } finally {
       if (mounted) {
         setState(() => loading = false);
@@ -849,6 +922,41 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
           const AppText(
             'Filter jobs',
             style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 14),
+          // Measured from the place the feed uses (current location or the
+          // one picked under "Jobs near").
+          const FieldLabel('Distance'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children:
+                const <(int?, String)>[
+                      (null, 'Any distance'),
+                      (5, '5 km'),
+                      (10, '10 km'),
+                      (25, '25 km'),
+                      (50, '50 km'),
+                      (100, '100 km'),
+                    ]
+                    .map(
+                      (item) => ChoiceChip(
+                        label: AppText(item.$2),
+                        selected: radius == item.$1,
+                        // A distance is measured from where the karigar is,
+                        // so it can't go with another city: picking one
+                        // clears the other.
+                        onSelected: (_) => setState(() {
+                          radius = item.$1;
+                          if (radius != null) {
+                            state = null;
+                            city = null;
+                            cities = [];
+                          }
+                        }),
+                      ),
+                    )
+                    .toList(),
           ),
           const SizedBox(height: 14),
           const FieldLabel('Category'),
@@ -870,30 +978,30 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
           ),
           const SizedBox(height: 14),
           const FieldLabel('State'),
-          DropdownButtonFormField<String>(
-            initialValue: state,
-            isExpanded: true,
-            menuMaxHeight: 400,
-            hint: const AppText('All states'),
-            items: widget.states
-                .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
-                .toList(),
+          // Searchable like Category and Skill: a state has up to a thousand
+          // towns, too many to scroll through in a plain dropdown.
+          SearchableOptionField(
+            key: ValueKey('state-$state'),
+            title: 'State',
+            options: widget.states,
+            value: state,
+            hint: 'All states',
             onChanged: (v) {
-              if (v != null) _loadCities(v);
+              if (v == null) return;
+              // Another state means searching outside "near me".
+              setState(() => radius = null);
+              _loadCities(v);
             },
           ),
           const SizedBox(height: 14),
           const FieldLabel('City'),
-          DropdownButtonFormField<String>(
-            key: ValueKey(state),
-            initialValue: city,
-            isExpanded: true,
-            menuMaxHeight: 400,
-            hint: AppText(loading ? 'Loading cities...' : 'All cities'),
-            items: cities
-                .map((e) => DropdownMenuItem(value: e, child: AppText(e)))
-                .toList(),
-            onChanged: loading ? null : (v) => setState(() => city = v),
+          SearchableOptionField(
+            key: ValueKey('city-$state-${cities.length}'),
+            title: 'City',
+            options: cities,
+            value: city,
+            hint: loading ? 'Loading cities...' : 'All cities',
+            onChanged: (v) => setState(() => city = v),
           ),
           const SizedBox(height: 18),
           Row(
@@ -912,6 +1020,7 @@ class _JobsApiFilterSheetState extends State<JobsApiFilterSheet> {
                     'city': city,
                     'category': category,
                     'skill': skill,
+                    'radius': radius?.toString(),
                   }),
                   child: const AppText('Apply'),
                 ),
@@ -969,13 +1078,17 @@ class JobCard extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 6,
                         children: [
-                          Tag(job.category),
+                          Tag(
+                            job.category.trim().isEmpty
+                                ? 'Other'
+                                : job.category,
+                          ),
                           if (job.isUrgent) const _UrgentTag(),
                         ],
                       ),
                     ),
                     if (trailing != null) const SizedBox(width: 8),
-                    if (trailing != null) trailing!,
+                    ?trailing,
                   ],
                 ),
                 const SizedBox(height: 9),
@@ -1009,14 +1122,17 @@ class JobCard extends StatelessWidget {
                       Meta(
                         LucideIcons.navigation,
                         context.trArgs('{distance} km away', {
-                          'distance': job.distanceKm!.toStringAsFixed(1),
+                          'distance': formatKm(job.distanceKm!),
                         }),
                       ),
                     Meta(
-                      LucideIcons.calendarDays,
-                      context.trArgs('{count} openings', {
-                        'count': '${job.openings}',
-                      }),
+                      LucideIcons.usersRound,
+                      context.trArgs(
+                        job.openings == 1
+                            ? '{count} opening'
+                            : '{count} openings',
+                        {'count': '${job.openings}'},
+                      ),
                     ),
                   ],
                 ),

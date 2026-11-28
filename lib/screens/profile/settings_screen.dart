@@ -25,11 +25,10 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         alerts = value.jobAlerts;
         messageAlerts = value.messageAlerts;
-        appThemeMode.value = switch (value.theme) {
-          'dark' => ThemeMode.dark,
-          'light' => ThemeMode.light,
-          _ => ThemeMode.system,
-        };
+        appThemeMode.value = value.theme == 'dark'
+            ? ThemeMode.dark
+            : ThemeMode.light;
+        unawaited(rememberAppTheme(appThemeMode.value));
         dark = value.theme == 'dark';
       });
     } on ApiException catch (e) {
@@ -59,28 +58,40 @@ class _SettingsPageState extends State<SettingsPage> {
   void _setDark(bool value) {
     setState(() => dark = value);
     appThemeMode.value = value ? ThemeMode.dark : ThemeMode.light;
+    unawaited(rememberAppTheme(appThemeMode.value));
     _savePreference('theme', value ? 'dark' : 'light');
   }
 
   Future<void> _logout() async {
-    try {
-      await AuthService().logout();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: AppText('Logged out successfully.')),
-      );
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const OnboardingPage()),
-        (_) => false,
-      );
-    } on ApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: AppText(error.message)));
-      }
-    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const AppText('Log out?'),
+        content: const AppText('You will need an OTP to log in again.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const AppText('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const AppText('Log out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    // Signs out on this phone even without internet.
+    await AuthService().logout();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: AppText('Logged out successfully.')),
+    );
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const OnboardingPage()),
+      (_) => false,
+    );
   }
 
   Future<void> _deleteAccount() async {
@@ -600,10 +611,11 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     try {
       if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
     } catch (_) {}
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: AppText('Unable to open this link.')),
       );
+    }
   }
 
   Future<void> _email(String address) async {

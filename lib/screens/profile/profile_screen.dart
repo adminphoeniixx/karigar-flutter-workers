@@ -303,13 +303,23 @@ class _ProfileTabState extends State<ProfileTab> {
                 MenuRow(
                   LucideIcons.shieldCheck,
                   'KYC Verification',
-                  'Verify your Aadhaar',
+                  // Said "Verify your Aadhaar" (in orange) even once verified.
+                  stats['kyc_status'] == 'verified'
+                      ? 'Aadhaar verified'
+                      : 'Verify your Aadhaar',
                   () => _open(const KycPage()),
-                  trailing: StatusPill(
-                    stats['kyc_status_label']?.toString() ?? 'Not submitted',
-                    const Color(0xFFFFF7ED),
-                    const Color(0xFFB45309),
-                  ),
+                  trailing: stats['kyc_status'] == 'verified'
+                      ? StatusPill(
+                          stats['kyc_status_label']?.toString() ?? 'Verified',
+                          const Color(0xFFECFDF3),
+                          const Color(0xFF15803D),
+                        )
+                      : StatusPill(
+                          stats['kyc_status_label']?.toString() ??
+                              'Not submitted',
+                          const Color(0xFFFFF7ED),
+                          const Color(0xFFB45309),
+                        ),
                 ),
                 MenuRow(
                   LucideIcons.fileText,
@@ -326,9 +336,12 @@ class _ProfileTabState extends State<ProfileTab> {
                 MenuRow(
                   LucideIcons.bookmark,
                   'Saved Jobs',
-                  context.trArgs('{count} saved jobs', {
-                    'count': '${stats['saved_jobs'] ?? 0}',
-                  }),
+                  context.trArgs(
+                    '${stats['saved_jobs'] ?? 0}' == '1'
+                        ? '{count} saved job'
+                        : '{count} saved jobs',
+                    {'count': '${stats['saved_jobs'] ?? 0}'},
+                  ),
                   () => _open(const SavedPage()),
                 ),
                 MenuRow(

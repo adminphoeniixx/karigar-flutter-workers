@@ -10,8 +10,12 @@ class HomeTab extends StatefulWidget {
     required this.onAlerts,
     required this.onProfile,
     required this.onUnreadChanged,
+    this.onAvailabilityChanged,
   });
   final int refreshToken;
+
+  /// Tells the shell, so the Jobs tab reloads the next time it is shown.
+  final VoidCallback? onAvailabilityChanged;
   final WorkerApiService? api;
   final FeedLocationService? locationService;
   final VoidCallback onBrowse, onAlerts, onProfile;
@@ -78,16 +82,31 @@ class _HomeTabState extends State<HomeTab> {
       // keep the entire home screen waiting for it: show the server's normal
       // (chosen/profile-city) feed first, then refresh nearby jobs once a
       // fresh position is available.
-      final position = (widget.locationService ?? FeedLocationService())
-          .current(requestPermission: true);
-      final response = await service.fetchDashboard();
+      final locationService = widget.locationService ?? FeedLocationService();
+      // The last known position is instant, so the first answer is usually
+      // already the nearby one and Home asks the server only once.
+      final known = await locationService.lastKnown();
+      final position = locationService.current(requestPermission: true);
+      final response = await service.fetchDashboard(location: known?.query);
       if (!mounted || sequence != _loadSequence) return;
       _applyDashboard(response);
-      unawaited(_refreshForCurrentLocation(service, position, sequence));
+      unawaited(
+        _refreshForCurrentLocation(service, position, sequence, known: known),
+      );
     } on ApiException catch (error) {
-      if (mounted && sequence == _loadSequence) {
+      final denied = error.statusCode == 401 || error.statusCode == 403;
+      // Already showing a dashboard: keep it and say the refresh failed.
+      // Offline, Home used to go blank with only "Try again".
+      if (mounted &&
+          sequence == _loadSequence &&
+          !denied &&
+          dashboard.isNotEmpty) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: AppText(error.message)));
+      } else if (mounted && sequence == _loadSequence) {
         setState(() {
-          accessDenied = error.statusCode == 401 || error.statusCode == 403;
+          accessDenied = denied;
           loadError = error.statusCode == 401
               ? 'Your session has expired. Please sign in again.'
               : error.statusCode == 403
@@ -132,10 +151,20 @@ class _HomeTabState extends State<HomeTab> {
   Future<void> _refreshForCurrentLocation(
     WorkerApiService service,
     Future<FeedPosition?> positionFuture,
-    int sequence,
-  ) async {
+    int sequence, {
+    FeedPosition? known,
+  }) async {
     final position = await positionFuture;
     if (!mounted || sequence != _loadSequence || position == null) return;
+    // Within a kilometre of the position already used: same jobs, so only
+    // the address line needs the fresh position.
+    if (known != null &&
+        FeedLocationService.distanceBetween(known, position) < 1000) {
+      if (!hasChosenFeedLocation) {
+        unawaited(_resolveCurrentLocation(position, sequence));
+      }
+      return;
+    }
     try {
       final response = await service.fetchDashboard(location: position.query);
       if (!mounted || sequence != _loadSequence) return;
@@ -205,8 +234,11 @@ class _HomeTabState extends State<HomeTab> {
     setState(() => available = value);
     try {
       final saved = await WorkerApiService().setAvailability(value);
+      widget.onAvailabilityChanged?.call();
       if (mounted) {
         setState(() => available = saved);
+        // The latest jobs and the count change with it: off shows none.
+        unawaited(_loadDashboard());
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: AppText(
@@ -227,50 +259,37 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  Widget _kycCard() {
+  _HomeStat _kycStat() {
     final status = stats['kyc_status']?.toString() ?? 'not_submitted';
-    final (label, tint, color) = switch (status) {
-      'verified' => (
-        'Verified ✓',
-        const Color(0xFFECFDF5),
-        const Color(0xFF047857),
-      ),
-      'pending' => (
-        'Under review',
-        const Color(0xFFFFF7ED),
-        const Color(0xFFB45309),
-      ),
-      'rejected' => (
-        'Fix & resubmit',
-        const Color(0xFFFEF2F2),
-        const Color(0xFFB91C1C),
-      ),
-      // This is the KYC *status*, not the action. The previous “Verify now”
-      // wording made an unsubmitted KYC look as though it had been verified.
-      _ => (
-        stats['kyc_status_label']?.toString().isNotEmpty == true
-            ? stats['kyc_status_label'].toString()
-            : 'Not submitted',
-        const Color(0xFFFFF3EE),
-        brand,
-      ),
+    final (value, color) = switch (status) {
+      'verified' => ('Verified', const Color(0xFF047857)),
+      'pending' => ('Under review', const Color(0xFFB45309)),
+      'rejected' => ('Rejected', const Color(0xFFB91C1C)),
+      // The KYC *status*, not the action: "Verify now" read as verified.
+      _ => ('Not submitted', brand),
     };
-    return StatCard(
-      label,
-      context.tr('KYC Status'),
-      LucideIcons.shieldCheck,
-      tint,
-      color,
-      compact: true,
+    return _HomeStat(
+      icon: status == 'verified' ? LucideIcons.shieldCheck : LucideIcons.shield,
+      color: color,
+      value: context.tr(value),
+      label: context.tr('KYC'),
       onTap: () => _openPage(const KycPage()),
     );
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: loading || loadError != null
+    appBar: (loading && dashboard.isEmpty) || loadError != null
         ? AppBar(actions: const [AppLanguageButton(), SizedBox(width: 12)])
         : AppBar(
+            // Refreshing over the data already shown: a thin line, not a
+            // blank screen.
+            bottom: loading
+                ? const PreferredSize(
+                    preferredSize: Size.fromHeight(2),
+                    child: LinearProgressIndicator(minHeight: 2, color: brand),
+                  )
+                : null,
             toolbarHeight: 88,
             leadingWidth: 58,
             leading: Padding(
@@ -362,13 +381,19 @@ class _HomeTabState extends State<HomeTab> {
               ),
             ),
             actions: [
+              // Chats with employers used to be reachable only from Profile.
+              IconButton(
+                tooltip: context.tr('Messages'),
+                onPressed: () => _openPage(const ConversationsPage()),
+                icon: const Icon(LucideIcons.messageSquare),
+              ),
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: const AppLanguageButton(),
               ),
             ],
           ),
-    body: loading
+    body: loading && dashboard.isEmpty
         ? const Center(child: CircularProgressIndicator())
         : loadError != null
         ? Center(
@@ -403,187 +428,156 @@ class _HomeTabState extends State<HomeTab> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                AppCard(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                // Top card: what is waiting for the karigar, a way straight
+                // into search, and the availability switch, in one place.
+                _HomeHero(
+                  jobCount: stats['available_jobs']?.toString() ?? '0',
+                  available: available,
+                  onSearch: widget.onBrowse,
+                  onAvailability: _setAvailability,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _QuickAction(
+                      LucideIcons.search,
+                      context.tr('Find jobs'),
+                      widget.onBrowse,
+                    ),
+                    _QuickAction(
+                      LucideIcons.clipboardCheck,
+                      context.tr('Applied'),
+                      () => _openPage(const ApplicationsTab()),
+                    ),
+                    _QuickAction(
+                      LucideIcons.bookmark,
+                      context.tr('Saved Jobs'),
+                      () => _openPage(const SavedPage()),
+                    ),
+                    _QuickAction(
+                      LucideIcons.fileText,
+                      context.tr('My Resume'),
+                      () => _openPage(const ResumePage()),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _HomeStatStrip(
+                  stats: [
+                    _HomeStat(
+                      icon: LucideIcons.send,
+                      color: const Color(0xFF047857),
+                      value: stats['applications']?.toString() ?? '0',
+                      label: context.tr('Applied'),
+                      onTap: () => _openPage(const ApplicationsTab()),
+                    ),
+                    if (dashboard['features'] is Map &&
+                        (dashboard['features']
+                                as Map)['verification_enabled'] ==
+                            true)
+                      _kycStat(),
+                    _HomeStat(
+                      icon: LucideIcons.userRoundCheck,
+                      color: const Color(0xFF4F46E5),
+                      value: '$completion%',
+                      label: context.tr('Profile'),
+                      onTap: widget.onProfile,
+                    ),
+                  ],
+                ),
+                // Nothing left to add once the profile is full and KYC is done;
+                // it used to keep asking for "skills & KYC" at 100%.
+                if (completion < 100 ||
+                    (dashboard['features']?['verification_enabled'] == true &&
+                        stats['kyc_status'] != 'verified')) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: context.brandTint,
+                      border: Border.all(
+                        color: context.isDark
+                            ? const Color(0xFF68402F)
+                            : const Color(0xFFFFC5B0),
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
                           children: [
-                            AppText(
-                              context.tr('Available for work'),
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AppText(
+                                    '${context.tr('Profile complete')}: $completion%',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  AppText(
+                                    context.tr(
+                                      'Add skills & KYC to get more jobs',
+                                    ),
+                                    style: TextStyle(
+                                      color: muted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            if (!available)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 3),
-                                child: Text(
-                                  'No job alerts or jobs while off',
-                                  style: TextStyle(color: muted, fontSize: 12),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 9,
+                                ),
+                                minimumSize: Size.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(11),
                                 ),
                               ),
-                            AppText(
-                              available
-                                  ? context.tr('Employers can discover you')
-                                  : context.tr("You're hidden from employers"),
-                              style: const TextStyle(
-                                color: muted,
-                                fontSize: 12,
+                              onPressed: widget.onProfile,
+                              child: AppText(
+                                context.tr('Complete'),
+                                style: TextStyle(fontSize: 13),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      Switch(
-                        value: available,
-                        activeTrackColor: brand,
-                        onChanged: _setAvailability,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: StatCard(
-                        stats['available_jobs']?.toString() ?? '0',
-                        context.tr('Available Jobs'),
-                        LucideIcons.briefcaseBusiness,
-                        Color(0xFFFFF3EE),
-                        brand,
-                        onTap: widget.onBrowse,
-                      ),
-                    ),
-                    if (dashboard['features'] is Map &&
-                        (dashboard['features']
-                                as Map)['verification_enabled'] ==
-                            true)
-                      SizedBox(width: 12),
-                    if (dashboard['features'] is Map &&
-                        (dashboard['features']
-                                as Map)['verification_enabled'] ==
-                            true)
-                      Expanded(child: _kycCard()),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: StatCard(
-                        stats['applications']?.toString() ?? '0',
-                        context.tr('Applications'),
-                        LucideIcons.check,
-                        Color(0xFFECFDF5),
-                        Color(0xFF047857),
-                        onTap: () => _openPage(const ApplicationsTab()),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: StatCard(
-                        '$completion%',
-                        context.tr('Profile complete'),
-                        LucideIcons.clock,
-                        Color(0xFFEEF2FF),
-                        Color(0xFF4F46E5),
-                        compact: true,
-                        onTap: widget.onProfile,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: context.brandTint,
-                    border: Border.all(
-                      color: context.isDark
-                          ? const Color(0xFF68402F)
-                          : const Color(0xFFFFC5B0),
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AppText(
-                                  '${context.tr('Profile complete')}: $completion%',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                                SizedBox(height: 2),
-                                AppText(
-                                  context.tr(
-                                    'Add skills & KYC to get more jobs',
-                                  ),
-                                  style: TextStyle(color: muted, fontSize: 12),
-                                ),
-                              ],
-                            ),
+                        const SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: completion / 100,
+                            minHeight: 7,
+                            backgroundColor: context.surfaceColor,
+                            color: brand,
                           ),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 9,
-                              ),
-                              minimumSize: Size.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(11),
-                              ),
-                            ),
-                            onPressed: widget.onProfile,
-                            child: AppText(
-                              context.tr('Complete'),
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          value: completion / 100,
-                          minHeight: 7,
-                          backgroundColor: context.surfaceColor,
-                          color: brand,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 17),
-                SectionHeader(
-                  context.tr('LATEST JOBS NEAR YOU'),
-                  action: context.tr('See all →'),
-                  onTap: widget.onBrowse,
-                ),
-                const SizedBox(height: 4),
+                ],
+                // The location row already says "Jobs near …", so it is the
+                // heading; "See all" sits under the list. Saves a row so jobs
+                // start in the top half of the screen.
+                const SizedBox(height: 6),
                 FeedLocationBar(
                   location: feedLocation,
                   onChanged: _loadDashboard,
                 ),
                 const SizedBox(height: 8),
                 if (!available)
-                  UnavailableJobsCard(
-                    onEnable: () =>
-                        _setAvailability(true).then((_) => _loadDashboard()),
-                  ),
-                // Availability controls whether the worker receives new work;
-                // it must not hide jobs they can still browse. The Jobs tab
-                // already follows this behaviour.
-                if (latestJobs.isEmpty)
+                  UnavailableJobsCard(onEnable: () => _setAvailability(true)),
+                // While unavailable the server sends no jobs; the card above
+                // says so, and old cards must not linger under it.
+                if (!available)
+                  const SizedBox.shrink()
+                else if (latestJobs.isEmpty)
                   AppCard(
                     child: Column(
                       children: [
@@ -612,6 +606,13 @@ class _HomeTabState extends State<HomeTab> {
                       onApplied: () => _removeAppliedJob(job.id),
                     ),
                   ),
+                if (available && latestJobs.isNotEmpty)
+                  Center(
+                    child: TextButton(
+                      onPressed: widget.onBrowse,
+                      child: AppText(context.tr('See all →')),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -628,12 +629,12 @@ class UnavailableJobsCard extends StatelessWidget {
       children: [
         const Icon(LucideIcons.circleOff, color: muted, size: 30),
         const SizedBox(height: 8),
-        const Text(
+        const AppText(
           "You're not available for work",
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 4),
-        Text(
+        AppText(
           message ??
               'While "Available for work" is off you get no job alerts and see no jobs. Switch it on whenever you’re ready.',
           textAlign: TextAlign.center,
@@ -642,9 +643,291 @@ class UnavailableJobsCard extends StatelessWidget {
         const SizedBox(height: 12),
         FilledButton(
           onPressed: onEnable,
-          child: const Text("I'm available for work"),
+          child: const AppText("I'm available for work"),
         ),
       ],
+    ),
+  );
+}
+
+/// The top of Home: jobs waiting, search, and "Available for work".
+class _HomeHero extends StatelessWidget {
+  const _HomeHero({
+    required this.jobCount,
+    required this.available,
+    required this.onSearch,
+    required this.onAvailability,
+  });
+  final String jobCount;
+  final bool available;
+  final VoidCallback onSearch;
+  final ValueChanged<bool> onAvailability;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(14, 8, 8, 12),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(18),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [brand, Color.lerp(brand, Colors.black, .28)!],
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: brand.withValues(alpha: .25),
+          blurRadius: 12,
+          offset: const Offset(0, 5),
+        ),
+      ],
+    ),
+    // Kept to two short rows so the job list starts in the top half of the
+    // screen when the app opens.
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: AppText(
+                  available
+                      ? context.trArgs('{count} jobs match your skills', {
+                          'count': jobCount,
+                        })
+                      : context.tr("You're hidden from employers"),
+                  maxLines: 1,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: available
+                    ? const Color(0xFF4ADE80)
+                    : Colors.white.withValues(alpha: .5),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            AppText(
+              context.tr('Available'),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: .9),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Semantics(
+              label: context.tr('Available for work'),
+              child: Transform.scale(
+                scale: .8,
+                child: Switch(
+                  value: available,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  activeThumbColor: brand,
+                  activeTrackColor: Colors.white,
+                  inactiveThumbColor: Colors.white,
+                  inactiveTrackColor: Colors.white.withValues(alpha: .25),
+                  onChanged: onAvailability,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsetsDirectional.only(end: 6),
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: onSearch,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.search, color: brand, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: AppText(
+                        context.tr('Search job title, skill…'),
+                        maxLines: 1,
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      LucideIcons.arrowRight,
+                      color: Color(0xFF9CA3AF),
+                      size: 17,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// One round shortcut under the top card.
+class _QuickAction extends StatelessWidget {
+  const _QuickAction(this.icon, this.label, this.onTap);
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: context.brandTint,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: context.borderColor),
+              ),
+              child: Icon(icon, color: brand, size: 19),
+            ),
+            const SizedBox(height: 5),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: AppText(
+                label,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _HomeStat {
+  const _HomeStat({
+    required this.icon,
+    required this.color,
+    required this.value,
+    required this.label,
+    this.onTap,
+  });
+  final IconData icon;
+  final Color color;
+  final String value, label;
+  final VoidCallback? onTap;
+}
+
+/// One card with equal columns (applied / KYC / profile). The three separate
+/// tiles were cramped and came out at different heights.
+class _HomeStatStrip extends StatelessWidget {
+  const _HomeStatStrip({required this.stats});
+  final List<_HomeStat> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final cells = <Widget>[];
+    for (var i = 0; i < stats.length; i++) {
+      if (i > 0) {
+        cells.add(
+          VerticalDivider(width: 1, thickness: 1, color: context.borderColor),
+        );
+      }
+      cells.add(Expanded(child: _cell(context, stats[i])));
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: context.surfaceColor,
+        border: Border.all(color: context.borderColor),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: cells,
+        ),
+      ),
+    );
+  }
+
+  // Dark green/indigo were hard to read on the dark surface.
+  Color _tone(BuildContext context, Color color) =>
+      context.isDark ? Color.lerp(color, Colors.white, .45)! : color;
+
+  Widget _cell(BuildContext context, _HomeStat stat) => Semantics(
+    button: stat.onTap != null,
+    label: '${stat.label}: ${stat.value}',
+    child: InkWell(
+      onTap: stat.onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(stat.icon, color: _tone(context, stat.color), size: 15),
+                  const SizedBox(width: 5),
+                  Text(
+                    stat.value,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: _tone(context, stat.color),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                stat.label,
+                maxLines: 1,
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     ),
   );
 }
